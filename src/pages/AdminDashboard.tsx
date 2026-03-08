@@ -185,7 +185,7 @@ const AdminDashboard = () => {
   // ─── Team CRUD ───
   const handleTeamSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = { name: teamForm.name, position: teamForm.position, department: teamForm.department || null, bio: teamForm.bio || null, image_url: teamForm.image_url || null, linkedin: teamForm.linkedin || null, github: teamForm.github || null, email: teamForm.email || null, sort_order: parseInt(teamForm.sort_order) || 0 };
+    const payload = { name: teamForm.name, position: teamForm.position, department: teamForm.department || null, bio: teamForm.bio || null, image_url: teamForm.image_url || null, linkedin: teamForm.linkedin || null, github: teamForm.github || null, email: teamForm.email || null, sort_order: parseInt(teamForm.sort_order) || 0, category: teamForm.category || "Executive Board" } as any;
     if (editingTeamId) {
       const { error } = await supabase.from("team_members").update(payload).eq("id", editingTeamId);
       if (error) toast.error("Failed"); else { toast.success("Team member updated!"); resetTeamForm(); fetchData(); }
