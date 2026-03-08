@@ -127,21 +127,42 @@ export type Database = {
       }
       event_registrations: {
         Row: {
+          department: string | null
+          email: string | null
           event_id: string
           id: string
+          name: string | null
+          payment_method: string | null
+          payment_status: string
+          phone: string | null
           registered_at: string
+          transaction_id: string | null
           user_id: string
         }
         Insert: {
+          department?: string | null
+          email?: string | null
           event_id: string
           id?: string
+          name?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          phone?: string | null
           registered_at?: string
+          transaction_id?: string | null
           user_id: string
         }
         Update: {
+          department?: string | null
+          email?: string | null
           event_id?: string
           id?: string
+          name?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          phone?: string | null
           registered_at?: string
+          transaction_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -160,7 +181,11 @@ export type Database = {
           date: string
           description: string | null
           id: string
+          image_url: string | null
+          is_paid: boolean
           max_participants: number | null
+          payment_methods: string[] | null
+          registration_fee: number | null
           title: string
           type: string | null
           venue: string | null
@@ -170,7 +195,11 @@ export type Database = {
           date: string
           description?: string | null
           id?: string
+          image_url?: string | null
+          is_paid?: boolean
           max_participants?: number | null
+          payment_methods?: string[] | null
+          registration_fee?: number | null
           title: string
           type?: string | null
           venue?: string | null
@@ -180,7 +209,11 @@ export type Database = {
           date?: string
           description?: string | null
           id?: string
+          image_url?: string | null
+          is_paid?: boolean
           max_participants?: number | null
+          payment_methods?: string[] | null
+          registration_fee?: number | null
           title?: string
           type?: string | null
           venue?: string | null
@@ -340,6 +373,7 @@ export type Database = {
           description: string | null
           github_link: string | null
           id: string
+          image_url: string | null
           mentor_id: string | null
           status: string
           title: string
@@ -352,6 +386,7 @@ export type Database = {
           description?: string | null
           github_link?: string | null
           id?: string
+          image_url?: string | null
           mentor_id?: string | null
           status?: string
           title: string
@@ -364,6 +399,7 @@ export type Database = {
           description?: string | null
           github_link?: string | null
           id?: string
+          image_url?: string | null
           mentor_id?: string | null
           status?: string
           title?: string
