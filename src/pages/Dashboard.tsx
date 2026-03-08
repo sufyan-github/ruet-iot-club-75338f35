@@ -13,6 +13,7 @@ const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Tables<"profiles"> | null>(null);
+  const [certificates, setCertificates] = useState<any[]>([]);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     full_name: "",
