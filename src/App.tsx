@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import About from "./pages/About";
 import Projects from "./pages/Projects";
 import Events from "./pages/Events";
+import Alumni from "./pages/Alumni";
 import Team from "./pages/Team";
 import Gallery from "./pages/Gallery";
 import JoinUs from "./pages/JoinUs";
