@@ -666,10 +666,106 @@ const AdminDashboard = () => {
                   </div>
                 </div>
               )}
+
+              {/* ── Course Payments ── */}
+              {paymentSubTab === "course" && (
+                <div>
+                  <div className="flex justify-end mb-4">
+                    <button
+                      onClick={() => {
+                        const rows = courseRegistrations.filter(r => r.payment_method || r.transaction_id).map((r: any) => {
+                          const p = members.find((m: any) => m.user_id === r.user_id);
+                          const c = adminCourses.find((co: any) => co.id === r.course_id);
+                          return {
+                            "Student Name": p?.full_name || "Unknown",
+                            "Email": p?.email || "—",
+                            "Phone": p?.phone || "—",
+                            "Student ID": p?.student_id || "—",
+                            "Department": p?.department || "—",
+                            "Course": c?.title || "—",
+                            "Payment Method": r.payment_method || "—",
+                            "Transaction ID": r.transaction_id || "—",
+                            "Status": r.payment_status,
+                            "Date": new Date(r.registered_at).toLocaleDateString(),
+                          };
+                        });
+                        downloadCSV(rows, `course_payments_${new Date().toISOString().slice(0, 10)}.csv`);
+                        toast.success("CSV exported!");
+                      }}
+                      className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2">
+                      <Download size={16} /> Export CSV
+                    </button>
+                  </div>
+                  {(() => {
+                    const paidRegs = courseRegistrations.filter(r => r.payment_method || r.transaction_id);
+                    const confirmed = paidRegs.filter(r => r.payment_status === "confirmed").length;
+                    const pending = paidRegs.filter(r => r.payment_status === "pending").length;
+                    const rejected = paidRegs.filter(r => r.payment_status === "rejected").length;
+                    return (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div className="p-4 rounded-xl glass text-center">
+                          <p className="text-2xl font-display font-bold text-foreground">{paidRegs.length}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Total Paid Enrollments</p>
+                        </div>
+                        <div className="p-4 rounded-xl glass text-center">
+                          <p className="text-2xl font-display font-bold text-primary">{confirmed}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Confirmed</p>
+                        </div>
+                        <div className="p-4 rounded-xl glass text-center">
+                          <p className="text-2xl font-display font-bold text-foreground">{pending}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Pending</p>
+                        </div>
+                        <div className="p-4 rounded-xl glass text-center">
+                          <div className="flex justify-center gap-3 text-xs">
+                            <span className="text-green-400">{confirmed} ✓</span>
+                            <span className="text-yellow-400">{pending} ⏳</span>
+                            <span className="text-destructive">{rejected} ✗</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">By Status</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  <div className="space-y-3">
+                    {courseRegistrations.length === 0 && <p className="text-center text-muted-foreground">No course enrollments yet.</p>}
+                    {courseRegistrations.map((r: any) => {
+                      const p = members.find((m: any) => m.user_id === r.user_id);
+                      const c = adminCourses.find((co: any) => co.id === r.course_id);
+                      return (
+                        <motion.div key={r.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl glass">
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-foreground">{p?.full_name || "Unknown"}</p>
+                              <p className="text-xs text-primary font-medium">{c?.title || "Unknown Course"} {c?.is_paid ? `· ৳${c.price}` : "· Free"}</p>
+                              <p className="text-xs text-muted-foreground">{p?.email || "—"} · {p?.student_id || "—"} · {p?.department || "—"}</p>
+                              {r.transaction_id && (
+                                <div className="flex items-center gap-3 mt-1.5">
+                                  <span className="text-xs font-mono text-muted-foreground">TXN: {r.transaction_id}</span>
+                                  <span className="text-xs text-muted-foreground">{r.payment_method}</span>
+                                </div>
+                              )}
+                              <p className="text-xs text-muted-foreground mt-1">{new Date(r.registered_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                            </div>
+                            <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${r.payment_status === "confirmed" ? "bg-green-500/10 text-green-400" : r.payment_status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-yellow-500/10 text-yellow-400"}`}>{r.payment_status}</span>
+                            <div className="flex gap-1 shrink-0">
+                              {r.payment_status === "pending" ? (
+                                <>
+                                  <button onClick={() => updateCoursePaymentStatus(r.id, "confirmed")} className="p-1.5 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors" title="Confirm"><Check size={14} /></button>
+                                  <button onClick={() => updateCoursePaymentStatus(r.id, "rejected")} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="Reject"><X size={14} /></button>
+                                </>
+                              ) : (
+                                <button onClick={() => updateCoursePaymentStatus(r.id, "pending")} className="text-[10px] px-2 py-1 rounded bg-secondary text-muted-foreground hover:bg-secondary/80 transition-colors">Reset</button>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
-
-          {/* ════════ Team Tab ════════ */}
           {tab === "team" && (
             <div className="max-w-4xl mx-auto">
               <div className="flex justify-end mb-4">
