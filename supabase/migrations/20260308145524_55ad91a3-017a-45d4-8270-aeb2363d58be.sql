@@ -1,0 +1,1 @@
+ALTER TABLE public.events ADD COLUMN payment_number text DEFAULT NULL, ADD COLUMN bank_account text DEFAULT NULL;

@@ -204,6 +204,7 @@ export type Database = {
       }
       events: {
         Row: {
+          bank_account: string | null
           created_at: string
           date: string
           description: string | null
@@ -212,12 +213,14 @@ export type Database = {
           is_paid: boolean
           max_participants: number | null
           payment_methods: string[] | null
+          payment_number: string | null
           registration_fee: number | null
           title: string
           type: string | null
           venue: string | null
         }
         Insert: {
+          bank_account?: string | null
           created_at?: string
           date: string
           description?: string | null
@@ -226,12 +229,14 @@ export type Database = {
           is_paid?: boolean
           max_participants?: number | null
           payment_methods?: string[] | null
+          payment_number?: string | null
           registration_fee?: number | null
           title: string
           type?: string | null
           venue?: string | null
         }
         Update: {
+          bank_account?: string | null
           created_at?: string
           date?: string
           description?: string | null
@@ -240,6 +245,7 @@ export type Database = {
           is_paid?: boolean
           max_participants?: number | null
           payment_methods?: string[] | null
+          payment_number?: string | null
           registration_fee?: number | null
           title?: string
           type?: string | null
