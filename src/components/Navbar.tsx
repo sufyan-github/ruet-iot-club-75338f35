@@ -1,18 +1,15 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Shield, ChevronDown } from "lucide-react";
+import { Menu, X, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/logo.png";
 
-const mainLinks = [
+const navLinks = [
   { label: "Home", path: "/" },
   { label: "About", path: "/about" },
   { label: "Projects", path: "/projects" },
   { label: "Events", path: "/events" },
-];
-
-const moreLinks = [
   { label: "Alumni", path: "/alumni" },
   { label: "Team", path: "/team" },
   { label: "Gallery", path: "/gallery" },
@@ -20,11 +17,8 @@ const moreLinks = [
   { label: "Contact", path: "/contact" },
 ];
 
-const allLinks = [...mainLinks, ...moreLinks];
-
 const Navbar = () => {
   const [open, setOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
   const { user, isAdmin } = useAuth();
@@ -35,13 +29,9 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Close more dropdown on route change
   useEffect(() => {
-    setMoreOpen(false);
     setOpen(false);
   }, [location.pathname]);
-
-  const isMoreActive = moreLinks.some((l) => location.pathname === l.path);
 
   return (
     <nav
@@ -52,7 +42,6 @@ const Navbar = () => {
       }`}
     >
       <div className="container flex items-center justify-between h-16">
-        {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 group">
           <div className="relative">
             <img src={logo} alt="RUET IoT Club" className="h-9 w-9 relative z-10" />
@@ -64,8 +53,8 @@ const Navbar = () => {
         </Link>
 
         {/* Desktop Nav */}
-        <div className="hidden lg:flex items-center gap-0.5">
-          {mainLinks.map((link) => (
+        <div className="hidden xl:flex items-center gap-0.5">
+          {navLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
@@ -75,7 +64,7 @@ const Navbar = () => {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {link.label}
+              <span className="relative z-10">{link.label}</span>
               {location.pathname === link.path && (
                 <motion.div
                   layoutId="nav-indicator"
@@ -86,50 +75,6 @@ const Navbar = () => {
             </Link>
           ))}
 
-          {/* More dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setMoreOpen(!moreOpen)}
-              onBlur={() => setTimeout(() => setMoreOpen(false), 150)}
-              className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                isMoreActive
-                  ? "text-primary bg-primary/10 border border-primary/20"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              More
-              <ChevronDown
-                size={14}
-                className={`transition-transform duration-200 ${moreOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-            <AnimatePresence>
-              {moreOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute top-full right-0 mt-2 w-44 py-2 rounded-xl bg-card/95 backdrop-blur-xl border border-border/50 shadow-xl shadow-black/20"
-                >
-                  {moreLinks.map((link) => (
-                    <Link
-                      key={link.path}
-                      to={link.path}
-                      className={`block px-4 py-2.5 text-sm font-medium transition-colors ${
-                        location.pathname === link.path
-                          ? "text-primary bg-primary/10"
-                          : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
           {isAdmin && (
             <Link
               to="/admin"
@@ -139,7 +84,8 @@ const Navbar = () => {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Shield size={13} /> Admin
+              <Shield size={13} className="relative z-10" />
+              <span className="relative z-10">Admin</span>
               {location.pathname === "/admin" && (
                 <motion.div
                   layoutId="nav-indicator"
@@ -180,7 +126,7 @@ const Navbar = () => {
         {/* Mobile toggle */}
         <button
           onClick={() => setOpen(!open)}
-          className="lg:hidden p-2 rounded-lg text-foreground hover:bg-secondary/50 transition-colors"
+          className="xl:hidden p-2 rounded-lg text-foreground hover:bg-secondary/50 transition-colors"
         >
           {open ? <X size={22} /> : <Menu size={22} />}
         </button>
@@ -194,10 +140,10 @@ const Navbar = () => {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25 }}
-            className="lg:hidden bg-background/95 backdrop-blur-xl border-t border-border/30 overflow-hidden"
+            className="xl:hidden bg-background/95 backdrop-blur-xl border-t border-border/30 overflow-hidden"
           >
             <div className="container py-4 flex flex-col gap-0.5">
-              {allLinks.map((link) => (
+              {navLinks.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
