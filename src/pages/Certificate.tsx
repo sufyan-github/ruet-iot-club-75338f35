@@ -2,7 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Award, Download, Calendar, User, BookOpen } from "lucide-react";
-import logo from "@/assets/logo.png";
+import iotClubLogo from "@/assets/iot_club_logo.png";
+import ruetLogo from "@/assets/ruet_logo.png";
 import signature from "@/assets/signature.jpg";
 
 const Certificate = () => {
@@ -99,12 +100,13 @@ const Certificate = () => {
           <div className="h-full flex flex-col items-center justify-between py-[4%] px-[6%] relative z-10">
             {/* Header */}
             <div className="text-center shrink-0">
-              <div className="flex items-center justify-center gap-3 mb-3">
-                <img src={logo} alt="RUET IoT Club" className="w-12 h-12" />
-                <div className="text-left">
+              <div className="flex items-center justify-between mb-3">
+                <img src={iotClubLogo} alt="RUET IoT Club" className="w-14 h-14 object-contain" />
+                <div className="text-center flex-1">
                   <h1 className="text-lg font-bold text-gray-800 tracking-wide leading-tight">RUET IoT Club</h1>
                   <p className="text-[10px] text-gray-500 tracking-wider uppercase">Learning Management System</p>
                 </div>
+                <img src={ruetLogo} alt="RUET" className="w-14 h-14 object-contain" />
               </div>
               <div className="w-20 h-[2px] bg-gradient-to-r from-transparent via-primary to-transparent mx-auto mb-3" />
               <h2 className="text-2xl md:text-3xl font-serif font-bold text-gray-700 tracking-[0.2em] uppercase leading-tight">
