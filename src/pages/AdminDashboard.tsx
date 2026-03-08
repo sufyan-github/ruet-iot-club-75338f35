@@ -995,7 +995,68 @@ const AdminDashboard = () => {
           {/* ════════ Courses Tab ════════ */}
           {tab === "courses" && (
             <div className="max-w-4xl mx-auto">
-              <div className="flex justify-end gap-2 mb-4">
+              {/* Stats Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                <div className="p-4 rounded-xl glass text-center">
+                  <p className="text-2xl font-bold text-foreground">{adminCourses.length}</p>
+                  <p className="text-xs text-muted-foreground">Total Courses</p>
+                </div>
+                <div className="p-4 rounded-xl glass text-center">
+                  <p className="text-2xl font-bold text-primary">{courseRegistrations.length}</p>
+                  <p className="text-xs text-muted-foreground">Enrollments</p>
+                </div>
+                <div className="p-4 rounded-xl glass text-center">
+                  <p className="text-2xl font-bold text-foreground">{courseCertificates.length}</p>
+                  <p className="text-xs text-muted-foreground">Certificates Issued</p>
+                </div>
+                <div className="p-4 rounded-xl glass text-center">
+                  <p className="text-2xl font-bold text-foreground">{courseRegistrations.filter(r => r.completed).length}</p>
+                  <p className="text-xs text-muted-foreground">Completed</p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap justify-end gap-2 mb-4">
+                <button onClick={() => {
+                  const rows = courseRegistrations.map(r => {
+                    const p = courseProfiles.find((pr: any) => pr.user_id === r.user_id);
+                    const c = adminCourses.find((co: any) => co.id === r.course_id);
+                    return {
+                      "Student Name": p?.full_name || "—",
+                      "Email": p?.email || "—",
+                      "Phone": p?.phone || "—",
+                      "Student ID": p?.student_id || "—",
+                      "Department": p?.department || "—",
+                      "Course": c?.title || "—",
+                      "Payment Status": r.payment_status,
+                      "Completed": r.completed ? "Yes" : "No",
+                      "Registered At": new Date(r.registered_at).toLocaleDateString(),
+                    };
+                  });
+                  downloadCSV(rows, "enrollments.csv");
+                }}
+                  className="px-3 py-2 rounded-lg bg-secondary text-foreground text-xs font-medium hover:bg-secondary/80 transition-colors flex items-center gap-1.5">
+                  <Download size={14} /> Export Enrollments CSV
+                </button>
+                <button onClick={() => {
+                  const rows = courseCertificates.map(cert => {
+                    const p = courseProfiles.find((pr: any) => pr.user_id === cert.user_id);
+                    const c = adminCourses.find((co: any) => co.id === cert.course_id);
+                    return {
+                      "Certificate #": cert.certificate_number,
+                      "Student Name": p?.full_name || "—",
+                      "Email": p?.email || "—",
+                      "Student ID": p?.student_id || "—",
+                      "Department": p?.department || "—",
+                      "Course": c?.title || "—",
+                      "Issued At": new Date(cert.issued_at).toLocaleDateString(),
+                    };
+                  });
+                  downloadCSV(rows, "certificates.csv");
+                }}
+                  className="px-3 py-2 rounded-lg bg-secondary text-foreground text-xs font-medium hover:bg-secondary/80 transition-colors flex items-center gap-1.5">
+                  <Download size={14} /> Export Certificates CSV
+                </button>
                 <button onClick={() => { showCourseForm ? resetCourseForm() : setShowCourseForm(true); }}
                   className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2">
                   <Plus size={16} /> {showCourseForm ? "Cancel" : "Add Course"}
@@ -1035,18 +1096,19 @@ const AdminDashboard = () => {
                 {adminCourses.map((c: any) => {
                   const cLessons = courseLessons.filter(l => l.course_id === c.id);
                   const cRegs = courseRegistrations.filter(r => r.course_id === c.id);
+                  const cCerts = courseCertificates.filter(cert => cert.course_id === c.id);
                   return (
                     <motion.div key={c.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl glass overflow-hidden">
                       <div className="p-4 flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           {c.image_url && <img src={c.image_url} alt={c.title} className="w-12 h-12 rounded-lg object-cover shrink-0" />}
                           <div className="min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <span className={`text-xs font-mono px-2 py-0.5 rounded ${c.status === "published" ? "bg-green-500/10 text-green-400" : "bg-yellow-500/10 text-yellow-400"}`}>{c.status}</span>
                               <span className={`text-xs font-mono px-2 py-0.5 rounded ${c.is_paid ? "bg-primary/10 text-primary" : "bg-green-500/10 text-green-400"}`}>{c.is_paid ? `৳${c.price}` : "Free"}</span>
                             </div>
                             <h4 className="font-semibold text-sm text-foreground">{c.title}</h4>
-                            <p className="text-xs text-muted-foreground">{cLessons.length} lessons · {cRegs.length} enrolled</p>
+                            <p className="text-xs text-muted-foreground">{cLessons.length} lessons · {cRegs.length} enrolled · {cCerts.length} certificates</p>
                           </div>
                         </div>
                         <div className="flex gap-1 shrink-0">
@@ -1069,6 +1131,48 @@ const AdminDashboard = () => {
                                 </div>
                               </div>
                             ))}
+                          </div>
+                        </div>
+                      )}
+                      {/* Enrolled Students */}
+                      {cRegs.length > 0 && (
+                        <div className="border-t border-border/50 p-3 bg-secondary/20">
+                          <p className="text-xs font-semibold text-muted-foreground mb-2">Enrolled Students ({cRegs.length}):</p>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="text-muted-foreground text-left">
+                                  <th className="pb-1 pr-3">Name</th>
+                                  <th className="pb-1 pr-3">Student ID</th>
+                                  <th className="pb-1 pr-3">Payment</th>
+                                  <th className="pb-1">Progress</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {cRegs.map((r: any) => {
+                                  const p = courseProfiles.find((pr: any) => pr.user_id === r.user_id);
+                                  const hasCert = cCerts.some(cert => cert.user_id === r.user_id);
+                                  return (
+                                    <tr key={r.id} className="border-t border-border/30">
+                                      <td className="py-1.5 pr-3 text-foreground">{p?.full_name || "—"}</td>
+                                      <td className="py-1.5 pr-3 text-muted-foreground">{p?.student_id || "—"}</td>
+                                      <td className="py-1.5 pr-3">
+                                        <span className={`font-mono px-1.5 py-0.5 rounded ${r.payment_status === "confirmed" ? "bg-green-500/10 text-green-400" : "bg-yellow-500/10 text-yellow-400"}`}>{r.payment_status}</span>
+                                      </td>
+                                      <td className="py-1.5">
+                                        {r.completed ? (
+                                          <span className="flex items-center gap-1 text-green-400">
+                                            <Award size={12} /> {hasCert ? "Certified" : "Completed"}
+                                          </span>
+                                        ) : (
+                                          <span className="text-muted-foreground">In Progress</span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
                           </div>
                         </div>
                       )}
@@ -1095,6 +1199,8 @@ const AdminDashboard = () => {
                   </motion.form>
                 </div>
               )}
+            </div>
+          )}
             </div>
           )}
         </div>
