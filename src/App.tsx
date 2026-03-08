@@ -55,6 +55,7 @@ const App = () => (
             <Route path="/research" element={<Research />} />
             <Route path="/courses" element={<Courses />} />
             <Route path="/courses/:id" element={<CourseDetail />} />
+            <Route path="/certificate/:id" element={<Certificate />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
