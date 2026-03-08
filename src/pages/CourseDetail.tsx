@@ -309,10 +309,17 @@ const CourseDetail = () => {
                           </button>
                         )}
                         {lesson.pdf_file && (
-                          <a href={lesson.pdf_file} target="_blank" rel="noopener noreferrer"
-                            className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="View PDF">
+                          <button
+                            onClick={() => setActivePdf(activePdf === lesson.pdf_file ? null : lesson.pdf_file)}
+                            className={`p-2 rounded-lg transition-colors ${
+                              activePdf === lesson.pdf_file
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-primary/10 text-primary hover:bg-primary/20"
+                            }`}
+                            title="View PDF"
+                          >
                             <FileText size={14} />
-                          </a>
+                          </button>
                         )}
                       </div>
                     )}
