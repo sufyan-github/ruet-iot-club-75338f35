@@ -75,11 +75,11 @@ const HeroCarousel = () => {
         </AnimatePresence>
 
         {/* Nav buttons */}
-        <button onClick={prev}
+        <button onClick={prev} aria-label="Previous slide"
           className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-background/60 backdrop-blur-sm text-foreground hover:bg-background/80 transition-colors z-10">
           <ChevronLeft size={18} />
         </button>
-        <button onClick={next}
+        <button onClick={next} aria-label="Next slide"
           className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-background/60 backdrop-blur-sm text-foreground hover:bg-background/80 transition-colors z-10">
           <ChevronRight size={18} />
         </button>
@@ -89,6 +89,7 @@ const HeroCarousel = () => {
       <div className="flex justify-center gap-2 mt-4">
         {slides.map((_, i) => (
           <button key={i} onClick={() => { setDirection(i > current ? 1 : -1); setCurrent(i); }}
+            aria-label={`Go to slide ${i + 1}: ${slides[i].label}`}
             className={`w-2 h-2 rounded-full transition-all duration-300 ${
               i === current ? "bg-primary w-6" : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
             }`}
