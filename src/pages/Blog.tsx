@@ -1,16 +1,28 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Calendar, ArrowRight, PenLine, BookOpen } from "lucide-react";
+import { Calendar, ArrowRight, PenLine, BookOpen, Tag } from "lucide-react";
 import Layout from "@/components/Layout";
-import SectionHeading from "@/components/SectionHeading";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+
+const CATEGORIES = [
+  "All",
+  "IoT",
+  "Embedded Systems",
+  "Machine Learning",
+  "Web Development",
+  "Robotics",
+  "Tutorial",
+  "Project Showcase",
+  "General",
+];
 
 const Blog = () => {
   const { user } = useAuth();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState("All");
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -25,15 +37,19 @@ const Blog = () => {
     fetchPosts();
   }, []);
 
-  const featured = posts[0];
-  const rest = posts.slice(1);
+  const filtered = activeCategory === "All"
+    ? posts
+    : posts.filter((p) => p.category === activeCategory);
+
+  const featured = filtered[0];
+  const rest = filtered.slice(1);
 
   return (
     <Layout>
       <section className="py-24">
         <div className="container max-w-6xl">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 mb-14">
+          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 mb-10">
             <div>
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
@@ -63,24 +79,50 @@ const Blog = () => {
             )}
           </div>
 
+          {/* Category Filter */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="flex flex-wrap gap-2 mb-10"
+          >
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all border ${
+                  activeCategory === cat
+                    ? "bg-primary/15 text-primary border-primary/30"
+                    : "bg-secondary/50 text-muted-foreground border-border hover:text-foreground hover:border-primary/20"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </motion.div>
+
           {loading ? (
             <div className="space-y-6">
               <div className="h-72 rounded-2xl bg-secondary/50 animate-pulse" />
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3].map(i => (
+                {[1, 2, 3].map((i) => (
                   <div key={i} className="h-56 rounded-2xl bg-secondary/50 animate-pulse" />
                 ))}
               </div>
             </div>
-          ) : posts.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               className="text-center py-28 rounded-2xl glass"
             >
               <BookOpen size={48} className="mx-auto text-muted-foreground/40 mb-4" />
-              <p className="text-muted-foreground text-lg mb-2">No blog posts yet.</p>
-              {user && (
+              <p className="text-muted-foreground text-lg mb-2">
+                {activeCategory === "All"
+                  ? "No blog posts yet."
+                  : `No posts in "${activeCategory}" yet.`}
+              </p>
+              {user && activeCategory === "All" && (
                 <Link to="/blog/write" className="text-primary hover:underline text-sm inline-block">
                   Be the first to write one →
                 </Link>
@@ -97,10 +139,15 @@ const Blog = () => {
                   className="group relative rounded-2xl glass overflow-hidden hover:border-primary/40 transition-all duration-300"
                 >
                   <Link to={`/blog/${featured.id}`} className="block p-8 md:p-10">
-                    <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center gap-3 mb-4 flex-wrap">
                       <span className="px-3 py-1 text-xs font-semibold rounded-full bg-primary/15 text-primary border border-primary/20">
                         Latest
                       </span>
+                      {featured.category && (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-accent/15 text-accent border border-accent/20">
+                          <Tag size={10} /> {featured.category}
+                        </span>
+                      )}
                       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <Calendar size={12} />
                         {new Date(featured.created_at).toLocaleDateString("en-US", {
@@ -119,7 +166,6 @@ const Blog = () => {
                       Read article <ArrowRight size={14} />
                     </span>
                   </Link>
-                  {/* Decorative glow */}
                   <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
                 </motion.article>
               )}
@@ -136,12 +182,19 @@ const Blog = () => {
                       className="group flex flex-col rounded-2xl glass hover:border-primary/30 transition-all duration-300 overflow-hidden"
                     >
                       <Link to={`/blog/${post.id}`} className="flex flex-col flex-1 p-6">
-                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
-                          <Calendar size={12} />
-                          {new Date(post.created_at).toLocaleDateString("en-US", {
-                            year: "numeric", month: "short", day: "numeric",
-                          })}
-                        </span>
+                        <div className="flex items-center gap-2 mb-3 flex-wrap">
+                          {post.category && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-medium rounded-full bg-accent/10 text-accent border border-accent/15">
+                              <Tag size={9} /> {post.category}
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Calendar size={12} />
+                            {new Date(post.created_at).toLocaleDateString("en-US", {
+                              year: "numeric", month: "short", day: "numeric",
+                            })}
+                          </span>
+                        </div>
                         <h3 className="text-lg font-display font-semibold text-foreground group-hover:text-primary transition-colors mb-3 leading-snug line-clamp-2">
                           {post.title}
                         </h3>

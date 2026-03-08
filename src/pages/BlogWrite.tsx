@@ -8,11 +8,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
+const CATEGORIES = [
+  "IoT",
+  "Embedded Systems",
+  "Machine Learning",
+  "Web Development",
+  "Robotics",
+  "Tutorial",
+  "Project Showcase",
+  "General",
+];
+
 const BlogWrite = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [category, setCategory] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [myPosts, setMyPosts] = useState<any[]>([]);
 
@@ -42,7 +54,8 @@ const BlogWrite = () => {
       content: content.trim(),
       author_id: user.id,
       published: false,
-    });
+      category: category || null,
+    } as any);
 
     if (error) {
       toast.error("Failed to submit blog post");
@@ -50,6 +63,7 @@ const BlogWrite = () => {
       toast.success("Blog post submitted for review! An admin will review and publish it.");
       setTitle("");
       setContent("");
+      setCategory("");
       // Refresh my posts
       const { data } = await supabase.from("blog_posts").select("*").eq("author_id", user.id).order("created_at", { ascending: false });
       setMyPosts(data || []);
@@ -78,6 +92,16 @@ const BlogWrite = () => {
               onChange={(e) => setTitle(e.target.value)}
               className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            >
+              <option value="">Select a category (optional)</option>
+              {CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
             <textarea
               placeholder="Write your blog content here... *"
               required
