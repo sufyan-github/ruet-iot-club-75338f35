@@ -147,6 +147,10 @@ const AdminDashboard = () => {
         setCourseLessons(lData || []);
         const { data: rData } = await supabase.from("course_registrations").select("*").order("registered_at", { ascending: false });
         setCourseRegistrations(rData || []);
+        const { data: certData } = await supabase.from("certificates").select("*").order("issued_at", { ascending: false });
+        setCourseCertificates(certData || []);
+        const { data: profData } = await supabase.from("profiles").select("user_id, full_name, email, phone, department, student_id");
+        setCourseProfiles(profData || []);
         break;
       }
     }
