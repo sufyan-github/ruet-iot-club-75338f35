@@ -1201,8 +1201,6 @@ const AdminDashboard = () => {
               )}
             </div>
           )}
-            </div>
-          )}
         </div>
       </section>
     </Layout>
