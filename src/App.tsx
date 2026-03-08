@@ -17,6 +17,9 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import EventRegistration from "./pages/EventRegistration";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
+import BlogWrite from "./pages/BlogWrite";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +45,9 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:id" element={<BlogPost />} />
+            <Route path="/blog/write" element={<BlogWrite />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
