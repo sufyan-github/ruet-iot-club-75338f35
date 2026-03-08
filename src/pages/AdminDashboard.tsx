@@ -346,6 +346,40 @@ const AdminDashboard = () => {
           {/* ════════ Payments Tab ════════ */}
           {tab === "payments" && (
             <div className="max-w-4xl mx-auto">
+              {/* Export Button */}
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => {
+                    const headers = ["Name", "Department", "Student ID", "Email", "Transaction ID", "Payment Method", "Amount", "Status", "Date"];
+                    const rows = payments.map((p: any) => {
+                      const member = members.find((m: any) => m.user_id === p.user_id);
+                      return [
+                        member?.full_name || "Unknown",
+                        member?.department || "",
+                        member?.student_id || "",
+                        member?.email || "",
+                        p.transaction_id,
+                        p.payment_method,
+                        p.amount,
+                        p.payment_status,
+                        new Date(p.created_at).toLocaleDateString(),
+                      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(",");
+                    });
+                    const csv = [headers.join(","), ...rows].join("\n");
+                    const blob = new Blob([csv], { type: "text/csv" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `payments_${new Date().toISOString().slice(0, 10)}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast.success("CSV exported!");
+                  }}
+                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2"
+                >
+                  <Download size={16} /> Export CSV
+                </button>
+              </div>
               {/* Summary Cards */}
               {(() => {
                 const totalRegistered = payments.length;
