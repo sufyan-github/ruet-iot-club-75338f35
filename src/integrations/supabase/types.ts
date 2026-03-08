@@ -128,26 +128,91 @@ export type Database = {
         }
         Relationships: []
       }
+      course_registrations: {
+        Row: {
+          completed: boolean
+          course_id: string
+          id: string
+          payment_method: string | null
+          payment_status: string
+          progress: Json | null
+          registered_at: string
+          transaction_id: string | null
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          course_id: string
+          id?: string
+          payment_method?: string | null
+          payment_status?: string
+          progress?: Json | null
+          registered_at?: string
+          transaction_id?: string | null
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          course_id?: string
+          id?: string
+          payment_method?: string | null
+          payment_status?: string
+          progress?: Json | null
+          registered_at?: string
+          transaction_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_registrations_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courses: {
         Row: {
+          category: string | null
           created_at: string
           description: string | null
+          duration: string | null
           id: string
+          image_url: string | null
           instructor: string | null
+          is_paid: boolean
+          max_students: number | null
+          price: number | null
+          status: string
           title: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
           description?: string | null
+          duration?: string | null
           id?: string
+          image_url?: string | null
           instructor?: string | null
+          is_paid?: boolean
+          max_students?: number | null
+          price?: number | null
+          status?: string
           title: string
         }
         Update: {
+          category?: string | null
           created_at?: string
           description?: string | null
+          duration?: string | null
           id?: string
+          image_url?: string | null
           instructor?: string | null
+          is_paid?: boolean
+          max_students?: number | null
+          price?: number | null
+          status?: string
           title?: string
         }
         Relationships: []
@@ -470,6 +535,48 @@ export type Database = {
           status?: string
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      research_papers: {
+        Row: {
+          abstract: string | null
+          authors: string
+          created_at: string
+          created_by: string | null
+          doi_link: string | null
+          id: string
+          pdf_url: string | null
+          research_area: string | null
+          status: string
+          tags: string[] | null
+          title: string
+        }
+        Insert: {
+          abstract?: string | null
+          authors: string
+          created_at?: string
+          created_by?: string | null
+          doi_link?: string | null
+          id?: string
+          pdf_url?: string | null
+          research_area?: string | null
+          status?: string
+          tags?: string[] | null
+          title: string
+        }
+        Update: {
+          abstract?: string | null
+          authors?: string
+          created_at?: string
+          created_by?: string | null
+          doi_link?: string | null
+          id?: string
+          pdf_url?: string | null
+          research_area?: string | null
+          status?: string
+          tags?: string[] | null
+          title?: string
         }
         Relationships: []
       }
