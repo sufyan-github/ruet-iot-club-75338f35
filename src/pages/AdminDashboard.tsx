@@ -62,7 +62,19 @@ const AdminDashboard = () => {
   const [photoForm, setPhotoForm] = useState(emptyPhotoForm);
   const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
 
-  useEffect(() => {
+  const [showResearchForm, setShowResearchForm] = useState(false);
+  const [researchForm, setResearchForm] = useState(emptyResearchForm);
+  const [editingResearchId, setEditingResearchId] = useState<string | null>(null);
+
+  const [showCourseForm, setShowCourseForm] = useState(false);
+  const [courseForm, setCourseForm] = useState(emptyCourseForm);
+  const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
+
+  const [showLessonForm, setShowLessonForm] = useState(false);
+  const [lessonForm, setLessonForm] = useState(emptyLessonForm);
+  const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+
     if (!loading && (!user || !isAdmin)) {
       navigate("/");
       if (!isAdmin && user) toast.error("Admin access required");
