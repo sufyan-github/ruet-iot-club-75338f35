@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getOptimizedImageUrl } from "@/lib/imageUtils";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
