@@ -60,6 +60,9 @@ const HeroCarousel = () => {
               src={slides[current].src}
               alt={slides[current].label}
               className="w-full h-full object-cover"
+              width={512}
+              height={512}
+              loading="lazy"
             />
             {/* Gradient overlay at bottom */}
             <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/90 to-transparent" />
