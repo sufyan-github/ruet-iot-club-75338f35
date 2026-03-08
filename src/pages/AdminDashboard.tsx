@@ -117,15 +117,25 @@ const AdminDashboard = () => {
   };
 
   const updateMemberStatus = async (userId: string, status: string) => {
-    const { error } = await supabase.from("profiles").update({ status }).eq("user_id", userId);
+    let updatePayload: any = { status };
+    
+    // Auto-assign membership ID on approval
+    if (status === "approved") {
+      const { data: existing } = await supabase.from("profiles").select("membership_id").eq("user_id", userId).single();
+      if (!existing?.membership_id) {
+        const { data: idData } = await supabase.rpc("generate_membership_id");
+        if (idData) updatePayload.membership_id = idData;
+      }
+    }
+    
+    const { error } = await supabase.from("profiles").update(updatePayload).eq("user_id", userId);
     if (error) { toast.error("Failed to update status"); return; }
-    toast.success(`Member ${status}`);
+    toast.success(`Member ${status}${updatePayload.membership_id ? ` — ID: ${updatePayload.membership_id}` : ""}`);
     // Send email notification
     try {
       await supabase.functions.invoke("send-notification", {
         body: { user_id: userId, status, type: "membership" },
       });
-      toast.info("Notification email sent");
     } catch { /* silent fail */ }
     fetchData();
   };
