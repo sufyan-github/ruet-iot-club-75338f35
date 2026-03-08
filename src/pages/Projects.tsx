@@ -22,7 +22,7 @@ const Projects = () => {
     fetchProjects();
   }, []);
 
-  const filtered = filter === "All" ? projects : projects.filter((p) => p.category === filter);
+  const filtered = filter === "All" ? projects : projects.filter((p) => p.status?.toLowerCase() === filter.toLowerCase());
 
   return (
     <Layout>
