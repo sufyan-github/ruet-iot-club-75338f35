@@ -20,6 +20,9 @@ import EventRegistration from "./pages/EventRegistration";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import BlogWrite from "./pages/BlogWrite";
+import Research from "./pages/Research";
+import Courses from "./pages/Courses";
+import CourseDetail from "./pages/CourseDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +51,9 @@ const App = () => (
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:id" element={<BlogPost />} />
             <Route path="/blog/write" element={<BlogWrite />} />
+            <Route path="/research" element={<Research />} />
+            <Route path="/courses" element={<Courses />} />
+            <Route path="/courses/:id" element={<CourseDetail />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
