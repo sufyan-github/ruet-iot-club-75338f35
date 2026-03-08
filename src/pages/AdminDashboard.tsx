@@ -345,24 +345,76 @@ const AdminDashboard = () => {
 
           {/* ════════ Payments Tab ════════ */}
           {tab === "payments" && (
-            <div className="space-y-3 max-w-4xl mx-auto">
-              {payments.length === 0 && <p className="text-center text-muted-foreground">No payments yet.</p>}
-              {payments.map((p: any) => (
-                <motion.div key={p.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl glass flex items-center justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-foreground font-mono">{p.transaction_id}</p>
-                    <p className="text-xs text-muted-foreground">{p.payment_method} · ৳{p.amount}</p>
+            <div className="max-w-4xl mx-auto">
+              {/* Summary Cards */}
+              {(() => {
+                const totalRegistered = payments.length;
+                const totalPaid = payments.filter(p => p.payment_status === "verified").reduce((sum, p) => sum + (p.amount || 0), 0);
+                const pendingCount = payments.filter(p => p.payment_status === "pending").length;
+                const verifiedCount = payments.filter(p => p.payment_status === "verified").length;
+                const rejectedCount = payments.filter(p => p.payment_status === "rejected").length;
+                const totalAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+                return (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="p-4 rounded-xl glass text-center">
+                      <p className="text-2xl font-display font-bold text-foreground">{totalRegistered}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Total Registered</p>
+                    </div>
+                    <div className="p-4 rounded-xl glass text-center">
+                      <p className="text-2xl font-display font-bold text-primary">৳{totalPaid}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Total Verified</p>
+                    </div>
+                    <div className="p-4 rounded-xl glass text-center">
+                      <p className="text-2xl font-display font-bold text-foreground">৳{totalAmount}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Total Amount</p>
+                    </div>
+                    <div className="p-4 rounded-xl glass text-center">
+                      <div className="flex justify-center gap-3 text-xs">
+                        <span className="text-green-400">{verifiedCount} ✓</span>
+                        <span className="text-yellow-400">{pendingCount} ⏳</span>
+                        <span className="text-destructive">{rejectedCount} ✗</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">By Status</p>
+                    </div>
                   </div>
-                  <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${
-                    p.payment_status === "verified" ? "bg-green-500/10 text-green-400" :
-                    p.payment_status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-yellow-500/10 text-yellow-400"
-                  }`}>{p.payment_status}</span>
-                  <div className="flex gap-1 shrink-0">
-                    <button onClick={() => updatePaymentStatus(p.id, "verified")} className="p-1.5 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"><Check size={14} /></button>
-                    <button onClick={() => updatePaymentStatus(p.id, "rejected")} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><X size={14} /></button>
-                  </div>
-                </motion.div>
-              ))}
+                );
+              })()}
+
+              {/* Payments List */}
+              <div className="space-y-3">
+                {payments.length === 0 && <p className="text-center text-muted-foreground">No payments yet.</p>}
+                {payments.map((p: any) => {
+                  const member = members.find((m: any) => m.user_id === p.user_id);
+                  return (
+                    <motion.div key={p.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl glass">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground">{member?.full_name || "Unknown Member"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {member?.department || "—"} · {member?.student_id || "—"} · {member?.email || "—"}
+                          </p>
+                          <div className="flex items-center gap-3 mt-1.5">
+                            <span className="text-xs font-mono text-muted-foreground">TXN: {p.transaction_id}</span>
+                            <span className="text-xs text-muted-foreground">{p.payment_method}</span>
+                            <span className="text-xs font-semibold text-primary">৳{p.amount}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {new Date(p.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        </div>
+                        <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${
+                          p.payment_status === "verified" ? "bg-green-500/10 text-green-400" :
+                          p.payment_status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-yellow-500/10 text-yellow-400"
+                        }`}>{p.payment_status}</span>
+                        <div className="flex gap-1 shrink-0">
+                          <button onClick={() => updatePaymentStatus(p.id, "verified")} className="p-1.5 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"><Check size={14} /></button>
+                          <button onClick={() => updatePaymentStatus(p.id, "rejected")} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><X size={14} /></button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
