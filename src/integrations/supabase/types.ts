@@ -290,47 +290,77 @@ export type Database = {
       }
       profiles: {
         Row: {
+          areas_of_interest: string | null
           avatar_url: string | null
+          batch: string | null
           created_at: string
           department: string | null
+          email: string | null
+          experience_level: string | null
           facebook_link: string | null
           full_name: string
+          github: string | null
           id: string
+          linkedin: string | null
+          motivation: string | null
           phone: string | null
+          previous_projects: string | null
+          resume_url: string | null
           session: string | null
           skills: string | null
           status: string
           student_id: string | null
+          time_commitment: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          areas_of_interest?: string | null
           avatar_url?: string | null
+          batch?: string | null
           created_at?: string
           department?: string | null
+          email?: string | null
+          experience_level?: string | null
           facebook_link?: string | null
           full_name: string
+          github?: string | null
           id?: string
+          linkedin?: string | null
+          motivation?: string | null
           phone?: string | null
+          previous_projects?: string | null
+          resume_url?: string | null
           session?: string | null
           skills?: string | null
           status?: string
           student_id?: string | null
+          time_commitment?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          areas_of_interest?: string | null
           avatar_url?: string | null
+          batch?: string | null
           created_at?: string
           department?: string | null
+          email?: string | null
+          experience_level?: string | null
           facebook_link?: string | null
           full_name?: string
+          github?: string | null
           id?: string
+          linkedin?: string | null
+          motivation?: string | null
           phone?: string | null
+          previous_projects?: string | null
+          resume_url?: string | null
           session?: string | null
           skills?: string | null
           status?: string
           student_id?: string | null
+          time_commitment?: string | null
           updated_at?: string
           user_id?: string
         }
