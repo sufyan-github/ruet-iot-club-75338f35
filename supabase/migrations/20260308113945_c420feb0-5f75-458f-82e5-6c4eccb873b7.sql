@@ -1,0 +1,1 @@
+CREATE POLICY "Admins can delete alumni" ON public.alumni FOR DELETE USING (public.has_role(auth.uid(), 'admin'));
