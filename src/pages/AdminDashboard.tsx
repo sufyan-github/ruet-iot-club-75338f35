@@ -268,6 +268,55 @@ const AdminDashboard = () => {
   const deletePhoto = async (id: string) => { const { error } = await supabase.from("activity_photos").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Photo deleted"); fetchData(); } };
   const resetPhotoForm = () => { setPhotoForm(emptyPhotoForm); setEditingPhotoId(null); setShowPhotoForm(false); };
 
+  // ─── Research CRUD ───
+  const handleResearchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload = { title: researchForm.title, authors: researchForm.authors, abstract: researchForm.abstract || null, pdf_url: researchForm.pdf_url || null, doi_link: researchForm.doi_link || null, status: researchForm.status, research_area: researchForm.research_area || null, tags: researchForm.tags ? researchForm.tags.split(",").map(t => t.trim()).filter(Boolean) : null } as any;
+    if (editingResearchId) {
+      const { error } = await supabase.from("research_papers").update(payload).eq("id", editingResearchId);
+      if (error) toast.error("Failed"); else { toast.success("Research updated!"); resetResearchForm(); fetchData(); }
+    } else {
+      const { error } = await supabase.from("research_papers").insert(payload);
+      if (error) toast.error("Failed"); else { toast.success("Research added!"); resetResearchForm(); fetchData(); }
+    }
+  };
+  const editResearch = (r: any) => { setResearchForm({ title: r.title, authors: r.authors, abstract: r.abstract || "", pdf_url: r.pdf_url || "", doi_link: r.doi_link || "", status: r.status || "ongoing", research_area: r.research_area || "", tags: r.tags?.join(", ") || "" }); setEditingResearchId(r.id); setShowResearchForm(true); };
+  const deleteResearch = async (id: string) => { const { error } = await supabase.from("research_papers").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Research deleted"); fetchData(); } };
+  const resetResearchForm = () => { setResearchForm(emptyResearchForm); setEditingResearchId(null); setShowResearchForm(false); };
+
+  // ─── Course CRUD ───
+  const handleCourseSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload = { title: courseForm.title, description: courseForm.description || null, instructor: courseForm.instructor || null, image_url: courseForm.image_url || null, is_paid: courseForm.is_paid, price: courseForm.is_paid && courseForm.price ? parseFloat(courseForm.price) : 0, category: courseForm.category || null, duration: courseForm.duration || null, max_students: courseForm.max_students ? parseInt(courseForm.max_students) : null, status: courseForm.status } as any;
+    if (editingCourseId) {
+      const { error } = await supabase.from("courses").update(payload).eq("id", editingCourseId);
+      if (error) toast.error("Failed"); else { toast.success("Course updated!"); resetCourseForm(); fetchData(); }
+    } else {
+      const { error } = await supabase.from("courses").insert(payload);
+      if (error) toast.error("Failed"); else { toast.success("Course created!"); resetCourseForm(); fetchData(); }
+    }
+  };
+  const editCourse = (c: any) => { setCourseForm({ title: c.title, description: c.description || "", instructor: c.instructor || "", image_url: c.image_url || "", is_paid: c.is_paid || false, price: c.price?.toString() || "", category: c.category || "", duration: c.duration || "", max_students: c.max_students?.toString() || "", status: c.status || "draft" }); setEditingCourseId(c.id); setShowCourseForm(true); };
+  const deleteCourse = async (id: string) => { const { error } = await supabase.from("courses").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Course deleted"); fetchData(); } };
+  const resetCourseForm = () => { setCourseForm(emptyCourseForm); setEditingCourseId(null); setShowCourseForm(false); };
+
+  // ─── Lesson CRUD ───
+  const handleLessonSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCourseId) return;
+    const payload = { title: lessonForm.title, video_url: lessonForm.video_url || null, pdf_file: lessonForm.pdf_file || null, sort_order: parseInt(lessonForm.sort_order) || 0, course_id: selectedCourseId };
+    if (editingLessonId) {
+      const { error } = await supabase.from("lessons").update(payload).eq("id", editingLessonId);
+      if (error) toast.error("Failed"); else { toast.success("Lesson updated!"); resetLessonForm(); fetchData(); }
+    } else {
+      const { error } = await supabase.from("lessons").insert(payload);
+      if (error) toast.error("Failed"); else { toast.success("Lesson added!"); resetLessonForm(); fetchData(); }
+    }
+  };
+  const editLesson = (l: any) => { setLessonForm({ title: l.title, video_url: l.video_url || "", pdf_file: l.pdf_file || "", sort_order: l.sort_order?.toString() || "0" }); setEditingLessonId(l.id); setSelectedCourseId(l.course_id); setShowLessonForm(true); };
+  const deleteLesson = async (id: string) => { const { error } = await supabase.from("lessons").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Lesson deleted"); fetchData(); } };
+  const resetLessonForm = () => { setLessonForm(emptyLessonForm); setEditingLessonId(null); setShowLessonForm(false); };
+
   if (loading || !isAdmin) return null;
 
   const tabsList: { key: TabType; label: string; icon: typeof Users }[] = [
@@ -278,6 +327,8 @@ const AdminDashboard = () => {
     { key: "projects", label: "Projects", icon: FolderOpen },
     { key: "events", label: "Events", icon: Calendar },
     { key: "alumni", label: "Alumni", icon: GraduationCap },
+    { key: "research", label: "Research", icon: FlaskConical },
+    { key: "courses", label: "Courses", icon: BookOpen },
     { key: "photos", label: "Photos", icon: Image },
     { key: "blog", label: "Blog", icon: BookOpen },
   ];
