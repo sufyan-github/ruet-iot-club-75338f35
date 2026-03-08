@@ -191,7 +191,7 @@ const Index = () => {
                   className="flex items-center gap-4 p-4 rounded-xl glass hover:border-primary/30 transition-colors">
                   <Calendar className="text-primary shrink-0" size={20} />
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-sm text-foreground">{event.title}</h4>
+                    <h3 className="font-semibold text-sm text-foreground">{event.title}</h3>
                     <p className="text-xs text-muted-foreground">{event.venue || "TBA"}</p>
                   </div>
                   <span className="text-xs font-mono text-primary shrink-0">
