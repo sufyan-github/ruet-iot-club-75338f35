@@ -56,6 +56,15 @@ const Dashboard = () => {
             });
           }
         });
+
+      supabase
+        .from("certificates")
+        .select("*, courses(title, instructor)")
+        .eq("user_id", user.id)
+        .order("issued_at", { ascending: false })
+        .then(({ data }) => {
+          setCertificates(data || []);
+        });
     }
   }, [user]);
 
