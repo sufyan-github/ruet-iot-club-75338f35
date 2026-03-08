@@ -4,9 +4,9 @@ import Layout from "@/components/Layout";
 import SectionHeading from "@/components/SectionHeading";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Pencil, Save, X } from "lucide-react";
+import { Pencil, Save, X, Award, ExternalLink } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 const Dashboard = () => {
