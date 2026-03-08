@@ -146,6 +146,7 @@ const AdminDashboard = () => {
         const { data: rData } = await supabase.from("course_registrations").select("*").order("registered_at", { ascending: false });
         setCourseRegistrations(rData || []);
         break;
+      }
     }
   };
 
