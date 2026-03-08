@@ -75,6 +75,7 @@ const AdminDashboard = () => {
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
 
+  useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
       navigate("/");
       if (!isAdmin && user) toast.error("Admin access required");
