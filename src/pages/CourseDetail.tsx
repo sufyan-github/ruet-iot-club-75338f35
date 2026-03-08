@@ -85,17 +85,33 @@ const CourseDetail = () => {
   };
 
   const toggleLessonComplete = async (lessonId: string) => {
-    if (!registration) return;
-    const progress = registration.progress || {};
+    if (!registration || !user) return;
+    const progress = { ...(registration.progress || {}) };
     progress[lessonId] = !progress[lessonId];
     const completedCount = Object.values(progress).filter(Boolean).length;
-    const allDone = completedCount === lessons.length;
+    const allDone = completedCount === lessons.length && lessons.length > 0;
     const { error } = await supabase
       .from("course_registrations")
       .update({ progress, completed: allDone })
       .eq("id", registration.id);
-    if (error) toast.error("Failed to update progress");
-    else setRegistration({ ...registration, progress, completed: allDone });
+    if (error) { toast.error("Failed to update progress"); return; }
+    setRegistration({ ...registration, progress, completed: allDone });
+
+    // Auto-generate certificate on completion
+    if (allDone && !certificate) {
+      const { data: certNum } = await supabase.rpc("generate_certificate_number");
+      if (certNum) {
+        const { data: newCert, error: certError } = await supabase
+          .from("certificates")
+          .insert({ user_id: user.id, course_id: id, certificate_number: certNum })
+          .select()
+          .single();
+        if (!certError && newCert) {
+          setCertificate(newCert);
+          toast.success("🎉 Congratulations! Certificate generated!", { duration: 5000 });
+        }
+      }
+    }
   };
 
   const isEnrolled = registration && (registration.payment_status === "confirmed" || !course?.is_paid);
