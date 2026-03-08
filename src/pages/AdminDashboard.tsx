@@ -1181,8 +1181,20 @@ const AdminDashboard = () => {
                                     <tr key={r.id} className="border-t border-border/30">
                                       <td className="py-1.5 pr-3 text-foreground">{p?.full_name || "—"}</td>
                                       <td className="py-1.5 pr-3 text-muted-foreground">{p?.student_id || "—"}</td>
+                                      <td className="py-1.5 pr-3 text-muted-foreground font-mono text-[10px]">{r.transaction_id || "—"}</td>
+                                      <td className="py-1.5 pr-3 text-muted-foreground">{r.payment_method || "—"}</td>
                                       <td className="py-1.5 pr-3">
-                                        <span className={`font-mono px-1.5 py-0.5 rounded ${r.payment_status === "confirmed" ? "bg-green-500/10 text-green-400" : "bg-yellow-500/10 text-yellow-400"}`}>{r.payment_status}</span>
+                                        <span className={`font-mono px-1.5 py-0.5 rounded ${r.payment_status === "confirmed" ? "bg-green-500/10 text-green-400" : r.payment_status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-yellow-500/10 text-yellow-400"}`}>{r.payment_status}</span>
+                                      </td>
+                                      <td className="py-1.5 pr-3">
+                                        {r.payment_status === "pending" ? (
+                                          <div className="flex gap-1">
+                                            <button onClick={() => updateCoursePaymentStatus(r.id, "confirmed")} className="p-1 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors" title="Approve"><Check size={12} /></button>
+                                            <button onClick={() => updateCoursePaymentStatus(r.id, "rejected")} className="p-1 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="Reject"><X size={12} /></button>
+                                          </div>
+                                        ) : (
+                                          <button onClick={() => updateCoursePaymentStatus(r.id, "pending")} className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:bg-secondary/80 transition-colors">Reset</button>
+                                        )}
                                       </td>
                                       <td className="py-1.5">
                                         {r.completed ? (
