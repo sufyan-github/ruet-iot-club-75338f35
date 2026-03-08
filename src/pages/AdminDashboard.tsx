@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Check, X, Users, FolderOpen, Calendar, Eye, GraduationCap, Pencil, Trash2, Plus, UserCog, Image, FileText, Download, ChevronDown, ChevronUp, BookOpen, Mail, FlaskConical, Video } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 
-type TabType = "applications" | "members" | "payments" | "team" | "projects" | "events" | "alumni" | "photos" | "blog";
+type TabType = "applications" | "members" | "payments" | "team" | "projects" | "events" | "alumni" | "photos" | "blog" | "research" | "courses";
 
 const emptyAlumniForm = { name: "", batch: "", department: "", company: "", linkedin: "" };
 const emptyProjectForm = { title: "", description: "", category: "", status: "idea", github_link: "", image_url: "" };
