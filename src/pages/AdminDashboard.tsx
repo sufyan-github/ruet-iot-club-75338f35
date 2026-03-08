@@ -597,6 +597,8 @@ const AdminDashboard = () => {
                     {eventForm.is_paid && (
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
                         <input placeholder="Registration Fee (৳)" type="number" value={eventForm.registration_fee} onChange={(e) => setEventForm({ ...eventForm, registration_fee: e.target.value })} className={inputClass} />
+                        <input placeholder="Payment Number (bKash/Nagad/Rocket)" value={eventForm.payment_number} onChange={(e) => setEventForm({ ...eventForm, payment_number: e.target.value })} className={inputClass} />
+                        <input placeholder="Bank Card/Account Number" value={eventForm.bank_account} onChange={(e) => setEventForm({ ...eventForm, bank_account: e.target.value })} className={inputClass} />
                         <div>
                           <label className="text-sm font-medium text-foreground mb-2 block">Payment Methods:</label>
                           <div className="flex flex-wrap gap-2">

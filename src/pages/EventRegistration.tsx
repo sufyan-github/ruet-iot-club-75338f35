@@ -182,11 +182,15 @@ const EventRegistration = () => {
                     {(form.payment_method === "bKash" || form.payment_method === "Nagad" || form.payment_method === "Rocket") && (
                       <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm text-muted-foreground mb-3">
                         <p>Send ৳{event.registration_fee} to <strong className="text-foreground">
-                          {form.payment_method === "bKash" && "01XXXXXXXXX (bKash Personal)"}
-                          {form.payment_method === "Nagad" && "01XXXXXXXXX (Nagad Personal)"}
-                          {form.payment_method === "Rocket" && "01XXXXXXXXX (Rocket Personal)"}
+                          {event.payment_number || "01580352238"} ({form.payment_method} Personal)
                         </strong></p>
                         <p className="mt-1 text-xs">Use "Send Money" option and note the Transaction ID.</p>
+                      </div>
+                    )}
+                    {form.payment_method === "Online Banking" && event.bank_account && (
+                      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm text-muted-foreground mb-3">
+                        <p>Transfer ৳{event.registration_fee} to Card/Account: <strong className="text-foreground">{event.bank_account}</strong></p>
+                        <p className="mt-1 text-xs">Note the Transaction/Reference ID after transfer.</p>
                       </div>
                     )}
                     <input placeholder="Transaction ID *" required value={form.transaction_id}
