@@ -13,7 +13,7 @@ type TabType = "applications" | "members" | "payments" | "team" | "projects" | "
 
 const emptyAlumniForm = { name: "", batch: "", department: "", company: "", linkedin: "" };
 const emptyProjectForm = { title: "", description: "", category: "", status: "idea", github_link: "", image_url: "" };
-const emptyEventForm = { title: "", date: "", venue: "", description: "", type: "", max_participants: "", image_url: "", is_paid: false, registration_fee: "", payment_methods: [] as string[] };
+const emptyEventForm = { title: "", date: "", venue: "", description: "", type: "", max_participants: "", image_url: "", is_paid: false, registration_fee: "", payment_methods: [] as string[], payment_number: "01580352238", bank_account: "4170331020181850" };
 const TEAM_CATEGORIES = ["Executive Board", "Advisory Board", "Core Team", "General Members"];
 const emptyTeamForm = { name: "", position: "", department: "", bio: "", image_url: "", linkedin: "", github: "", email: "", sort_order: "0", category: "Executive Board" };
 const emptyPhotoForm = { title: "", image_url: "", description: "" };
@@ -152,7 +152,7 @@ const AdminDashboard = () => {
   // ─── Event CRUD ───
   const handleEventSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = { title: eventForm.title, date: eventForm.date, venue: eventForm.venue || null, description: eventForm.description || null, type: eventForm.type || null, max_participants: eventForm.max_participants ? parseInt(eventForm.max_participants) : null, image_url: eventForm.image_url || null, is_paid: eventForm.is_paid, registration_fee: eventForm.is_paid && eventForm.registration_fee ? parseFloat(eventForm.registration_fee) : 0, payment_methods: eventForm.is_paid ? eventForm.payment_methods : [] };
+    const payload = { title: eventForm.title, date: eventForm.date, venue: eventForm.venue || null, description: eventForm.description || null, type: eventForm.type || null, max_participants: eventForm.max_participants ? parseInt(eventForm.max_participants) : null, image_url: eventForm.image_url || null, is_paid: eventForm.is_paid, registration_fee: eventForm.is_paid && eventForm.registration_fee ? parseFloat(eventForm.registration_fee) : 0, payment_methods: eventForm.is_paid ? eventForm.payment_methods : [], payment_number: eventForm.is_paid ? eventForm.payment_number || null : null, bank_account: eventForm.is_paid ? eventForm.bank_account || null : null };
     if (editingEventId) {
       const { error } = await supabase.from("events").update(payload).eq("id", editingEventId);
       if (error) toast.error("Failed"); else { toast.success("Event updated!"); resetEventForm(); fetchData(); }
@@ -161,7 +161,7 @@ const AdminDashboard = () => {
       if (error) toast.error("Failed"); else { toast.success("Event created!"); resetEventForm(); fetchData(); }
     }
   };
-  const editEvent = (ev: any) => { setEventForm({ title: ev.title, date: ev.date ? new Date(ev.date).toISOString().slice(0, 16) : "", venue: ev.venue || "", description: ev.description || "", type: ev.type || "", max_participants: ev.max_participants?.toString() || "", image_url: ev.image_url || "", is_paid: ev.is_paid || false, registration_fee: ev.registration_fee?.toString() || "", payment_methods: ev.payment_methods || [] }); setEditingEventId(ev.id); setShowEventForm(true); };
+  const editEvent = (ev: any) => { setEventForm({ title: ev.title, date: ev.date ? new Date(ev.date).toISOString().slice(0, 16) : "", venue: ev.venue || "", description: ev.description || "", type: ev.type || "", max_participants: ev.max_participants?.toString() || "", image_url: ev.image_url || "", is_paid: ev.is_paid || false, registration_fee: ev.registration_fee?.toString() || "", payment_methods: ev.payment_methods || [], payment_number: ev.payment_number || "01580352238", bank_account: ev.bank_account || "4170331020181850" }); setEditingEventId(ev.id); setShowEventForm(true); };
   const deleteEvent = async (id: string) => { const { error } = await supabase.from("events").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Event deleted"); fetchData(); } };
   const resetEventForm = () => { setEventForm(emptyEventForm); setEditingEventId(null); setShowEventForm(false); };
   const togglePaymentMethod = (method: string) => { setEventForm(prev => ({ ...prev, payment_methods: prev.payment_methods.includes(method) ? prev.payment_methods.filter(m => m !== method) : [...prev.payment_methods, method] })); };
@@ -597,6 +597,8 @@ const AdminDashboard = () => {
                     {eventForm.is_paid && (
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
                         <input placeholder="Registration Fee (৳)" type="number" value={eventForm.registration_fee} onChange={(e) => setEventForm({ ...eventForm, registration_fee: e.target.value })} className={inputClass} />
+                        <input placeholder="Payment Number (bKash/Nagad/Rocket)" value={eventForm.payment_number} onChange={(e) => setEventForm({ ...eventForm, payment_number: e.target.value })} className={inputClass} />
+                        <input placeholder="Bank Card/Account Number" value={eventForm.bank_account} onChange={(e) => setEventForm({ ...eventForm, bank_account: e.target.value })} className={inputClass} />
                         <div>
                           <label className="text-sm font-medium text-foreground mb-2 block">Payment Methods:</label>
                           <div className="flex flex-wrap gap-2">
