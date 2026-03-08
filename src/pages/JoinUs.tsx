@@ -1,20 +1,65 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import Layout from "@/components/Layout";
 import SectionHeading from "@/components/SectionHeading";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const departments = ["CSE", "EEE", "ECE", "ME", "CE", "IPE", "MTE", "URP", "Arch", "GCE", "BECM", "CFPE"];
 
 const JoinUs = () => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     fullName: "", studentId: "", department: "", session: "", email: "", phone: "",
     facebook: "", skills: "", motivation: "", paymentMethod: "", transactionId: "",
   });
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Application submitted! Our team will review your application.");
+    
+    if (!user) {
+      toast.error("Please sign in first to submit your application.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // Update profile
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({
+          full_name: formData.fullName,
+          student_id: formData.studentId,
+          department: formData.department,
+          session: formData.session,
+          phone: formData.phone,
+          facebook_link: formData.facebook,
+          skills: formData.skills,
+        })
+        .eq("user_id", user.id);
+
+      if (profileError) throw profileError;
+
+      // Submit payment
+      const { error: paymentError } = await supabase
+        .from("membership_payments")
+        .insert({
+          user_id: user.id,
+          payment_method: formData.paymentMethod,
+          transaction_id: formData.transactionId,
+        });
+
+      if (paymentError) throw paymentError;
+
+      toast.success("Application submitted! Our team will review your application.");
+    } catch (err: any) {
+      toast.error(err.message || "Something went wrong");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -27,13 +72,20 @@ const JoinUs = () => {
         <div className="container">
           <SectionHeading title="Join RUET IoT Club" subtitle="Become part of the IoT revolution. Membership fee: 300 BDT" />
 
+          {!user && (
+            <div className="max-w-2xl mx-auto mb-8 p-4 rounded-xl glass border-primary/20 text-center">
+              <p className="text-sm text-muted-foreground">
+                Please <Link to="/auth" className="text-primary hover:underline">sign in or create an account</Link> first to submit your membership application.
+              </p>
+            </div>
+          )}
+
           <motion.form
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             onSubmit={handleSubmit}
             className="max-w-2xl mx-auto space-y-6"
           >
-            {/* Personal Info */}
             <div className="p-6 rounded-xl glass space-y-4">
               <h3 className="font-display text-sm font-bold tracking-wider text-primary">Personal Information</h3>
               <div className="grid md:grid-cols-2 gap-4">
@@ -61,7 +113,6 @@ const JoinUs = () => {
                 className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none" />
             </div>
 
-            {/* Payment */}
             <div className="p-6 rounded-xl glass space-y-4">
               <h3 className="font-display text-sm font-bold tracking-wider text-primary">Payment (300 BDT)</h3>
               <p className="text-xs text-muted-foreground">
@@ -82,9 +133,10 @@ const JoinUs = () => {
 
             <button
               type="submit"
-              className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors glow-border"
+              disabled={submitting || !user}
+              className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors glow-border disabled:opacity-50"
             >
-              Submit Application
+              {submitting ? "Submitting..." : "Submit Application"}
             </button>
             <p className="text-xs text-center text-muted-foreground">
               Your application will be reviewed by the admin team. You'll receive a confirmation email.
