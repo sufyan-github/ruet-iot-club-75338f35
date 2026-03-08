@@ -41,6 +41,30 @@ export type Database = {
         }
         Relationships: []
       }
+      activity_photos: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url: string
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string
+          title?: string | null
+        }
+        Relationships: []
+      }
       alumni: {
         Row: {
           batch: string | null
@@ -480,6 +504,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      team_members: {
+        Row: {
+          bio: string | null
+          created_at: string
+          department: string | null
+          email: string | null
+          github: string | null
+          id: string
+          image_url: string | null
+          linkedin: string | null
+          name: string
+          position: string
+          sort_order: number | null
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          github?: string | null
+          id?: string
+          image_url?: string | null
+          linkedin?: string | null
+          name: string
+          position: string
+          sort_order?: number | null
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          github?: string | null
+          id?: string
+          image_url?: string | null
+          linkedin?: string | null
+          name?: string
+          position?: string
+          sort_order?: number | null
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
