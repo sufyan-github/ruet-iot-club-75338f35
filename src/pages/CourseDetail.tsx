@@ -38,6 +38,7 @@ const CourseDetail = () => {
   const [paymentMethod, setPaymentMethod] = useState("bKash");
   const [certificate, setCertificate] = useState<any>(null);
   const [activeVideo, setActiveVideo] = useState<string | null>(null);
+  const [activePdf, setActivePdf] = useState<string | null>(null);
 
   useEffect(() => {
     const fetch = async () => {
