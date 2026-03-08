@@ -14,7 +14,8 @@ type TabType = "applications" | "members" | "payments" | "team" | "projects" | "
 const emptyAlumniForm = { name: "", batch: "", department: "", company: "", linkedin: "" };
 const emptyProjectForm = { title: "", description: "", category: "", status: "idea", github_link: "", image_url: "" };
 const emptyEventForm = { title: "", date: "", venue: "", description: "", type: "", max_participants: "", image_url: "", is_paid: false, registration_fee: "", payment_methods: [] as string[] };
-const emptyTeamForm = { name: "", position: "", department: "", bio: "", image_url: "", linkedin: "", github: "", email: "", sort_order: "0" };
+const TEAM_CATEGORIES = ["Executive Board", "Advisory Board", "Core Team", "General Members"];
+const emptyTeamForm = { name: "", position: "", department: "", bio: "", image_url: "", linkedin: "", github: "", email: "", sort_order: "0", category: "Executive Board" };
 const emptyPhotoForm = { title: "", image_url: "", description: "" };
 
 const AdminDashboard = () => {
@@ -184,7 +185,7 @@ const AdminDashboard = () => {
   // ─── Team CRUD ───
   const handleTeamSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = { name: teamForm.name, position: teamForm.position, department: teamForm.department || null, bio: teamForm.bio || null, image_url: teamForm.image_url || null, linkedin: teamForm.linkedin || null, github: teamForm.github || null, email: teamForm.email || null, sort_order: parseInt(teamForm.sort_order) || 0 };
+    const payload = { name: teamForm.name, position: teamForm.position, department: teamForm.department || null, bio: teamForm.bio || null, image_url: teamForm.image_url || null, linkedin: teamForm.linkedin || null, github: teamForm.github || null, email: teamForm.email || null, sort_order: parseInt(teamForm.sort_order) || 0, category: teamForm.category || "Executive Board" } as any;
     if (editingTeamId) {
       const { error } = await supabase.from("team_members").update(payload).eq("id", editingTeamId);
       if (error) toast.error("Failed"); else { toast.success("Team member updated!"); resetTeamForm(); fetchData(); }
@@ -193,7 +194,7 @@ const AdminDashboard = () => {
       if (error) toast.error("Failed"); else { toast.success("Team member added!"); resetTeamForm(); fetchData(); }
     }
   };
-  const editTeam = (t: any) => { setTeamForm({ name: t.name, position: t.position, department: t.department || "", bio: t.bio || "", image_url: t.image_url || "", linkedin: t.linkedin || "", github: t.github || "", email: t.email || "", sort_order: t.sort_order?.toString() || "0" }); setEditingTeamId(t.id); setShowTeamForm(true); };
+  const editTeam = (t: any) => { setTeamForm({ name: t.name, position: t.position, department: t.department || "", bio: t.bio || "", image_url: t.image_url || "", linkedin: t.linkedin || "", github: t.github || "", email: t.email || "", sort_order: t.sort_order?.toString() || "0", category: t.category || "Executive Board" }); setEditingTeamId(t.id); setShowTeamForm(true); };
   const deleteTeam = async (id: string) => { const { error } = await supabase.from("team_members").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Team member removed"); fetchData(); } };
   const resetTeamForm = () => { setTeamForm(emptyTeamForm); setEditingTeamId(null); setShowTeamForm(false); };
 
@@ -473,6 +474,11 @@ const AdminDashboard = () => {
                   <div className="grid md:grid-cols-2 gap-4">
                     <input placeholder="Full Name *" required value={teamForm.name} onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })} className={inputClass} />
                     <input placeholder="Position (e.g., President) *" required value={teamForm.position} onChange={(e) => setTeamForm({ ...teamForm, position: e.target.value })} className={inputClass} />
+                    <select value={teamForm.category} onChange={(e) => setTeamForm({ ...teamForm, category: e.target.value })} className={inputClass}>
+                      {TEAM_CATEGORIES.map((cat) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
                     <input placeholder="Department" value={teamForm.department} onChange={(e) => setTeamForm({ ...teamForm, department: e.target.value })} className={inputClass} />
                     <input placeholder="Sort Order (0 = first)" type="number" value={teamForm.sort_order} onChange={(e) => setTeamForm({ ...teamForm, sort_order: e.target.value })} className={inputClass} />
                     <input placeholder="Email" value={teamForm.email} onChange={(e) => setTeamForm({ ...teamForm, email: e.target.value })} className={inputClass} />
@@ -501,7 +507,7 @@ const AdminDashboard = () => {
                       )}
                       <div className="min-w-0">
                         <h4 className="font-semibold text-sm text-foreground">{t.name}</h4>
-                        <p className="text-xs text-muted-foreground">{t.position} · {t.department || "—"}</p>
+                        <p className="text-xs text-muted-foreground">{t.position} · {t.category || "Executive Board"} · {t.department || "—"}</p>
                       </div>
                     </div>
                     <div className="flex gap-1 shrink-0">
