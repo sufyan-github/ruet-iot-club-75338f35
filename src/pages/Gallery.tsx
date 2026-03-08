@@ -39,7 +39,7 @@ const Gallery = () => {
                   onClick={() => setSelectedPhoto(photo)}
                   className="aspect-square rounded-xl glass overflow-hidden relative group cursor-pointer"
                 >
-                  <img src={photo.image_url} alt={photo.title || "Activity"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  <img src={getOptimizedImageUrl(photo.image_url, { width: 400, height: 400 })} alt={photo.title || "Activity"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="absolute bottom-3 left-3 right-3">
                       {photo.title && <h4 className="font-semibold text-sm text-foreground">{photo.title}</h4>}
