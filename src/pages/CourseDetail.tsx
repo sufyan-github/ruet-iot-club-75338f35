@@ -5,7 +5,7 @@ import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { BookOpen, Play, FileText, CheckCircle, Lock, ArrowLeft, Award, ExternalLink } from "lucide-react";
+import { BookOpen, Play, FileText, CheckCircle, Lock, ArrowLeft, Award, ExternalLink, X } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const CourseDetail = () => {
