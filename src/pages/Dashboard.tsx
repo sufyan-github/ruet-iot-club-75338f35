@@ -280,6 +280,56 @@ const Dashboard = () => {
               </div>
             </motion.div>
           </div>
+
+          {/* My Certificates */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-6 p-6 rounded-xl glass"
+          >
+            <h3 className="font-display text-sm font-bold tracking-wider text-primary mb-4 flex items-center gap-2">
+              <Award size={16} /> My Certificates
+            </h3>
+            {certificates.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">
+                No certificates yet. Complete a course to earn one!
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {certificates.map((cert) => (
+                  <div
+                    key={cert.id}
+                    className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 border border-border"
+                  >
+                    <div>
+                      <h4 className="text-sm font-semibold text-foreground">
+                        {cert.courses?.title || "Course"}
+                      </h4>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-xs text-muted-foreground font-mono">
+                          {cert.certificate_number}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(cert.issued_at).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    <Link
+                      to={`/certificate/${cert.id}`}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
+                    >
+                      <ExternalLink size={12} /> View
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
         </div>
       </section>
     </Layout>
