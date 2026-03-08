@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Calendar, User, PenLine } from "lucide-react";
+import { Calendar, ArrowRight, PenLine, BookOpen } from "lucide-react";
 import Layout from "@/components/Layout";
 import SectionHeading from "@/components/SectionHeading";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,63 +25,138 @@ const Blog = () => {
     fetchPosts();
   }, []);
 
+  const featured = posts[0];
+  const rest = posts.slice(1);
+
   return (
     <Layout>
-      <section className="py-20">
-        <div className="container max-w-4xl">
-          <div className="flex items-center justify-between mb-2">
-            <SectionHeading title="Blog" subtitle="Insights, tutorials, and updates from our members" align="left" />
+      <section className="py-24">
+        <div className="container max-w-6xl">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 mb-14">
+            <div>
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-4xl md:text-5xl font-display font-bold tracking-tight text-foreground mb-3"
+              >
+                Blog
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="text-muted-foreground text-lg max-w-md"
+              >
+                Insights, tutorials, and updates from our members
+              </motion.p>
+            </div>
             {user && (
-              <Link to="/blog/write"
-                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2 shrink-0">
-                <PenLine size={16} /> Write Post
-              </Link>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+                <Link
+                  to="/blog/write"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-all glow-border"
+                >
+                  <PenLine size={16} /> Write a Post
+                </Link>
+              </motion.div>
             )}
           </div>
 
           {loading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="h-32 rounded-xl bg-secondary animate-pulse" />
-              ))}
+            <div className="space-y-6">
+              <div className="h-72 rounded-2xl bg-secondary/50 animate-pulse" />
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="h-56 rounded-2xl bg-secondary/50 animate-pulse" />
+                ))}
+              </div>
             </div>
           ) : posts.length === 0 ? (
-            <div className="text-center py-20">
-              <p className="text-muted-foreground">No blog posts yet.</p>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center py-28 rounded-2xl glass"
+            >
+              <BookOpen size={48} className="mx-auto text-muted-foreground/40 mb-4" />
+              <p className="text-muted-foreground text-lg mb-2">No blog posts yet.</p>
               {user && (
-                <Link to="/blog/write" className="text-primary hover:underline text-sm mt-2 inline-block">
-                  Be the first to write one!
+                <Link to="/blog/write" className="text-primary hover:underline text-sm inline-block">
+                  Be the first to write one →
                 </Link>
               )}
-            </div>
+            </motion.div>
           ) : (
-            <div className="space-y-6">
-              {posts.map((post, i) => (
+            <div className="space-y-10">
+              {/* Featured Post */}
+              {featured && (
                 <motion.article
-                  key={post.id}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="p-6 rounded-xl glass hover:border-primary/30 transition-all group"
+                  transition={{ duration: 0.5 }}
+                  className="group relative rounded-2xl glass overflow-hidden hover:border-primary/40 transition-all duration-300"
                 >
-                  <h2 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors mb-2">
-                    {post.title}
-                  </h2>
-                  <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                    {post.content?.substring(0, 300)}
-                    {(post.content?.length || 0) > 300 && "..."}
-                  </p>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Calendar size={12} />
-                      {new Date(post.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                  <Link to={`/blog/${featured.id}`} className="block p-8 md:p-10">
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="px-3 py-1 text-xs font-semibold rounded-full bg-primary/15 text-primary border border-primary/20">
+                        Latest
+                      </span>
+                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Calendar size={12} />
+                        {new Date(featured.created_at).toLocaleDateString("en-US", {
+                          year: "numeric", month: "long", day: "numeric",
+                        })}
+                      </span>
+                    </div>
+                    <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground group-hover:text-primary transition-colors mb-4 leading-tight">
+                      {featured.title}
+                    </h2>
+                    <p className="text-muted-foreground leading-relaxed line-clamp-3 max-w-3xl mb-6">
+                      {featured.content?.substring(0, 400)}
+                      {(featured.content?.length || 0) > 400 && "..."}
+                    </p>
+                    <span className="inline-flex items-center gap-2 text-primary text-sm font-semibold group-hover:gap-3 transition-all">
+                      Read article <ArrowRight size={14} />
                     </span>
-                  </div>
-                  <Link to={`/blog/${post.id}`} className="text-primary text-sm hover:underline mt-3 inline-block">
-                    Read more →
                   </Link>
+                  {/* Decorative glow */}
+                  <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
                 </motion.article>
-              ))}
+              )}
+
+              {/* Post Grid */}
+              {rest.length > 0 && (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {rest.map((post, i) => (
+                    <motion.article
+                      key={post.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 + i * 0.05 }}
+                      className="group flex flex-col rounded-2xl glass hover:border-primary/30 transition-all duration-300 overflow-hidden"
+                    >
+                      <Link to={`/blog/${post.id}`} className="flex flex-col flex-1 p-6">
+                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
+                          <Calendar size={12} />
+                          {new Date(post.created_at).toLocaleDateString("en-US", {
+                            year: "numeric", month: "short", day: "numeric",
+                          })}
+                        </span>
+                        <h3 className="text-lg font-display font-semibold text-foreground group-hover:text-primary transition-colors mb-3 leading-snug line-clamp-2">
+                          {post.title}
+                        </h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 flex-1 mb-4">
+                          {post.content?.substring(0, 200)}
+                          {(post.content?.length || 0) > 200 && "..."}
+                        </p>
+                        <span className="inline-flex items-center gap-1.5 text-primary text-sm font-medium group-hover:gap-2.5 transition-all mt-auto">
+                          Read more <ArrowRight size={13} />
+                        </span>
+                      </Link>
+                    </motion.article>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
