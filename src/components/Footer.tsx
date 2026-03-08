@@ -42,15 +42,15 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold text-sm mb-4 text-foreground">Follow Us</h4>
             <div className="flex gap-3">
-              <a href="https://www.facebook.com/ruet.iot.club" target="_blank" rel="noopener noreferrer"
+              <a href="https://www.facebook.com/ruet.iot.club" target="_blank" rel="noopener noreferrer" aria-label="Facebook"
                 className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
                 <Facebook size={16} />
               </a>
-              <a href="https://www.linkedin.com/company/ruet-iot-club" target="_blank" rel="noopener noreferrer"
+              <a href="https://www.linkedin.com/company/ruet-iot-club" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"
                 className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
                 <Linkedin size={16} />
               </a>
-              <a href="https://github.com" target="_blank" rel="noopener noreferrer"
+              <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub"
                 className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
                 <Github size={16} />
               </a>
