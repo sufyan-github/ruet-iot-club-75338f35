@@ -13,6 +13,7 @@ const BlogWrite = () => {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [category, setCategory] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [myPosts, setMyPosts] = useState<any[]>([]);
 
