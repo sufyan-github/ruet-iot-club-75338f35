@@ -14,7 +14,8 @@ type TabType = "applications" | "members" | "payments" | "team" | "projects" | "
 const emptyAlumniForm = { name: "", batch: "", department: "", company: "", linkedin: "" };
 const emptyProjectForm = { title: "", description: "", category: "", status: "idea", github_link: "", image_url: "" };
 const emptyEventForm = { title: "", date: "", venue: "", description: "", type: "", max_participants: "", image_url: "", is_paid: false, registration_fee: "", payment_methods: [] as string[] };
-const emptyTeamForm = { name: "", position: "", department: "", bio: "", image_url: "", linkedin: "", github: "", email: "", sort_order: "0" };
+const TEAM_CATEGORIES = ["Executive Board", "Advisory Board", "Core Team", "General Members"];
+const emptyTeamForm = { name: "", position: "", department: "", bio: "", image_url: "", linkedin: "", github: "", email: "", sort_order: "0", category: "Executive Board" };
 const emptyPhotoForm = { title: "", image_url: "", description: "" };
 
 const AdminDashboard = () => {
