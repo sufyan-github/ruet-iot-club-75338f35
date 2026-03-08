@@ -5,8 +5,25 @@ import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { BookOpen, Play, FileText, CheckCircle, Lock, ArrowLeft, Award, ExternalLink } from "lucide-react";
+import { BookOpen, Play, FileText, CheckCircle, Lock, ArrowLeft, Award, ExternalLink, X } from "lucide-react";
 import { Link } from "react-router-dom";
+
+const getYouTubeEmbedUrl = (url: string): string => {
+  try {
+    const u = new URL(url);
+    let videoId = "";
+    if (u.hostname.includes("youtu.be")) {
+      videoId = u.pathname.slice(1);
+    } else if (u.searchParams.get("v")) {
+      videoId = u.searchParams.get("v")!;
+    } else if (u.pathname.includes("/embed/")) {
+      videoId = u.pathname.split("/embed/")[1];
+    }
+    return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1` : url;
+  } catch {
+    return url;
+  }
+};
 
 const CourseDetail = () => {
   const { id } = useParams();
@@ -20,6 +37,7 @@ const CourseDetail = () => {
   const [txnId, setTxnId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("bKash");
   const [certificate, setCertificate] = useState<any>(null);
+  const [activeVideo, setActiveVideo] = useState<string | null>(null);
 
   useEffect(() => {
     const fetch = async () => {
@@ -208,6 +226,34 @@ const CourseDetail = () => {
             </div>
           )}
 
+          {/* Video Player */}
+          {activeVideo && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 rounded-xl overflow-hidden glass"
+            >
+              <div className="flex items-center justify-between p-3 border-b border-border">
+                <p className="text-sm font-medium text-foreground">Now Playing</p>
+                <button
+                  onClick={() => setActiveVideo(null)}
+                  className="p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+                <iframe
+                  className="absolute inset-0 w-full h-full"
+                  src={getYouTubeEmbedUrl(activeVideo)}
+                  title="Lesson Video"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            </motion.div>
+          )}
+
           {/* Lessons */}
           <div className="space-y-3">
             <h2 className="font-display text-lg font-bold text-foreground mb-4">
@@ -249,10 +295,17 @@ const CourseDetail = () => {
                     {canAccess && (
                       <div className="flex gap-2 shrink-0">
                         {lesson.video_url && (
-                          <a href={lesson.video_url} target="_blank" rel="noopener noreferrer"
-                            className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="Watch Video">
+                          <button
+                            onClick={() => setActiveVideo(lesson.video_url)}
+                            className={`p-2 rounded-lg transition-colors ${
+                              activeVideo === lesson.video_url
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-primary/10 text-primary hover:bg-primary/20"
+                            }`}
+                            title="Watch Video"
+                          >
                             <Play size={14} />
-                          </a>
+                          </button>
                         )}
                         {lesson.pdf_file && (
                           <a href={lesson.pdf_file} target="_blank" rel="noopener noreferrer"
