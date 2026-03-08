@@ -24,6 +24,8 @@ const AdminDashboard = () => {
   const [tab, setTab] = useState<TabType>("applications");
   const [members, setMembers] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
+  const [eventPayments, setEventPayments] = useState<any[]>([]);
+  const [paymentSubTab, setPaymentSubTab] = useState<"membership" | "event">("membership");
   const [projects, setProjects] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [alumni, setAlumni] = useState<any[]>([]);
@@ -74,10 +76,11 @@ const AdminDashboard = () => {
       }
       case "payments": {
         const { data: payData } = await supabase.from("membership_payments").select("*").order("created_at", { ascending: false });
-        // Fetch member names for payments
+        const { data: eventRegData } = await supabase.from("event_registrations").select("*, events(title)").order("registered_at", { ascending: false });
         const { data: profilesData } = await supabase.from("profiles").select("user_id, full_name, email, phone, department, student_id");
         setMembers(profilesData || []);
         setPayments(payData || []);
+        setEventPayments(eventRegData || []);
         break;
       }
       case "projects": {
@@ -129,6 +132,12 @@ const AdminDashboard = () => {
 
   const updatePaymentStatus = async (id: string, status: string) => {
     const { error } = await supabase.from("membership_payments").update({ payment_status: status }).eq("id", id);
+    if (error) toast.error("Failed to update payment");
+    else { toast.success(`Payment ${status}`); fetchData(); }
+  };
+
+  const updateEventPaymentStatus = async (id: string, status: string) => {
+    const { error } = await supabase.from("event_registrations").update({ payment_status: status }).eq("id", id);
     if (error) toast.error("Failed to update payment");
     else { toast.success(`Payment ${status}`); fetchData(); }
   };
@@ -347,109 +356,174 @@ const AdminDashboard = () => {
           {/* ════════ Payments Tab ════════ */}
           {tab === "payments" && (
             <div className="max-w-4xl mx-auto">
-              {/* Export Button */}
-              <div className="flex justify-end mb-4">
-                <button
-                  onClick={() => {
-                    const headers = ["Name", "Department", "Student ID", "Email", "Transaction ID", "Payment Method", "Amount", "Status", "Date"];
-                    const rows = payments.map((p: any) => {
-                      const member = members.find((m: any) => m.user_id === p.user_id);
-                      return [
-                        member?.full_name || "Unknown",
-                        member?.department || "",
-                        member?.student_id || "",
-                        member?.email || "",
-                        p.transaction_id,
-                        p.payment_method,
-                        p.amount,
-                        p.payment_status,
-                        new Date(p.created_at).toLocaleDateString(),
-                      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(",");
-                    });
-                    const csv = [headers.join(","), ...rows].join("\n");
-                    const blob = new Blob([csv], { type: "text/csv" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = `payments_${new Date().toISOString().slice(0, 10)}.csv`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                    toast.success("CSV exported!");
-                  }}
-                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2"
-                >
-                  <Download size={16} /> Export CSV
+              {/* Sub-tabs */}
+              <div className="flex gap-2 mb-6">
+                <button onClick={() => setPaymentSubTab("membership")}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${paymentSubTab === "membership" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}>
+                  Membership Payments
+                </button>
+                <button onClick={() => setPaymentSubTab("event")}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${paymentSubTab === "event" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}>
+                  Event Payments
                 </button>
               </div>
-              {/* Summary Cards */}
-              {(() => {
-                const totalRegistered = payments.length;
-                const totalPaid = payments.filter(p => p.payment_status === "verified").reduce((sum, p) => sum + (p.amount || 0), 0);
-                const pendingCount = payments.filter(p => p.payment_status === "pending").length;
-                const verifiedCount = payments.filter(p => p.payment_status === "verified").length;
-                const rejectedCount = payments.filter(p => p.payment_status === "rejected").length;
-                const totalAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-                return (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div className="p-4 rounded-xl glass text-center">
-                      <p className="text-2xl font-display font-bold text-foreground">{totalRegistered}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Total Registered</p>
-                    </div>
-                    <div className="p-4 rounded-xl glass text-center">
-                      <p className="text-2xl font-display font-bold text-primary">৳{totalPaid}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Total Verified</p>
-                    </div>
-                    <div className="p-4 rounded-xl glass text-center">
-                      <p className="text-2xl font-display font-bold text-foreground">৳{totalAmount}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Total Amount</p>
-                    </div>
-                    <div className="p-4 rounded-xl glass text-center">
-                      <div className="flex justify-center gap-3 text-xs">
-                        <span className="text-green-400">{verifiedCount} ✓</span>
-                        <span className="text-yellow-400">{pendingCount} ⏳</span>
-                        <span className="text-destructive">{rejectedCount} ✗</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-2">By Status</p>
-                    </div>
-                  </div>
-                );
-              })()}
 
-              {/* Payments List */}
-              <div className="space-y-3">
-                {payments.length === 0 && <p className="text-center text-muted-foreground">No payments yet.</p>}
-                {payments.map((p: any) => {
-                  const member = members.find((m: any) => m.user_id === p.user_id);
-                  return (
-                    <motion.div key={p.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl glass">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-foreground">{member?.full_name || "Unknown Member"}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {member?.department || "—"} · {member?.student_id || "—"} · {member?.email || "—"}
-                          </p>
-                          <div className="flex items-center gap-3 mt-1.5">
-                            <span className="text-xs font-mono text-muted-foreground">TXN: {p.transaction_id}</span>
-                            <span className="text-xs text-muted-foreground">{p.payment_method}</span>
-                            <span className="text-xs font-semibold text-primary">৳{p.amount}</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {new Date(p.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                          </p>
+              {/* ── Membership Payments ── */}
+              {paymentSubTab === "membership" && (
+                <div>
+                  <div className="flex justify-end mb-4">
+                    <button
+                      onClick={() => {
+                        const headers = ["Name", "Department", "Student ID", "Email", "Transaction ID", "Payment Method", "Amount", "Status", "Date"];
+                        const rows = payments.map((p: any) => {
+                          const member = members.find((m: any) => m.user_id === p.user_id);
+                          return [member?.full_name || "Unknown", member?.department || "", member?.student_id || "", member?.email || "", p.transaction_id, p.payment_method, p.amount, p.payment_status, new Date(p.created_at).toLocaleDateString()].map(v => `"${String(v).replace(/"/g, '""')}"`).join(",");
+                        });
+                        const csv = [headers.join(","), ...rows].join("\n");
+                        const blob = new Blob([csv], { type: "text/csv" });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a"); a.href = url; a.download = `membership_payments_${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(url);
+                        toast.success("CSV exported!");
+                      }}
+                      className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2">
+                      <Download size={16} /> Export CSV
+                    </button>
+                  </div>
+                  {(() => {
+                    const totalPaid = payments.filter(p => p.payment_status === "verified").reduce((sum, p) => sum + (p.amount || 0), 0);
+                    const pendingCount = payments.filter(p => p.payment_status === "pending").length;
+                    const verifiedCount = payments.filter(p => p.payment_status === "verified").length;
+                    const rejectedCount = payments.filter(p => p.payment_status === "rejected").length;
+                    return (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div className="p-4 rounded-xl glass text-center">
+                          <p className="text-2xl font-display font-bold text-foreground">{payments.length}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Total</p>
                         </div>
-                        <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${
-                          p.payment_status === "verified" ? "bg-green-500/10 text-green-400" :
-                          p.payment_status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-yellow-500/10 text-yellow-400"
-                        }`}>{p.payment_status}</span>
-                        <div className="flex gap-1 shrink-0">
-                          <button onClick={() => updatePaymentStatus(p.id, "verified")} className="p-1.5 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"><Check size={14} /></button>
-                          <button onClick={() => updatePaymentStatus(p.id, "rejected")} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><X size={14} /></button>
+                        <div className="p-4 rounded-xl glass text-center">
+                          <p className="text-2xl font-display font-bold text-primary">৳{totalPaid}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Verified</p>
+                        </div>
+                        <div className="p-4 rounded-xl glass text-center">
+                          <p className="text-2xl font-display font-bold text-foreground">৳{payments.reduce((s, p) => s + (p.amount || 0), 0)}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Total Amount</p>
+                        </div>
+                        <div className="p-4 rounded-xl glass text-center">
+                          <div className="flex justify-center gap-3 text-xs">
+                            <span className="text-green-400">{verifiedCount} ✓</span>
+                            <span className="text-yellow-400">{pendingCount} ⏳</span>
+                            <span className="text-destructive">{rejectedCount} ✗</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">By Status</p>
                         </div>
                       </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
+                    );
+                  })()}
+                  <div className="space-y-3">
+                    {payments.length === 0 && <p className="text-center text-muted-foreground">No membership payments yet.</p>}
+                    {payments.map((p: any) => {
+                      const member = members.find((m: any) => m.user_id === p.user_id);
+                      return (
+                        <motion.div key={p.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl glass">
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-foreground">{member?.full_name || "Unknown Member"}</p>
+                              <p className="text-xs text-muted-foreground">{member?.department || "—"} · {member?.student_id || "—"} · {member?.email || "—"}</p>
+                              <div className="flex items-center gap-3 mt-1.5">
+                                <span className="text-xs font-mono text-muted-foreground">TXN: {p.transaction_id}</span>
+                                <span className="text-xs text-muted-foreground">{p.payment_method}</span>
+                                <span className="text-xs font-semibold text-primary">৳{p.amount}</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">{new Date(p.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                            </div>
+                            <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${p.payment_status === "verified" ? "bg-green-500/10 text-green-400" : p.payment_status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-yellow-500/10 text-yellow-400"}`}>{p.payment_status}</span>
+                            <div className="flex gap-1 shrink-0">
+                              <button onClick={() => updatePaymentStatus(p.id, "verified")} className="p-1.5 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"><Check size={14} /></button>
+                              <button onClick={() => updatePaymentStatus(p.id, "rejected")} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><X size={14} /></button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Event Payments ── */}
+              {paymentSubTab === "event" && (
+                <div>
+                  <div className="flex justify-end mb-4">
+                    <button
+                      onClick={() => {
+                        const headers = ["Name", "Email", "Phone", "Department", "Event", "Payment Method", "Transaction ID", "Status", "Date"];
+                        const rows = eventPayments.map((p: any) => {
+                          return [p.name || "Unknown", p.email || "", p.phone || "", p.department || "", p.events?.title || "Unknown Event", p.payment_method || "Free", p.transaction_id || "—", p.payment_status, new Date(p.registered_at).toLocaleDateString()].map(v => `"${String(v).replace(/"/g, '""')}"`).join(",");
+                        });
+                        const csv = [headers.join(","), ...rows].join("\n");
+                        const blob = new Blob([csv], { type: "text/csv" });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a"); a.href = url; a.download = `event_payments_${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(url);
+                        toast.success("CSV exported!");
+                      }}
+                      className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2">
+                      <Download size={16} /> Export CSV
+                    </button>
+                  </div>
+                  {(() => {
+                    const confirmed = eventPayments.filter(p => p.payment_status === "confirmed").length;
+                    const pending = eventPayments.filter(p => p.payment_status === "pending").length;
+                    const rejected = eventPayments.filter(p => p.payment_status === "rejected").length;
+                    return (
+                      <div className="grid grid-cols-3 gap-4 mb-6">
+                        <div className="p-4 rounded-xl glass text-center">
+                          <p className="text-2xl font-display font-bold text-foreground">{eventPayments.length}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Total Registrations</p>
+                        </div>
+                        <div className="p-4 rounded-xl glass text-center">
+                          <p className="text-2xl font-display font-bold text-primary">{confirmed}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Confirmed</p>
+                        </div>
+                        <div className="p-4 rounded-xl glass text-center">
+                          <div className="flex justify-center gap-3 text-xs">
+                            <span className="text-green-400">{confirmed} ✓</span>
+                            <span className="text-yellow-400">{pending} ⏳</span>
+                            <span className="text-destructive">{rejected} ✗</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">By Status</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  <div className="space-y-3">
+                    {eventPayments.length === 0 && <p className="text-center text-muted-foreground">No event registrations yet.</p>}
+                    {eventPayments.map((p: any) => (
+                      <motion.div key={p.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl glass">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-foreground">{p.name || "Unknown"}</p>
+                            <p className="text-xs text-primary font-medium">{p.events?.title || "Unknown Event"}</p>
+                            <p className="text-xs text-muted-foreground">{p.email || "—"} · {p.phone || "—"} · {p.department || "—"}</p>
+                            {p.transaction_id && (
+                              <div className="flex items-center gap-3 mt-1.5">
+                                <span className="text-xs font-mono text-muted-foreground">TXN: {p.transaction_id}</span>
+                                <span className="text-xs text-muted-foreground">{p.payment_method}</span>
+                              </div>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-1">{new Date(p.registered_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                          </div>
+                          <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${p.payment_status === "confirmed" ? "bg-green-500/10 text-green-400" : p.payment_status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-yellow-500/10 text-yellow-400"}`}>{p.payment_status}</span>
+                          {p.payment_status !== "confirmed" && (
+                            <div className="flex gap-1 shrink-0">
+                              <button onClick={() => updateEventPaymentStatus(p.id, "confirmed")} className="p-1.5 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"><Check size={14} /></button>
+                              <button onClick={() => updateEventPaymentStatus(p.id, "rejected")} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><X size={14} /></button>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
