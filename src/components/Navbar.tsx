@@ -10,6 +10,7 @@ const navLinks = [
   { label: "About", path: "/about" },
   { label: "Projects", path: "/projects" },
   { label: "Events", path: "/events" },
+  { label: "Alumni", path: "/alumni" },
   { label: "Team", path: "/team" },
   { label: "Gallery", path: "/gallery" },
   { label: "Contact", path: "/contact" },
