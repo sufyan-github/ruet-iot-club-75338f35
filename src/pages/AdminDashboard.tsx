@@ -101,6 +101,11 @@ const AdminDashboard = () => {
         setPhotos(data || []);
         break;
       }
+      case "blog": {
+        const { data } = await supabase.from("blog_posts").select("*").order("created_at", { ascending: false });
+        setBlogPosts(data || []);
+        break;
+      }
     }
   };
 
