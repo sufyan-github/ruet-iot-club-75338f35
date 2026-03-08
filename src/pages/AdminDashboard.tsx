@@ -614,6 +614,59 @@ const AdminDashboard = () => {
               </div>
             </div>
           )}
+
+          {/* ════════ Blog Tab ════════ */}
+          {tab === "blog" && (
+            <div className="max-w-4xl mx-auto">
+              <p className="text-xs text-muted-foreground text-center mb-4">Review and publish member blog posts</p>
+              {blogPosts.length === 0 && <p className="text-center text-muted-foreground">No blog posts yet.</p>}
+              <div className="space-y-3">
+                {blogPosts.map((post: any) => (
+                  <motion.div key={post.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="p-4 rounded-xl glass">
+                    <div className="flex items-center justify-between gap-4 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm text-foreground">{post.title}</h4>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(post.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${
+                        post.published ? "bg-green-500/10 text-green-400" : "bg-yellow-500/10 text-yellow-400"
+                      }`}>
+                        {post.published ? "Published" : "Pending"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-3 mb-3">{post.content?.substring(0, 200)}</p>
+                    <div className="flex gap-2">
+                      {!post.published && (
+                        <button onClick={async () => {
+                          const { error } = await supabase.from("blog_posts").update({ published: true }).eq("id", post.id);
+                          if (error) toast.error("Failed"); else { toast.success("Blog post published!"); fetchData(); }
+                        }} className="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 text-xs font-medium transition-colors flex items-center gap-1">
+                          <Check size={12} /> Publish
+                        </button>
+                      )}
+                      {post.published && (
+                        <button onClick={async () => {
+                          const { error } = await supabase.from("blog_posts").update({ published: false }).eq("id", post.id);
+                          if (error) toast.error("Failed"); else { toast.success("Blog post unpublished"); fetchData(); }
+                        }} className="px-3 py-1.5 rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 text-xs font-medium transition-colors">
+                          Unpublish
+                        </button>
+                      )}
+                      <button onClick={async () => {
+                        const { error } = await supabase.from("blog_posts").delete().eq("id", post.id);
+                        if (error) toast.error("Failed"); else { toast.success("Blog post deleted"); fetchData(); }
+                      }} className="px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 text-xs font-medium transition-colors flex items-center gap-1">
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </Layout>
