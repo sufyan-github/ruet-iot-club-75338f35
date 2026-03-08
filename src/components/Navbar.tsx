@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/logo.png";
 
 const navLinks = [
@@ -17,6 +18,7 @@ const navLinks = [
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const { user, isAdmin } = useAuth();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/30">
@@ -43,12 +45,39 @@ const Navbar = () => {
               {link.label}
             </Link>
           ))}
-          <Link
-            to="/join"
-            className="ml-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors glow-border"
-          >
-            Join Us
-          </Link>
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1 ${
+                location.pathname === "/admin" ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+              }`}
+            >
+              <Shield size={14} /> Admin
+            </Link>
+          )}
+          {user ? (
+            <Link
+              to="/dashboard"
+              className="ml-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors glow-border"
+            >
+              Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link
+                to="/auth"
+                className="ml-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground font-semibold text-sm hover:bg-secondary/80 transition-colors"
+              >
+                Sign In
+              </Link>
+              <Link
+                to="/join"
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors glow-border"
+              >
+                Join Us
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile toggle */}
@@ -84,13 +113,29 @@ const Navbar = () => {
                   {link.label}
                 </Link>
               ))}
-              <Link
-                to="/join"
-                onClick={() => setOpen(false)}
-                className="mt-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm text-center"
-              >
-                Join Us
-              </Link>
+              {isAdmin && (
+                <Link to="/admin" onClick={() => setOpen(false)}
+                  className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground flex items-center gap-1">
+                  <Shield size={14} /> Admin
+                </Link>
+              )}
+              {user ? (
+                <Link to="/dashboard" onClick={() => setOpen(false)}
+                  className="mt-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm text-center">
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link to="/auth" onClick={() => setOpen(false)}
+                    className="mt-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground font-semibold text-sm text-center">
+                    Sign In
+                  </Link>
+                  <Link to="/join" onClick={() => setOpen(false)}
+                    className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm text-center">
+                    Join Us
+                  </Link>
+                </>
+              )}
             </div>
           </motion.div>
         )}
