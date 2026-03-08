@@ -4,14 +4,38 @@ import SectionHeading from "@/components/SectionHeading";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const Contact = () => {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Message sent! We'll get back to you soon.");
-    setForm({ name: "", email: "", subject: "", message: "" });
+    if (!form.name || !form.email || !form.subject || !form.message) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-notification", {
+        body: {
+          type: "contact",
+          name: form.name,
+          email: form.email,
+          subject: form.subject,
+          message: form.message,
+        },
+      });
+      if (error) throw error;
+      toast.success("Message sent! We'll get back to you soon.");
+      setForm({ name: "", email: "", subject: "", message: "" });
+    } catch (err: any) {
+      toast.error("Failed to send message. Please try again.");
+      console.error(err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -47,7 +71,21 @@ const Contact = () => {
                     <Phone className="text-primary shrink-0 mt-0.5" size={18} />
                     <div>
                       <p className="text-sm font-medium text-foreground">Phone</p>
-                      <p className="text-sm text-muted-foreground">+880 1XXX-XXXXXX</p>
+                      <p className="text-sm text-muted-foreground">+880 1580-352238</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-xl glass">
+                <h3 className="font-display text-sm font-bold tracking-wider text-primary mb-4">Membership & Payment</h3>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <Phone className="text-primary shrink-0 mt-0.5" size={18} />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Payment & Membership Contact</p>
+                      <p className="text-sm text-muted-foreground">+880 1580-352238</p>
+                      <p className="text-xs text-muted-foreground mt-1">Contact this number for membership payment queries, bKash/Nagad transactions, and any membership-related inquiries.</p>
                     </div>
                   </div>
                 </div>
@@ -77,9 +115,9 @@ const Contact = () => {
                 className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
               <textarea name="message" placeholder="Your Message *" required rows={5} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}
                 className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none" />
-              <button type="submit"
-                className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors glow-border">
-                Send Message
+              <button type="submit" disabled={submitting}
+                className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors glow-border disabled:opacity-50">
+                {submitting ? "Sending..." : "Send Message"}
               </button>
             </motion.form>
           </div>
