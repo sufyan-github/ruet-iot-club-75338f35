@@ -76,10 +76,11 @@ const AdminDashboard = () => {
       }
       case "payments": {
         const { data: payData } = await supabase.from("membership_payments").select("*").order("created_at", { ascending: false });
-        // Fetch member names for payments
+        const { data: eventRegData } = await supabase.from("event_registrations").select("*, events(title)").order("registered_at", { ascending: false });
         const { data: profilesData } = await supabase.from("profiles").select("user_id, full_name, email, phone, department, student_id");
         setMembers(profilesData || []);
         setPayments(payData || []);
+        setEventPayments(eventRegData || []);
         break;
       }
       case "projects": {
