@@ -194,7 +194,7 @@ const AdminDashboard = () => {
       if (error) toast.error("Failed"); else { toast.success("Team member added!"); resetTeamForm(); fetchData(); }
     }
   };
-  const editTeam = (t: any) => { setTeamForm({ name: t.name, position: t.position, department: t.department || "", bio: t.bio || "", image_url: t.image_url || "", linkedin: t.linkedin || "", github: t.github || "", email: t.email || "", sort_order: t.sort_order?.toString() || "0" }); setEditingTeamId(t.id); setShowTeamForm(true); };
+  const editTeam = (t: any) => { setTeamForm({ name: t.name, position: t.position, department: t.department || "", bio: t.bio || "", image_url: t.image_url || "", linkedin: t.linkedin || "", github: t.github || "", email: t.email || "", sort_order: t.sort_order?.toString() || "0", category: t.category || "Executive Board" }); setEditingTeamId(t.id); setShowTeamForm(true); };
   const deleteTeam = async (id: string) => { const { error } = await supabase.from("team_members").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Team member removed"); fetchData(); } };
   const resetTeamForm = () => { setTeamForm(emptyTeamForm); setEditingTeamId(null); setShowTeamForm(false); };
 
