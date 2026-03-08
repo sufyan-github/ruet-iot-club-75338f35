@@ -23,6 +23,7 @@ import BlogWrite from "./pages/BlogWrite";
 import Research from "./pages/Research";
 import Courses from "./pages/Courses";
 import CourseDetail from "./pages/CourseDetail";
+import Certificate from "./pages/Certificate";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ const App = () => (
             <Route path="/research" element={<Research />} />
             <Route path="/courses" element={<Courses />} />
             <Route path="/courses/:id" element={<CourseDetail />} />
+            <Route path="/certificate/:id" element={<Certificate />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

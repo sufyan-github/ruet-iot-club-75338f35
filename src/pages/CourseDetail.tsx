@@ -5,7 +5,8 @@ import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { BookOpen, Play, FileText, CheckCircle, Lock, ArrowLeft, Award } from "lucide-react";
+import { BookOpen, Play, FileText, CheckCircle, Lock, ArrowLeft, Award, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const CourseDetail = () => {
   const { id } = useParams();
@@ -18,6 +19,7 @@ const CourseDetail = () => {
   const [registering, setRegistering] = useState(false);
   const [txnId, setTxnId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("bKash");
+  const [certificate, setCertificate] = useState<any>(null);
 
   useEffect(() => {
     const fetch = async () => {
@@ -38,6 +40,15 @@ const CourseDetail = () => {
           .eq("user_id", user.id)
           .maybeSingle();
         setRegistration(reg);
+
+        // Check for existing certificate
+        const { data: certData } = await supabase
+          .from("certificates")
+          .select("*")
+          .eq("course_id", id!)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        setCertificate(certData);
       }
       setLoading(false);
     };
@@ -74,17 +85,33 @@ const CourseDetail = () => {
   };
 
   const toggleLessonComplete = async (lessonId: string) => {
-    if (!registration) return;
-    const progress = registration.progress || {};
+    if (!registration || !user) return;
+    const progress = { ...(registration.progress || {}) };
     progress[lessonId] = !progress[lessonId];
     const completedCount = Object.values(progress).filter(Boolean).length;
-    const allDone = completedCount === lessons.length;
+    const allDone = completedCount === lessons.length && lessons.length > 0;
     const { error } = await supabase
       .from("course_registrations")
       .update({ progress, completed: allDone })
       .eq("id", registration.id);
-    if (error) toast.error("Failed to update progress");
-    else setRegistration({ ...registration, progress, completed: allDone });
+    if (error) { toast.error("Failed to update progress"); return; }
+    setRegistration({ ...registration, progress, completed: allDone });
+
+    // Auto-generate certificate on completion
+    if (allDone && !certificate) {
+      const { data: certNum } = await supabase.rpc("generate_certificate_number");
+      if (certNum) {
+        const { data: newCert, error: certError } = await supabase
+          .from("certificates")
+          .insert({ user_id: user.id, course_id: id, certificate_number: certNum })
+          .select()
+          .single();
+        if (!certError && newCert) {
+          setCertificate(newCert);
+          toast.success("🎉 Congratulations! Certificate generated!", { duration: 5000 });
+        }
+      }
+    }
   };
 
   const isEnrolled = registration && (registration.payment_status === "confirmed" || !course?.is_paid);
@@ -169,6 +196,15 @@ const CourseDetail = () => {
                 />
               </div>
               <p className="text-xs text-muted-foreground mt-2">{completedLessons} of {lessons.length} lessons completed ({progressPercent}%)</p>
+              {certificate && (
+                <Link
+                  to={`/certificate/${certificate.id}`}
+                  className="mt-4 flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity"
+                >
+                  <Award size={18} /> View Certificate
+                  <ExternalLink size={14} />
+                </Link>
+              )}
             </div>
           )}
 
