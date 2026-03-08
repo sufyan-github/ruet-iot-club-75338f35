@@ -46,7 +46,7 @@ const Navbar = () => {
       <div className="container flex items-center justify-between h-16">
         <Link to="/" className="flex items-center gap-2.5 group">
           <div className="relative">
-            <img src={logo} alt="RUET IoT Club" className="h-9 w-9 relative z-10 rounded-full object-cover" />
+            <img src={logo} alt="RUET IoT Club" className="h-9 w-9 relative z-10 rounded-full object-cover" width={36} height={36} />
             <div className="absolute inset-0 bg-primary/20 rounded-full blur-md group-hover:bg-primary/30 transition-colors" />
           </div>
           <span className="font-display text-sm font-bold tracking-wider text-foreground group-hover:text-primary transition-colors">
