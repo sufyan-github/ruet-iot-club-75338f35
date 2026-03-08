@@ -10,7 +10,7 @@ const Projects = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("All");
-  const [categories, setCategories] = useState<string[]>(["All"]);
+  const categories = ["All", "Ongoing", "Completed", "Planned"];
   const [selectedProject, setSelectedProject] = useState<any>(null);
 
   useEffect(() => {
