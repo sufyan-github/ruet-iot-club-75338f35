@@ -1,24 +1,22 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { useState } from "react";
 import Layout from "@/components/Layout";
 import SectionHeading from "@/components/SectionHeading";
-
-const galleryItems = [
-  { title: "IoT Workshop 2025", category: "Workshop", color: "from-primary/20 to-accent/20" },
-  { title: "Hackathon Finals", category: "Hackathon", color: "from-accent/20 to-primary/20" },
-  { title: "Project Exhibition", category: "Exhibition", color: "from-primary/30 to-green-500/20" },
-  { title: "Arduino Training", category: "Training", color: "from-yellow-500/20 to-primary/20" },
-  { title: "Team Building", category: "Event", color: "from-primary/20 to-blue-500/20" },
-  { title: "Smart Campus Demo", category: "Project", color: "from-accent/30 to-primary/20" },
-  { title: "School Outreach", category: "Outreach", color: "from-green-500/20 to-accent/20" },
-  { title: "Annual Meetup", category: "Event", color: "from-primary/20 to-accent/30" },
-];
-
-const categories = ["All", "Workshop", "Hackathon", "Exhibition", "Training", "Event", "Project", "Outreach"];
+import { supabase } from "@/integrations/supabase/client";
 
 const Gallery = () => {
-  const [filter, setFilter] = useState("All");
-  const filtered = filter === "All" ? galleryItems : galleryItems.filter((g) => g.category === filter);
+  const [photos, setPhotos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedPhoto, setSelectedPhoto] = useState<any | null>(null);
+
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase.from("activity_photos").select("*").order("created_at", { ascending: false });
+      setPhotos(data || []);
+      setLoading(false);
+    };
+    fetch();
+  }, []);
 
   return (
     <Layout>
@@ -26,43 +24,49 @@ const Gallery = () => {
         <div className="container">
           <SectionHeading title="Gallery" subtitle="Moments from our journey" />
 
-          <div className="flex flex-wrap justify-center gap-2 mb-10">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setFilter(cat)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  filter === cat ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
-            {filtered.map((item, i) => (
-              <motion.div
-                key={item.title}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.05 }}
-                className="aspect-square rounded-xl glass overflow-hidden relative group cursor-pointer"
-              >
-                <div className={`absolute inset-0 bg-gradient-to-br ${item.color}`} />
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center opacity-80 group-hover:opacity-100 transition-opacity">
-                  <span className="text-xs font-mono text-primary mb-2">{item.category}</span>
-                  <h4 className="font-semibold text-sm text-foreground">{item.title}</h4>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          <p className="text-center text-sm text-muted-foreground mt-10">
-            More photos coming soon. Follow us on social media for the latest updates!
-          </p>
+          {loading ? (
+            <p className="text-center text-muted-foreground">Loading gallery...</p>
+          ) : photos.length === 0 ? (
+            <p className="text-center text-muted-foreground">Photos coming soon. Follow us on social media for the latest updates!</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
+              {photos.map((photo, i) => (
+                <motion.div
+                  key={photo.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.05 }}
+                  onClick={() => setSelectedPhoto(photo)}
+                  className="aspect-square rounded-xl glass overflow-hidden relative group cursor-pointer"
+                >
+                  <img src={photo.image_url} alt={photo.title || "Activity"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute bottom-3 left-3 right-3">
+                      {photo.title && <h4 className="font-semibold text-sm text-foreground">{photo.title}</h4>}
+                      {photo.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{photo.description}</p>}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
+
+      {/* Lightbox */}
+      {selectedPhoto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm p-4"
+          onClick={() => setSelectedPhoto(null)}>
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="max-w-3xl w-full rounded-2xl overflow-hidden glass" onClick={(e) => e.stopPropagation()}>
+            <img src={selectedPhoto.image_url} alt={selectedPhoto.title || "Activity"} className="w-full max-h-[70vh] object-contain bg-background" />
+            <div className="p-4">
+              {selectedPhoto.title && <h3 className="font-semibold text-foreground">{selectedPhoto.title}</h3>}
+              {selectedPhoto.description && <p className="text-sm text-muted-foreground mt-1">{selectedPhoto.description}</p>}
+            </div>
+          </motion.div>
+        </div>
+      )}
     </Layout>
   );
 };
