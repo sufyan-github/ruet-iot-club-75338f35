@@ -111,8 +111,16 @@ const AdminDashboard = () => {
 
   const updateMemberStatus = async (userId: string, status: string) => {
     const { error } = await supabase.from("profiles").update({ status }).eq("user_id", userId);
-    if (error) toast.error("Failed to update status");
-    else { toast.success(`Member ${status}`); fetchData(); }
+    if (error) { toast.error("Failed to update status"); return; }
+    toast.success(`Member ${status}`);
+    // Send email notification
+    try {
+      await supabase.functions.invoke("send-notification", {
+        body: { user_id: userId, status, type: "membership" },
+      });
+      toast.info("Notification email sent");
+    } catch { /* silent fail */ }
+    fetchData();
   };
 
   const updatePaymentStatus = async (id: string, status: string) => {
