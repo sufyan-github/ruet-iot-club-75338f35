@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Calendar } from "lucide-react";
+import { ArrowLeft, Calendar, Tag } from "lucide-react";
 import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
 
