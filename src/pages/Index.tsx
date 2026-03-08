@@ -6,6 +6,7 @@ import Layout from "@/components/Layout";
 import SectionHeading from "@/components/SectionHeading";
 import HeroCarousel from "@/components/HeroCarousel";
 import { supabase } from "@/integrations/supabase/client";
+import { getOptimizedImageUrl } from "@/lib/imageUtils";
 import heroBg from "@/assets/hero-bg.jpg";
 
 const stats = [
@@ -153,7 +154,7 @@ const Index = () => {
                 <motion.div key={project.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }} transition={{ delay: i * 0.1 }}
                   className="rounded-xl glass hover:border-primary/30 transition-colors group overflow-hidden">
-                  {project.image_url && <img src={project.image_url} alt={project.title} className="w-full h-40 object-cover" width={323} height={160} loading="lazy" />}
+                  {project.image_url && <img src={getOptimizedImageUrl(project.image_url, { width: 400, height: 200 })} alt={project.title} className="w-full h-40 object-cover" width={323} height={160} loading="lazy" />}
                   <div className="p-6">
                     <div className="flex items-center gap-2 mb-3">
                       {project.category && <span className="text-xs font-mono px-2 py-1 rounded bg-primary/10 text-primary">{project.category}</span>}

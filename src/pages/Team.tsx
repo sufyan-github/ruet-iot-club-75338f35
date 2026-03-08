@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getOptimizedImageUrl } from "@/lib/imageUtils";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import SectionHeading from "@/components/SectionHeading";
@@ -98,7 +99,7 @@ const Team = () => {
                         className="p-6 rounded-xl glass text-center hover:border-primary/30 transition-all duration-300 group"
                       >
                         {member.image_url ? (
-                          <img src={member.image_url} alt={member.name} className="w-20 h-20 rounded-full object-cover mx-auto mb-4 ring-2 ring-primary/20 group-hover:ring-primary/50 transition-all" />
+                          <img src={getOptimizedImageUrl(member.image_url, { width: 100, height: 100 })} alt={member.name} className="w-20 h-20 rounded-full object-cover mx-auto mb-4 ring-2 ring-primary/20 group-hover:ring-primary/50 transition-all" loading="lazy" />
                         ) : (
                           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 mx-auto mb-4 flex items-center justify-center ring-2 ring-primary/20">
                             <span className="font-display text-xl font-bold text-primary">

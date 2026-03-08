@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getOptimizedImageUrl } from "@/lib/imageUtils";
 import { motion, AnimatePresence } from "framer-motion";
 import Layout from "@/components/Layout";
 import SectionHeading from "@/components/SectionHeading";
@@ -53,7 +54,7 @@ const Projects = () => {
                   className="rounded-xl glass hover:border-primary/30 transition-colors group overflow-hidden flex flex-col h-[360px]">
                   <div className="h-40 bg-muted flex-shrink-0">
                     {project.image_url ? (
-                      <img src={project.image_url} alt={project.title} className="w-full h-full object-cover" />
+                      <img src={getOptimizedImageUrl(project.image_url, { width: 400, height: 200 })} alt={project.title} className="w-full h-full object-cover" loading="lazy" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">No Image</div>
                     )}
@@ -94,7 +95,7 @@ const Projects = () => {
           {selectedProject && (
             <>
               {selectedProject.image_url && (
-                <img src={selectedProject.image_url} alt={selectedProject.title} className="w-full h-48 object-cover rounded-md mb-4" />
+                <img src={getOptimizedImageUrl(selectedProject.image_url, { width: 600, height: 300 })} alt={selectedProject.title} className="w-full h-48 object-cover rounded-md mb-4" />
               )}
               <DialogHeader>
                 <DialogTitle>{selectedProject.title}</DialogTitle>
