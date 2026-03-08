@@ -1166,7 +1166,10 @@ const AdminDashboard = () => {
                                 <tr className="text-muted-foreground text-left">
                                   <th className="pb-1 pr-3">Name</th>
                                   <th className="pb-1 pr-3">Student ID</th>
+                                  <th className="pb-1 pr-3">Txn ID</th>
+                                  <th className="pb-1 pr-3">Method</th>
                                   <th className="pb-1 pr-3">Payment</th>
+                                  <th className="pb-1 pr-3">Actions</th>
                                   <th className="pb-1">Progress</th>
                                 </tr>
                               </thead>
