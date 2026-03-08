@@ -117,15 +117,25 @@ const AdminDashboard = () => {
   };
 
   const updateMemberStatus = async (userId: string, status: string) => {
-    const { error } = await supabase.from("profiles").update({ status }).eq("user_id", userId);
+    let updatePayload: any = { status };
+    
+    // Auto-assign membership ID on approval
+    if (status === "approved") {
+      const { data: existing } = await supabase.from("profiles").select("membership_id").eq("user_id", userId).single();
+      if (!existing?.membership_id) {
+        const { data: idData } = await supabase.rpc("generate_membership_id");
+        if (idData) updatePayload.membership_id = idData;
+      }
+    }
+    
+    const { error } = await supabase.from("profiles").update(updatePayload).eq("user_id", userId);
     if (error) { toast.error("Failed to update status"); return; }
-    toast.success(`Member ${status}`);
+    toast.success(`Member ${status}${updatePayload.membership_id ? ` — ID: ${updatePayload.membership_id}` : ""}`);
     // Send email notification
     try {
       await supabase.functions.invoke("send-notification", {
         body: { user_id: userId, status, type: "membership" },
       });
-      toast.info("Notification email sent");
     } catch { /* silent fail */ }
     fetchData();
   };
@@ -332,13 +342,14 @@ const AdminDashboard = () => {
 
           {/* ════════ Members Tab ════════ */}
           {tab === "members" && (
-            <div className="space-y-3 max-w-4xl mx-auto">
+             <div className="space-y-3 max-w-4xl mx-auto">
               {members.length === 0 && <p className="text-center text-muted-foreground">No members yet.</p>}
               {members.map((m: any) => (
                 <motion.div key={m.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl glass flex items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-sm text-foreground">{m.full_name}</h4>
                     <p className="text-xs text-muted-foreground">{m.department || "—"} · {m.student_id || "—"} · {m.phone || "—"}</p>
+                    {m.membership_id && <p className="text-xs font-mono text-primary mt-1">ID: {m.membership_id}</p>}
                   </div>
                   <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${
                     m.status === "approved" ? "bg-green-500/10 text-green-400" :
