@@ -2,7 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Award, Download, Calendar, User, BookOpen } from "lucide-react";
-import logo from "@/assets/logo.png";
+import iotClubLogo from "@/assets/iot_club_logo.png";
+import ruetLogo from "@/assets/ruet_logo.png";
 import signature from "@/assets/signature.jpg";
 
 const Certificate = () => {
