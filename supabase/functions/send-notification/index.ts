@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
             Authorization: `Bearer ${resendApiKey}`,
           },
           body: JSON.stringify({
-            from: "RUET IoT Club <noreply@ruet-iot-club.lovable.app>",
+            from: "RUET IoT Club <onboarding@resend.dev>",
             to: recipients,
             subject: emailSubject,
             text: emailBody,
