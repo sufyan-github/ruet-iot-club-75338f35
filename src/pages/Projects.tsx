@@ -16,10 +16,7 @@ const Projects = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       const { data } = await supabase.from("projects").select("*").order("created_at", { ascending: false });
-      const items = data || [];
-      setProjects(items);
-      const cats = ["All", ...Array.from(new Set(items.map((p) => p.category).filter(Boolean) as string[]))];
-      setCategories(cats);
+      setProjects(data || []);
       setLoading(false);
     };
     fetchProjects();
