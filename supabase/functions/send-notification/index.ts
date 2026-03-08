@@ -5,8 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const ADMIN_EMAIL = "iotclub@ruet.ac.bd";
-const PRESIDENT_EMAIL = "md.nayem.abeer2004@gmail.com";
+const ADMIN_EMAIL = "ruetiotclub@gmail.com";
+const PRESIDENT_EMAIL = "abusufyan.cse20@gmail.com";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
