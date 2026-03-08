@@ -133,6 +133,19 @@ const AdminDashboard = () => {
         setBlogPosts(data || []);
         break;
       }
+      case "research": {
+        const { data } = await supabase.from("research_papers").select("*").order("created_at", { ascending: false });
+        setResearchPapers(data || []);
+        break;
+      }
+      case "courses": {
+        const { data: cData } = await supabase.from("courses").select("*").order("created_at", { ascending: false });
+        setAdminCourses(cData || []);
+        const { data: lData } = await supabase.from("lessons").select("*").order("sort_order", { ascending: true });
+        setCourseLessons(lData || []);
+        const { data: rData } = await supabase.from("course_registrations").select("*").order("registered_at", { ascending: false });
+        setCourseRegistrations(rData || []);
+        break;
     }
   };
 
