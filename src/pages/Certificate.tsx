@@ -126,6 +126,7 @@ const Certificate = () => {
               <div className="w-full">
                 <div className="flex items-end justify-between">
                   <div className="text-center">
+                    <img src={signature} alt="Authorized Signature" className="h-12 object-contain mb-1" />
                     <div className="w-32 border-t border-gray-400 mb-1" />
                     <p className="text-xs text-gray-500">Authorized Signature</p>
                   </div>
@@ -147,7 +148,13 @@ const Certificate = () => {
                   </div>
                   <div className="text-center">
                     <div className="w-32 border-t border-gray-400 mb-1" />
-                    <p className="text-xs text-gray-500">Date of Issue</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(certificate.issued_at).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </p>
                   </div>
                 </div>
               </div>
