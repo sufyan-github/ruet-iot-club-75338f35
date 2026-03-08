@@ -33,7 +33,12 @@ const BlogPost = () => {
             <ArrowLeft size={14} /> Back to Blog
           </Link>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-4">{post.title}</h1>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground mb-8">
+          <div className="flex items-center gap-4 text-xs text-muted-foreground mb-8 flex-wrap">
+            {post.category && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-accent/15 text-accent border border-accent/20">
+                <Tag size={10} /> {post.category}
+              </span>
+            )}
             <span className="flex items-center gap-1">
               <Calendar size={12} />
               {new Date(post.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
