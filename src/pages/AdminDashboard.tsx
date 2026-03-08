@@ -44,7 +44,7 @@ const AdminDashboard = () => {
   const [members, setMembers] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [eventPayments, setEventPayments] = useState<any[]>([]);
-  const [paymentSubTab, setPaymentSubTab] = useState<"membership" | "event">("membership");
+  const [paymentSubTab, setPaymentSubTab] = useState<"membership" | "event" | "course">("membership");
   const [projects, setProjects] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [alumni, setAlumni] = useState<any[]>([]);
