@@ -507,7 +507,7 @@ const AdminDashboard = () => {
                       )}
                       <div className="min-w-0">
                         <h4 className="font-semibold text-sm text-foreground">{t.name}</h4>
-                        <p className="text-xs text-muted-foreground">{t.position} · {t.department || "—"}</p>
+                        <p className="text-xs text-muted-foreground">{t.position} · {t.category || "Executive Board"} · {t.department || "—"}</p>
                       </div>
                     </div>
                     <div className="flex gap-1 shrink-0">
