@@ -43,7 +43,8 @@ const BlogWrite = () => {
       content: content.trim(),
       author_id: user.id,
       published: false,
-    });
+      category: category || null,
+    } as any);
 
     if (error) {
       toast.error("Failed to submit blog post");
