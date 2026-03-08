@@ -20,6 +20,7 @@ const CourseDetail = () => {
   const [txnId, setTxnId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("bKash");
   const [certificate, setCertificate] = useState<any>(null);
+  const [activeVideo, setActiveVideo] = useState<string | null>(null);
 
   useEffect(() => {
     const fetch = async () => {
