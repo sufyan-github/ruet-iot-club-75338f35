@@ -934,6 +934,163 @@ const AdminDashboard = () => {
               </div>
             </div>
           )}
+
+          {/* ════════ Research Tab ════════ */}
+          {tab === "research" && (
+            <div className="max-w-4xl mx-auto">
+              <div className="flex justify-end mb-4">
+                <button onClick={() => { showResearchForm ? resetResearchForm() : setShowResearchForm(true); }}
+                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2">
+                  <Plus size={16} /> {showResearchForm ? "Cancel" : "Add Research"}
+                </button>
+              </div>
+              {showResearchForm && (
+                <motion.form initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+                  onSubmit={handleResearchSubmit} className="p-6 rounded-xl glass space-y-4 mb-6">
+                  <h3 className="font-display text-sm font-bold tracking-wider text-primary">{editingResearchId ? "Edit Research" : "Add Research Paper"}</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <input placeholder="Title *" required value={researchForm.title} onChange={(e) => setResearchForm({ ...researchForm, title: e.target.value })} className={inputClass} />
+                    <input placeholder="Authors *" required value={researchForm.authors} onChange={(e) => setResearchForm({ ...researchForm, authors: e.target.value })} className={inputClass} />
+                    <select value={researchForm.status} onChange={(e) => setResearchForm({ ...researchForm, status: e.target.value })} className={inputClass}>
+                      <option value="ongoing">Ongoing</option>
+                      <option value="published">Published</option>
+                    </select>
+                    <input placeholder="Research Area (IoT, AI, etc.)" value={researchForm.research_area} onChange={(e) => setResearchForm({ ...researchForm, research_area: e.target.value })} className={inputClass} />
+                    <input placeholder="PDF URL" value={researchForm.pdf_url} onChange={(e) => setResearchForm({ ...researchForm, pdf_url: e.target.value })} className={inputClass} />
+                    <input placeholder="DOI Link" value={researchForm.doi_link} onChange={(e) => setResearchForm({ ...researchForm, doi_link: e.target.value })} className={inputClass} />
+                  </div>
+                  <textarea placeholder="Abstract" rows={3} value={researchForm.abstract} onChange={(e) => setResearchForm({ ...researchForm, abstract: e.target.value })} className={inputClass + " resize-none"} />
+                  <input placeholder="Tags (comma-separated)" value={researchForm.tags} onChange={(e) => setResearchForm({ ...researchForm, tags: e.target.value })} className={inputClass} />
+                  <button type="submit" className="px-6 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">{editingResearchId ? "Update" : "Add"}</button>
+                </motion.form>
+              )}
+              <div className="space-y-3">
+                {researchPapers.length === 0 && <p className="text-center text-muted-foreground">No research papers yet.</p>}
+                {researchPapers.map((r: any) => (
+                  <motion.div key={r.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl glass flex items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-xs font-mono px-2 py-0.5 rounded ${r.status === "published" ? "bg-green-500/10 text-green-400" : "bg-yellow-500/10 text-yellow-400"}`}>{r.status}</span>
+                        {r.research_area && <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary">{r.research_area}</span>}
+                      </div>
+                      <h4 className="font-semibold text-sm text-foreground">{r.title}</h4>
+                      <p className="text-xs text-muted-foreground">{r.authors}</p>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <button onClick={() => editResearch(r)} className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"><Pencil size={14} /></button>
+                      <button onClick={() => deleteResearch(r.id)} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><Trash2 size={14} /></button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ════════ Courses Tab ════════ */}
+          {tab === "courses" && (
+            <div className="max-w-4xl mx-auto">
+              <div className="flex justify-end gap-2 mb-4">
+                <button onClick={() => { showCourseForm ? resetCourseForm() : setShowCourseForm(true); }}
+                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2">
+                  <Plus size={16} /> {showCourseForm ? "Cancel" : "Add Course"}
+                </button>
+              </div>
+
+              {showCourseForm && (
+                <motion.form initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+                  onSubmit={handleCourseSubmit} className="p-6 rounded-xl glass space-y-4 mb-6">
+                  <h3 className="font-display text-sm font-bold tracking-wider text-primary">{editingCourseId ? "Edit Course" : "Create New Course"}</h3>
+                  <ImageUpload folder="courses" currentUrl={courseForm.image_url} onUpload={(url) => setCourseForm({ ...courseForm, image_url: url })} />
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <input placeholder="Course Title *" required value={courseForm.title} onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })} className={inputClass} />
+                    <input placeholder="Instructor" value={courseForm.instructor} onChange={(e) => setCourseForm({ ...courseForm, instructor: e.target.value })} className={inputClass} />
+                    <input placeholder="Category (IoT, Programming, etc.)" value={courseForm.category} onChange={(e) => setCourseForm({ ...courseForm, category: e.target.value })} className={inputClass} />
+                    <input placeholder="Duration (e.g., 4 weeks)" value={courseForm.duration} onChange={(e) => setCourseForm({ ...courseForm, duration: e.target.value })} className={inputClass} />
+                    <input placeholder="Max Students" type="number" value={courseForm.max_students} onChange={(e) => setCourseForm({ ...courseForm, max_students: e.target.value })} className={inputClass} />
+                    <select value={courseForm.status} onChange={(e) => setCourseForm({ ...courseForm, status: e.target.value })} className={inputClass}>
+                      <option value="draft">Draft</option>
+                      <option value="published">Published</option>
+                    </select>
+                  </div>
+                  <textarea placeholder="Description" rows={3} value={courseForm.description} onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })} className={inputClass + " resize-none"} />
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm font-medium text-foreground">Pricing:</label>
+                    <button type="button" onClick={() => setCourseForm({ ...courseForm, is_paid: false })} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${!courseForm.is_paid ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>Free</button>
+                    <button type="button" onClick={() => setCourseForm({ ...courseForm, is_paid: true })} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${courseForm.is_paid ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>Paid</button>
+                    {courseForm.is_paid && <input placeholder="Price (৳)" type="number" value={courseForm.price} onChange={(e) => setCourseForm({ ...courseForm, price: e.target.value })} className={inputClass + " w-32"} />}
+                  </div>
+                  <button type="submit" className="px-6 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">{editingCourseId ? "Update" : "Create"}</button>
+                </motion.form>
+              )}
+
+              {/* Courses List */}
+              <div className="space-y-4">
+                {adminCourses.length === 0 && <p className="text-center text-muted-foreground">No courses yet.</p>}
+                {adminCourses.map((c: any) => {
+                  const cLessons = courseLessons.filter(l => l.course_id === c.id);
+                  const cRegs = courseRegistrations.filter(r => r.course_id === c.id);
+                  return (
+                    <motion.div key={c.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl glass overflow-hidden">
+                      <div className="p-4 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          {c.image_url && <img src={c.image_url} alt={c.title} className="w-12 h-12 rounded-lg object-cover shrink-0" />}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`text-xs font-mono px-2 py-0.5 rounded ${c.status === "published" ? "bg-green-500/10 text-green-400" : "bg-yellow-500/10 text-yellow-400"}`}>{c.status}</span>
+                              <span className={`text-xs font-mono px-2 py-0.5 rounded ${c.is_paid ? "bg-primary/10 text-primary" : "bg-green-500/10 text-green-400"}`}>{c.is_paid ? `৳${c.price}` : "Free"}</span>
+                            </div>
+                            <h4 className="font-semibold text-sm text-foreground">{c.title}</h4>
+                            <p className="text-xs text-muted-foreground">{cLessons.length} lessons · {cRegs.length} enrolled</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <button onClick={() => { setSelectedCourseId(c.id); setShowLessonForm(true); }} className="p-1.5 rounded bg-accent/10 text-accent hover:bg-accent/20 transition-colors" title="Add Lesson"><Video size={14} /></button>
+                          <button onClick={() => editCourse(c)} className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"><Pencil size={14} /></button>
+                          <button onClick={() => deleteCourse(c.id)} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><Trash2 size={14} /></button>
+                        </div>
+                      </div>
+                      {/* Lessons */}
+                      {cLessons.length > 0 && (
+                        <div className="border-t border-border/50 p-3 bg-secondary/30">
+                          <p className="text-xs font-semibold text-muted-foreground mb-2">Lessons:</p>
+                          <div className="space-y-1">
+                            {cLessons.map((l: any, idx: number) => (
+                              <div key={l.id} className="flex items-center justify-between gap-2 py-1 px-2 rounded bg-secondary/50">
+                                <span className="text-xs text-foreground">{idx + 1}. {l.title}</span>
+                                <div className="flex gap-1">
+                                  <button onClick={() => editLesson(l)} className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"><Pencil size={10} /></button>
+                                  <button onClick={() => deleteLesson(l.id)} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={10} /></button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Lesson Form Modal */}
+              {showLessonForm && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => resetLessonForm()}>
+                  <motion.form initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                    onClick={(e) => e.stopPropagation()} onSubmit={handleLessonSubmit}
+                    className="w-full max-w-md p-6 rounded-xl bg-background border border-border space-y-4">
+                    <h3 className="font-display text-sm font-bold tracking-wider text-primary">{editingLessonId ? "Edit Lesson" : "Add Lesson"}</h3>
+                    <input placeholder="Lesson Title *" required value={lessonForm.title} onChange={(e) => setLessonForm({ ...lessonForm, title: e.target.value })} className={inputClass} />
+                    <input placeholder="Video URL" value={lessonForm.video_url} onChange={(e) => setLessonForm({ ...lessonForm, video_url: e.target.value })} className={inputClass} />
+                    <input placeholder="PDF/Resource URL" value={lessonForm.pdf_file} onChange={(e) => setLessonForm({ ...lessonForm, pdf_file: e.target.value })} className={inputClass} />
+                    <input placeholder="Sort Order" type="number" value={lessonForm.sort_order} onChange={(e) => setLessonForm({ ...lessonForm, sort_order: e.target.value })} className={inputClass} />
+                    <div className="flex gap-2">
+                      <button type="submit" className="px-6 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">{editingLessonId ? "Update" : "Add"}</button>
+                      <button type="button" onClick={() => resetLessonForm()} className="px-6 py-2 rounded-lg bg-secondary text-muted-foreground font-semibold text-sm hover:bg-secondary/80 transition-colors">Cancel</button>
+                    </div>
+                  </motion.form>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </section>
     </Layout>
