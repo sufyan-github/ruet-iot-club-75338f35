@@ -35,6 +35,10 @@ const AdminDashboard = () => {
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [photos, setPhotos] = useState<any[]>([]);
   const [blogPosts, setBlogPosts] = useState<any[]>([]);
+  const [researchPapers, setResearchPapers] = useState<any[]>([]);
+  const [adminCourses, setAdminCourses] = useState<any[]>([]);
+  const [courseLessons, setCourseLessons] = useState<any[]>([]);
+  const [courseRegistrations, setCourseRegistrations] = useState<any[]>([]);
   const [expandedApp, setExpandedApp] = useState<string | null>(null);
 
   // Form states
