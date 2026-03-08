@@ -208,6 +208,12 @@ const AdminDashboard = () => {
     else { toast.success(`Payment ${status}`); fetchData(); }
   };
 
+  const updateCoursePaymentStatus = async (id: string, status: string) => {
+    const { error } = await supabase.from("course_registrations").update({ payment_status: status }).eq("id", id);
+    if (error) toast.error("Failed to update payment");
+    else { toast.success(`Course payment ${status}`); fetchData(); }
+  };
+
   // ─── Project CRUD ───
   const handleProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
