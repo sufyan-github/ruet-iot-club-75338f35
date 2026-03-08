@@ -222,6 +222,7 @@ const AdminDashboard = () => {
     { key: "events", label: "Events", icon: Calendar },
     { key: "alumni", label: "Alumni", icon: GraduationCap },
     { key: "photos", label: "Photos", icon: Image },
+    { key: "blog", label: "Blog", icon: BookOpen },
   ];
 
   const inputClass = "w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";
