@@ -64,48 +64,74 @@ const JoinUs = () => {
         const ext = resumeFile.name.split(".").pop();
         const path = `${user.id}/resume.${ext}`;
         const { error: uploadError } = await supabase.storage.from("resumes").upload(path, resumeFile, { upsert: true });
-        if (uploadError) throw uploadError;
-        // Store just the path since bucket is private
+        if (uploadError) {
+          console.error("Resume upload error:", uploadError);
+          toast.error("Failed to upload resume: " + uploadError.message);
+          setSubmitting(false);
+          return;
+        }
         resumeUrl = path;
       }
 
-      // Update profile
+      // Update profile with application details
+      const profilePayload: Record<string, any> = {
+        full_name: form.fullName,
+        student_id: form.studentId,
+        email: form.email,
+        phone: form.phone,
+        department: form.department,
+        batch: form.batch,
+        experience_level: form.experienceLevel,
+        areas_of_interest: form.areasOfInterest,
+        previous_projects: form.previousProjects || null,
+        motivation: form.motivation,
+        time_commitment: form.timeCommitment,
+        linkedin: form.linkedin || null,
+        github: form.github || null,
+      };
+      if (resumeUrl) {
+        profilePayload.resume_url = resumeUrl;
+      }
+
       const { error: profileError } = await supabase
         .from("profiles")
-        .update({
-          full_name: form.fullName,
-          student_id: form.studentId,
-          email: form.email,
-          phone: form.phone,
-          department: form.department,
-          batch: form.batch,
-          experience_level: form.experienceLevel,
-          areas_of_interest: form.areasOfInterest,
-          previous_projects: form.previousProjects || null,
-          motivation: form.motivation,
-          time_commitment: form.timeCommitment,
-          linkedin: form.linkedin || null,
-          github: form.github || null,
-          resume_url: resumeUrl,
-        })
+        .update(profilePayload)
         .eq("user_id", user.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Profile update error:", profileError);
+        toast.error("Failed to update profile: " + profileError.message);
+        setSubmitting(false);
+        return;
+      }
 
       // Submit payment
-      const { error: paymentError } = await supabase
-        .from("membership_payments")
-        .insert({
-          user_id: user.id,
-          payment_method: form.paymentMethod,
-          transaction_id: form.transactionId,
-        });
+      if (form.paymentMethod && form.transactionId) {
+        const { error: paymentError } = await supabase
+          .from("membership_payments")
+          .insert({
+            user_id: user.id,
+            payment_method: form.paymentMethod,
+            transaction_id: form.transactionId,
+          });
 
-      if (paymentError) throw paymentError;
+        if (paymentError) {
+          console.error("Payment error:", paymentError);
+          // If duplicate, still consider success since profile was updated
+          if (paymentError.message?.includes("duplicate")) {
+            toast.info("Payment already recorded. Profile updated successfully!");
+          } else {
+            toast.error("Failed to submit payment: " + paymentError.message);
+            setSubmitting(false);
+            return;
+          }
+        }
+      }
 
       setSuccess(true);
       toast.success("Application submitted successfully!");
     } catch (err: any) {
+      console.error("Submission error:", err);
       toast.error(err.message || "Something went wrong");
     } finally {
       setSubmitting(false);
