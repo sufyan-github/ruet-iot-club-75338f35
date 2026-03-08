@@ -75,11 +75,11 @@ const HeroCarousel = () => {
         </AnimatePresence>
 
         {/* Nav buttons */}
-        <button onClick={prev}
+        <button onClick={prev} aria-label="Previous slide"
           className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-background/60 backdrop-blur-sm text-foreground hover:bg-background/80 transition-colors z-10">
           <ChevronLeft size={18} />
         </button>
-        <button onClick={next}
+        <button onClick={next} aria-label="Next slide"
           className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-background/60 backdrop-blur-sm text-foreground hover:bg-background/80 transition-colors z-10">
           <ChevronRight size={18} />
         </button>
