@@ -562,8 +562,14 @@ const AdminDashboard = () => {
                             </div>
                             <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${p.payment_status === "verified" ? "bg-green-500/10 text-green-400" : p.payment_status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-yellow-500/10 text-yellow-400"}`}>{p.payment_status}</span>
                             <div className="flex gap-1 shrink-0">
-                              <button onClick={() => updatePaymentStatus(p.id, "verified")} className="p-1.5 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"><Check size={14} /></button>
-                              <button onClick={() => updatePaymentStatus(p.id, "rejected")} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><X size={14} /></button>
+                              {p.payment_status === "pending" ? (
+                                <>
+                                  <button onClick={() => updatePaymentStatus(p.id, "verified")} className="p-1.5 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors" title="Verify"><Check size={14} /></button>
+                                  <button onClick={() => updatePaymentStatus(p.id, "rejected")} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="Reject"><X size={14} /></button>
+                                </>
+                              ) : (
+                                <button onClick={() => updatePaymentStatus(p.id, "pending")} className="text-[10px] px-2 py-1 rounded bg-secondary text-muted-foreground hover:bg-secondary/80 transition-colors">Reset</button>
+                              )}
                             </div>
                           </div>
                         </motion.div>
