@@ -8,6 +8,23 @@ import { toast } from "sonner";
 import { BookOpen, Play, FileText, CheckCircle, Lock, ArrowLeft, Award, ExternalLink, X } from "lucide-react";
 import { Link } from "react-router-dom";
 
+const getYouTubeEmbedUrl = (url: string): string => {
+  try {
+    const u = new URL(url);
+    let videoId = "";
+    if (u.hostname.includes("youtu.be")) {
+      videoId = u.pathname.slice(1);
+    } else if (u.searchParams.get("v")) {
+      videoId = u.searchParams.get("v")!;
+    } else if (u.pathname.includes("/embed/")) {
+      videoId = u.pathname.split("/embed/")[1];
+    }
+    return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1` : url;
+  } catch {
+    return url;
+  }
+};
+
 const CourseDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
