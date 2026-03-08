@@ -8,6 +8,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
+const CATEGORIES = [
+  "IoT",
+  "Embedded Systems",
+  "Machine Learning",
+  "Web Development",
+  "Robotics",
+  "Tutorial",
+  "Project Showcase",
+  "General",
+];
+
 const BlogWrite = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
