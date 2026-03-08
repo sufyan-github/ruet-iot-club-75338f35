@@ -152,7 +152,7 @@ const AdminDashboard = () => {
   // ─── Event CRUD ───
   const handleEventSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = { title: eventForm.title, date: eventForm.date, venue: eventForm.venue || null, description: eventForm.description || null, type: eventForm.type || null, max_participants: eventForm.max_participants ? parseInt(eventForm.max_participants) : null, image_url: eventForm.image_url || null, is_paid: eventForm.is_paid, registration_fee: eventForm.is_paid && eventForm.registration_fee ? parseFloat(eventForm.registration_fee) : 0, payment_methods: eventForm.is_paid ? eventForm.payment_methods : [] };
+    const payload = { title: eventForm.title, date: eventForm.date, venue: eventForm.venue || null, description: eventForm.description || null, type: eventForm.type || null, max_participants: eventForm.max_participants ? parseInt(eventForm.max_participants) : null, image_url: eventForm.image_url || null, is_paid: eventForm.is_paid, registration_fee: eventForm.is_paid && eventForm.registration_fee ? parseFloat(eventForm.registration_fee) : 0, payment_methods: eventForm.is_paid ? eventForm.payment_methods : [], payment_number: eventForm.is_paid ? eventForm.payment_number || null : null, bank_account: eventForm.is_paid ? eventForm.bank_account || null : null };
     if (editingEventId) {
       const { error } = await supabase.from("events").update(payload).eq("id", editingEventId);
       if (error) toast.error("Failed"); else { toast.success("Event updated!"); resetEventForm(); fetchData(); }
