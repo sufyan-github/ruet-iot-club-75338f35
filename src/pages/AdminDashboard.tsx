@@ -116,9 +116,13 @@ const AdminDashboard = () => {
         const { data: payData } = await supabase.from("membership_payments").select("*").order("created_at", { ascending: false });
         const { data: eventRegData } = await supabase.from("event_registrations").select("*, events(title)").order("registered_at", { ascending: false });
         const { data: profilesData } = await supabase.from("profiles").select("user_id, full_name, email, phone, department, student_id");
+        const { data: courseRegData } = await supabase.from("course_registrations").select("*").order("registered_at", { ascending: false });
+        const { data: coursesData } = await supabase.from("courses").select("id, title, price, is_paid");
         setMembers(profilesData || []);
         setPayments(payData || []);
         setEventPayments(eventRegData || []);
+        setCourseRegistrations(courseRegData || []);
+        setAdminCourses(coursesData || []);
         break;
       }
       case "projects": {
