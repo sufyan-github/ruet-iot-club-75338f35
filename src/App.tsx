@@ -24,6 +24,7 @@ import Research from "./pages/Research";
 import Courses from "./pages/Courses";
 import CourseDetail from "./pages/CourseDetail";
 import Certificate from "./pages/Certificate";
+import VerifyCertificate from "./pages/VerifyCertificate";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
