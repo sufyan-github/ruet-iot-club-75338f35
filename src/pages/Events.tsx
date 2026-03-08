@@ -42,7 +42,7 @@ const Events = () => {
                   className="rounded-xl glass hover:border-primary/30 transition-colors overflow-hidden"
                 >
                   {event.image_url && (
-                    <img src={event.image_url} alt={event.title} className="w-full h-48 object-cover" />
+                    <img src={getOptimizedImageUrl(event.image_url, { width: 600, height: 250 })} alt={event.title} className="w-full h-48 object-cover" loading="lazy" />
                   )}
                   <div className="p-6">
                     <div className="flex items-start justify-between gap-4">

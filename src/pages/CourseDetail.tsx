@@ -151,7 +151,7 @@ const CourseDetail = () => {
           {/* Header */}
           <div className="rounded-xl glass overflow-hidden mb-8">
             {course.image_url && (
-              <img src={course.image_url} alt={course.title} className="w-full h-48 md:h-64 object-cover" />
+              <img src={getOptimizedImageUrl(course.image_url, { width: 800, height: 350 })} alt={course.title} className="w-full h-48 md:h-64 object-cover" />
             )}
             <div className="p-6">
               <div className="flex items-center gap-2 mb-3">

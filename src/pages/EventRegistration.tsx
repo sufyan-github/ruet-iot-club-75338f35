@@ -116,7 +116,7 @@ const EventRegistration = () => {
           {/* Event Info Card */}
           <div className="p-6 rounded-xl glass mb-8">
             {event.image_url && (
-              <img src={event.image_url} alt={event.title} className="w-full h-48 object-cover rounded-lg mb-4" />
+              <img src={getOptimizedImageUrl(event.image_url, { width: 600, height: 250 })} alt={event.title} className="w-full h-48 object-cover rounded-lg mb-4" />
             )}
             <h3 className="font-semibold text-lg text-foreground mb-2">{event.title}</h3>
             {event.description && <p className="text-sm text-muted-foreground mb-3">{event.description}</p>}

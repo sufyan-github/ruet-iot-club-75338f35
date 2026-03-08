@@ -94,7 +94,7 @@ const Projects = () => {
           {selectedProject && (
             <>
               {selectedProject.image_url && (
-                <img src={selectedProject.image_url} alt={selectedProject.title} className="w-full h-48 object-cover rounded-md mb-4" />
+                <img src={getOptimizedImageUrl(selectedProject.image_url, { width: 600, height: 300 })} alt={selectedProject.title} className="w-full h-48 object-cover rounded-md mb-4" />
               )}
               <DialogHeader>
                 <DialogTitle>{selectedProject.title}</DialogTitle>

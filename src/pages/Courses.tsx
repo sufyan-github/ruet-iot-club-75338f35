@@ -81,9 +81,10 @@ const Courses = () => {
                   >
                     {course.image_url ? (
                       <img
-                        src={course.image_url}
+                        src={getOptimizedImageUrl(course.image_url, { width: 400, height: 200 })}
                         alt={course.title}
                         className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
                       />
                     ) : (
                       <div className="w-full h-40 bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center">

@@ -59,7 +59,7 @@ const Gallery = () => {
           onClick={() => setSelectedPhoto(null)}>
           <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
             className="max-w-3xl w-full rounded-2xl overflow-hidden glass" onClick={(e) => e.stopPropagation()}>
-            <img src={selectedPhoto.image_url} alt={selectedPhoto.title || "Activity"} className="w-full max-h-[70vh] object-contain bg-background" />
+            <img src={getOptimizedImageUrl(selectedPhoto.image_url, { width: 1024 })} alt={selectedPhoto.title || "Activity"} className="w-full max-h-[70vh] object-contain bg-background" />
             <div className="p-4">
               {selectedPhoto.title && <h3 className="font-semibold text-foreground">{selectedPhoto.title}</h3>}
               {selectedPhoto.description && <p className="text-sm text-muted-foreground mt-1">{selectedPhoto.description}</p>}
