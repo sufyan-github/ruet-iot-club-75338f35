@@ -511,6 +511,7 @@ export type Database = {
       team_members: {
         Row: {
           bio: string | null
+          category: string | null
           created_at: string
           department: string | null
           email: string | null
@@ -524,6 +525,7 @@ export type Database = {
         }
         Insert: {
           bio?: string | null
+          category?: string | null
           created_at?: string
           department?: string | null
           email?: string | null
@@ -537,6 +539,7 @@ export type Database = {
         }
         Update: {
           bio?: string | null
+          category?: string | null
           created_at?: string
           department?: string | null
           email?: string | null
