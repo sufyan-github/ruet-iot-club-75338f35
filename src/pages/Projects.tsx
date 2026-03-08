@@ -10,22 +10,19 @@ const Projects = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("All");
-  const [categories, setCategories] = useState<string[]>(["All"]);
+  const categories = ["All", "Ongoing", "Completed", "Planned"];
   const [selectedProject, setSelectedProject] = useState<any>(null);
 
   useEffect(() => {
     const fetchProjects = async () => {
       const { data } = await supabase.from("projects").select("*").order("created_at", { ascending: false });
-      const items = data || [];
-      setProjects(items);
-      const cats = ["All", ...Array.from(new Set(items.map((p) => p.category).filter(Boolean) as string[]))];
-      setCategories(cats);
+      setProjects(data || []);
       setLoading(false);
     };
     fetchProjects();
   }, []);
 
-  const filtered = filter === "All" ? projects : projects.filter((p) => p.category === filter);
+  const filtered = filter === "All" ? projects : projects.filter((p) => p.status?.toLowerCase() === filter.toLowerCase());
 
   return (
     <Layout>
