@@ -52,6 +52,7 @@ const BlogWrite = () => {
       toast.success("Blog post submitted for review! An admin will review and publish it.");
       setTitle("");
       setContent("");
+      setCategory("");
       // Refresh my posts
       const { data } = await supabase.from("blog_posts").select("*").eq("author_id", user.id).order("created_at", { ascending: false });
       setMyPosts(data || []);
