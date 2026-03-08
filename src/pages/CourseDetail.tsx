@@ -40,6 +40,15 @@ const CourseDetail = () => {
           .eq("user_id", user.id)
           .maybeSingle();
         setRegistration(reg);
+
+        // Check for existing certificate
+        const { data: certData } = await supabase
+          .from("certificates")
+          .select("*")
+          .eq("course_id", id!)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        setCertificate(certData);
       }
       setLoading(false);
     };
