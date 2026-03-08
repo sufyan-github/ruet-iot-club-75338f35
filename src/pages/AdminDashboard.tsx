@@ -342,13 +342,14 @@ const AdminDashboard = () => {
 
           {/* ════════ Members Tab ════════ */}
           {tab === "members" && (
-            <div className="space-y-3 max-w-4xl mx-auto">
+             <div className="space-y-3 max-w-4xl mx-auto">
               {members.length === 0 && <p className="text-center text-muted-foreground">No members yet.</p>}
               {members.map((m: any) => (
                 <motion.div key={m.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl glass flex items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-sm text-foreground">{m.full_name}</h4>
                     <p className="text-xs text-muted-foreground">{m.department || "—"} · {m.student_id || "—"} · {m.phone || "—"}</p>
+                    {m.membership_id && <p className="text-xs font-mono text-primary mt-1">ID: {m.membership_id}</p>}
                   </div>
                   <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${
                     m.status === "approved" ? "bg-green-500/10 text-green-400" :
