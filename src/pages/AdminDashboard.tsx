@@ -642,12 +642,16 @@ const AdminDashboard = () => {
                             <p className="text-xs text-muted-foreground mt-1">{new Date(p.registered_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                           </div>
                           <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${p.payment_status === "confirmed" ? "bg-green-500/10 text-green-400" : p.payment_status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-yellow-500/10 text-yellow-400"}`}>{p.payment_status}</span>
-                          {p.payment_status !== "confirmed" && (
-                            <div className="flex gap-1 shrink-0">
-                              <button onClick={() => updateEventPaymentStatus(p.id, "confirmed")} className="p-1.5 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"><Check size={14} /></button>
-                              <button onClick={() => updateEventPaymentStatus(p.id, "rejected")} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><X size={14} /></button>
-                            </div>
-                          )}
+                          <div className="flex gap-1 shrink-0">
+                            {p.payment_status === "pending" ? (
+                              <>
+                                <button onClick={() => updateEventPaymentStatus(p.id, "confirmed")} className="p-1.5 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors" title="Confirm"><Check size={14} /></button>
+                                <button onClick={() => updateEventPaymentStatus(p.id, "rejected")} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="Reject"><X size={14} /></button>
+                              </>
+                            ) : (
+                              <button onClick={() => updateEventPaymentStatus(p.id, "pending")} className="text-[10px] px-2 py-1 rounded bg-secondary text-muted-foreground hover:bg-secondary/80 transition-colors">Reset</button>
+                            )}
+                          </div>
                         </div>
                       </motion.div>
                     ))}
