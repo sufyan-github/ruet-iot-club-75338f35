@@ -6,12 +6,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Check, X, Users, FolderOpen, Calendar, Eye, GraduationCap, Pencil, Trash2 } from "lucide-react";
+import { Check, X, Users, FolderOpen, Calendar, Eye, GraduationCap, Pencil, Trash2, Plus } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 type TabType = "members" | "payments" | "projects" | "events" | "alumni";
 
 const emptyAlumniForm = { name: "", batch: "", department: "", company: "", linkedin: "" };
+const emptyProjectForm = { title: "", description: "", category: "", status: "idea", github_link: "" };
+const emptyEventForm = { title: "", date: "", venue: "", description: "", type: "", max_participants: "" };
 
 const AdminDashboard = () => {
   const { user, loading, isAdmin } = useAuth();
@@ -31,9 +33,7 @@ const AdminDashboard = () => {
   }, [user, loading, isAdmin, navigate]);
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchData();
-    }
+    if (isAdmin) fetchData();
   }, [isAdmin, tab]);
 
   const fetchData = async () => {
@@ -47,7 +47,7 @@ const AdminDashboard = () => {
       const { data } = await supabase.from("projects").select("*").order("created_at", { ascending: false });
       setProjects(data || []);
     } else if (tab === "events") {
-      const { data } = await supabase.from("events").select("*").order("created_at", { ascending: false });
+      const { data } = await supabase.from("events").select("*").order("date", { ascending: false });
       setEvents(data || []);
     } else if (tab === "alumni") {
       const { data } = await supabase.from("alumni").select("*").order("batch", { ascending: false });
@@ -67,33 +67,100 @@ const AdminDashboard = () => {
     else { toast.success(`Payment ${status}`); fetchData(); }
   };
 
-  const updateProjectStatus = async (id: string, status: string) => {
-    const { error } = await supabase.from("projects").update({ status }).eq("id", id);
-    if (error) toast.error("Failed to update project");
-    else { toast.success("Project status updated"); fetchData(); }
-  };
+  // ─── Project CRUD ───
+  const [showProjectForm, setShowProjectForm] = useState(false);
+  const [projectForm, setProjectForm] = useState(emptyProjectForm);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
 
-  // Event management
-  const [showEventForm, setShowEventForm] = useState(false);
-  const [eventForm, setEventForm] = useState({ title: "", date: "", venue: "", description: "", type: "", max_participants: "" });
-
-  const createEvent = async (e: React.FormEvent) => {
+  const handleProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.from("events").insert({
-      title: eventForm.title, date: eventForm.date, venue: eventForm.venue,
-      description: eventForm.description, type: eventForm.type,
-      max_participants: eventForm.max_participants ? parseInt(eventForm.max_participants) : null,
-    });
-    if (error) toast.error("Failed to create event");
-    else {
-      toast.success("Event created!");
-      setShowEventForm(false);
-      setEventForm({ title: "", date: "", venue: "", description: "", type: "", max_participants: "" });
-      fetchData();
+    const payload = {
+      title: projectForm.title,
+      description: projectForm.description || null,
+      category: projectForm.category || null,
+      status: projectForm.status,
+      github_link: projectForm.github_link || null,
+    };
+
+    if (editingProjectId) {
+      const { error } = await supabase.from("projects").update(payload).eq("id", editingProjectId);
+      if (error) toast.error("Failed to update project");
+      else { toast.success("Project updated!"); resetProjectForm(); fetchData(); }
+    } else {
+      const { error } = await supabase.from("projects").insert({ ...payload, created_by: user!.id });
+      if (error) toast.error("Failed to create project");
+      else { toast.success("Project created!"); resetProjectForm(); fetchData(); }
     }
   };
 
-  // Alumni management
+  const editProject = (p: Tables<"projects">) => {
+    setProjectForm({
+      title: p.title, description: p.description || "", category: p.category || "",
+      status: p.status, github_link: p.github_link || "",
+    });
+    setEditingProjectId(p.id);
+    setShowProjectForm(true);
+  };
+
+  const deleteProject = async (id: string) => {
+    const { error } = await supabase.from("projects").delete().eq("id", id);
+    if (error) toast.error("Failed to delete project");
+    else { toast.success("Project deleted"); fetchData(); }
+  };
+
+  const resetProjectForm = () => {
+    setProjectForm(emptyProjectForm);
+    setEditingProjectId(null);
+    setShowProjectForm(false);
+  };
+
+  // ─── Event CRUD ───
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [eventForm, setEventForm] = useState(emptyEventForm);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+
+  const handleEventSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload = {
+      title: eventForm.title, date: eventForm.date, venue: eventForm.venue || null,
+      description: eventForm.description || null, type: eventForm.type || null,
+      max_participants: eventForm.max_participants ? parseInt(eventForm.max_participants) : null,
+    };
+
+    if (editingEventId) {
+      const { error } = await supabase.from("events").update(payload).eq("id", editingEventId);
+      if (error) toast.error("Failed to update event");
+      else { toast.success("Event updated!"); resetEventForm(); fetchData(); }
+    } else {
+      const { error } = await supabase.from("events").insert(payload);
+      if (error) toast.error("Failed to create event");
+      else { toast.success("Event created!"); resetEventForm(); fetchData(); }
+    }
+  };
+
+  const editEvent = (ev: Tables<"events">) => {
+    setEventForm({
+      title: ev.title, date: ev.date ? new Date(ev.date).toISOString().slice(0, 16) : "",
+      venue: ev.venue || "", description: ev.description || "",
+      type: ev.type || "", max_participants: ev.max_participants?.toString() || "",
+    });
+    setEditingEventId(ev.id);
+    setShowEventForm(true);
+  };
+
+  const deleteEvent = async (id: string) => {
+    const { error } = await supabase.from("events").delete().eq("id", id);
+    if (error) toast.error("Failed to delete event");
+    else { toast.success("Event deleted"); fetchData(); }
+  };
+
+  const resetEventForm = () => {
+    setEventForm(emptyEventForm);
+    setEditingEventId(null);
+    setShowEventForm(false);
+  };
+
+  // ─── Alumni CRUD ───
   const [showAlumniForm, setShowAlumniForm] = useState(false);
   const [alumniForm, setAlumniForm] = useState(emptyAlumniForm);
   const [editingAlumniId, setEditingAlumniId] = useState<string | null>(null);
@@ -101,10 +168,8 @@ const AdminDashboard = () => {
   const handleAlumniSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
-      name: alumniForm.name,
-      batch: alumniForm.batch || null,
-      department: alumniForm.department || null,
-      company: alumniForm.company || null,
+      name: alumniForm.name, batch: alumniForm.batch || null,
+      department: alumniForm.department || null, company: alumniForm.company || null,
       linkedin: alumniForm.linkedin || null,
     };
 
@@ -158,13 +223,10 @@ const AdminDashboard = () => {
           {/* Tabs */}
           <div className="flex flex-wrap justify-center gap-2 mb-8">
             {tabs.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
+              <button key={t.key} onClick={() => setTab(t.key)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   tab === t.key ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
-                }`}
-              >
+                }`}>
                 <t.icon size={16} /> {t.label}
               </button>
             ))}
@@ -224,23 +286,65 @@ const AdminDashboard = () => {
 
           {/* Projects Tab */}
           {tab === "projects" && (
-            <div className="space-y-3 max-w-4xl mx-auto">
-              {projects.length === 0 && <p className="text-center text-muted-foreground">No projects yet.</p>}
-              {projects.map((p) => (
-                <motion.div key={p.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl glass flex items-center justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-sm text-foreground">{p.title}</h4>
-                    <p className="text-xs text-muted-foreground">{p.category || "—"}</p>
+            <div className="max-w-4xl mx-auto">
+              <div className="flex justify-end mb-4">
+                <button onClick={() => { showProjectForm ? resetProjectForm() : setShowProjectForm(true); }}
+                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2">
+                  <Plus size={16} /> {showProjectForm ? "Cancel" : "Add Project"}
+                </button>
+              </div>
+
+              {showProjectForm && (
+                <motion.form initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+                  onSubmit={handleProjectSubmit} className="p-6 rounded-xl glass space-y-4 mb-6">
+                  <h3 className="font-display text-sm font-bold tracking-wider text-primary">
+                    {editingProjectId ? "Edit Project" : "Add New Project"}
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <input placeholder="Project Title *" required value={projectForm.title}
+                      onChange={(e) => setProjectForm({ ...projectForm, title: e.target.value })} className={inputClass} />
+                    <input placeholder="Category (IoT, Environmental...)" value={projectForm.category}
+                      onChange={(e) => setProjectForm({ ...projectForm, category: e.target.value })} className={inputClass} />
+                    <select value={projectForm.status}
+                      onChange={(e) => setProjectForm({ ...projectForm, status: e.target.value })} className={inputClass}>
+                      <option value="idea">Idea</option>
+                      <option value="ongoing">Ongoing</option>
+                      <option value="completed">Completed</option>
+                      <option value="published">Published</option>
+                    </select>
+                    <input placeholder="GitHub Link" value={projectForm.github_link}
+                      onChange={(e) => setProjectForm({ ...projectForm, github_link: e.target.value })} className={inputClass} />
                   </div>
-                  <select value={p.status} onChange={(e) => updateProjectStatus(p.id, e.target.value)}
-                    className="text-xs px-2 py-1 rounded bg-secondary border border-border text-foreground">
-                    <option value="idea">Idea</option>
-                    <option value="ongoing">Ongoing</option>
-                    <option value="completed">Completed</option>
-                    <option value="published">Published</option>
-                  </select>
-                </motion.div>
-              ))}
+                  <textarea placeholder="Description" rows={3} value={projectForm.description}
+                    onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })} className={inputClass + " resize-none"} />
+                  <button type="submit" className="px-6 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">
+                    {editingProjectId ? "Update Project" : "Create Project"}
+                  </button>
+                </motion.form>
+              )}
+
+              <div className="space-y-3">
+                {projects.length === 0 && <p className="text-center text-muted-foreground">No projects yet.</p>}
+                {projects.map((p) => (
+                  <motion.div key={p.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="p-4 rounded-xl glass flex items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-sm text-foreground">{p.title}</h4>
+                      <p className="text-xs text-muted-foreground">{p.category || "—"} · {p.status}</p>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <button onClick={() => editProject(p)}
+                        className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                        <Pencil size={14} />
+                      </button>
+                      <button onClick={() => deleteProject(p.id)}
+                        className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -248,15 +352,18 @@ const AdminDashboard = () => {
           {tab === "events" && (
             <div className="max-w-4xl mx-auto">
               <div className="flex justify-end mb-4">
-                <button onClick={() => setShowEventForm(!showEventForm)}
-                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors">
-                  {showEventForm ? "Cancel" : "Create Event"}
+                <button onClick={() => { showEventForm ? resetEventForm() : setShowEventForm(true); }}
+                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2">
+                  <Plus size={16} /> {showEventForm ? "Cancel" : "Create Event"}
                 </button>
               </div>
 
               {showEventForm && (
                 <motion.form initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-                  onSubmit={createEvent} className="p-6 rounded-xl glass space-y-4 mb-6">
+                  onSubmit={handleEventSubmit} className="p-6 rounded-xl glass space-y-4 mb-6">
+                  <h3 className="font-display text-sm font-bold tracking-wider text-primary">
+                    {editingEventId ? "Edit Event" : "Create New Event"}
+                  </h3>
                   <div className="grid md:grid-cols-2 gap-4">
                     <input placeholder="Event Title *" required value={eventForm.title}
                       onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })} className={inputClass} />
@@ -272,18 +379,29 @@ const AdminDashboard = () => {
                   <textarea placeholder="Description" rows={3} value={eventForm.description}
                     onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })} className={inputClass + " resize-none"} />
                   <button type="submit" className="px-6 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">
-                    Create Event
+                    {editingEventId ? "Update Event" : "Create Event"}
                   </button>
                 </motion.form>
               )}
 
               <div className="space-y-3">
                 {events.length === 0 && <p className="text-center text-muted-foreground">No events yet.</p>}
-                {events.map((e) => (
-                  <motion.div key={e.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl glass flex items-center justify-between gap-4">
+                {events.map((ev) => (
+                  <motion.div key={ev.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="p-4 rounded-xl glass flex items-center justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-sm text-foreground">{e.title}</h4>
-                      <p className="text-xs text-muted-foreground">{e.type || "—"} · {e.venue || "—"} · {new Date(e.date).toLocaleDateString()}</p>
+                      <h4 className="font-semibold text-sm text-foreground">{ev.title}</h4>
+                      <p className="text-xs text-muted-foreground">{ev.type || "—"} · {ev.venue || "—"} · {new Date(ev.date).toLocaleDateString()}</p>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <button onClick={() => editEvent(ev)}
+                        className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                        <Pencil size={14} />
+                      </button>
+                      <button onClick={() => deleteEvent(ev.id)}
+                        className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </motion.div>
                 ))}
@@ -296,8 +414,8 @@ const AdminDashboard = () => {
             <div className="max-w-4xl mx-auto">
               <div className="flex justify-end mb-4">
                 <button onClick={() => { showAlumniForm ? resetAlumniForm() : setShowAlumniForm(true); }}
-                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors">
-                  {showAlumniForm ? "Cancel" : "Add Alumni"}
+                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2">
+                  <Plus size={16} /> {showAlumniForm ? "Cancel" : "Add Alumni"}
                 </button>
               </div>
 
