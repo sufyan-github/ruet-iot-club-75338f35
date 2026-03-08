@@ -474,6 +474,11 @@ const AdminDashboard = () => {
                   <div className="grid md:grid-cols-2 gap-4">
                     <input placeholder="Full Name *" required value={teamForm.name} onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })} className={inputClass} />
                     <input placeholder="Position (e.g., President) *" required value={teamForm.position} onChange={(e) => setTeamForm({ ...teamForm, position: e.target.value })} className={inputClass} />
+                    <select value={teamForm.category} onChange={(e) => setTeamForm({ ...teamForm, category: e.target.value })} className={inputClass}>
+                      {TEAM_CATEGORIES.map((cat) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
                     <input placeholder="Department" value={teamForm.department} onChange={(e) => setTeamForm({ ...teamForm, department: e.target.value })} className={inputClass} />
                     <input placeholder="Sort Order (0 = first)" type="number" value={teamForm.sort_order} onChange={(e) => setTeamForm({ ...teamForm, sort_order: e.target.value })} className={inputClass} />
                     <input placeholder="Email" value={teamForm.email} onChange={(e) => setTeamForm({ ...teamForm, email: e.target.value })} className={inputClass} />
