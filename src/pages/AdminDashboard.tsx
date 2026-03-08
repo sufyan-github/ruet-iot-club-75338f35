@@ -6,10 +6,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Check, X, Users, FolderOpen, Calendar, Eye, GraduationCap, Pencil, Trash2, Plus, UserCog, Image, FileText, Download, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, X, Users, FolderOpen, Calendar, Eye, GraduationCap, Pencil, Trash2, Plus, UserCog, Image, FileText, Download, ChevronDown, ChevronUp, BookOpen, Mail } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 
-type TabType = "applications" | "members" | "payments" | "team" | "projects" | "events" | "alumni" | "photos";
+type TabType = "applications" | "members" | "payments" | "team" | "projects" | "events" | "alumni" | "photos" | "blog";
 
 const emptyAlumniForm = { name: "", batch: "", department: "", company: "", linkedin: "" };
 const emptyProjectForm = { title: "", description: "", category: "", status: "idea", github_link: "", image_url: "" };
@@ -28,6 +28,7 @@ const AdminDashboard = () => {
   const [alumni, setAlumni] = useState<any[]>([]);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [photos, setPhotos] = useState<any[]>([]);
+  const [blogPosts, setBlogPosts] = useState<any[]>([]);
   const [expandedApp, setExpandedApp] = useState<string | null>(null);
 
   // Form states
@@ -100,13 +101,26 @@ const AdminDashboard = () => {
         setPhotos(data || []);
         break;
       }
+      case "blog": {
+        const { data } = await supabase.from("blog_posts").select("*").order("created_at", { ascending: false });
+        setBlogPosts(data || []);
+        break;
+      }
     }
   };
 
   const updateMemberStatus = async (userId: string, status: string) => {
     const { error } = await supabase.from("profiles").update({ status }).eq("user_id", userId);
-    if (error) toast.error("Failed to update status");
-    else { toast.success(`Member ${status}`); fetchData(); }
+    if (error) { toast.error("Failed to update status"); return; }
+    toast.success(`Member ${status}`);
+    // Send email notification
+    try {
+      await supabase.functions.invoke("send-notification", {
+        body: { user_id: userId, status, type: "membership" },
+      });
+      toast.info("Notification email sent");
+    } catch { /* silent fail */ }
+    fetchData();
   };
 
   const updatePaymentStatus = async (id: string, status: string) => {
@@ -208,6 +222,7 @@ const AdminDashboard = () => {
     { key: "events", label: "Events", icon: Calendar },
     { key: "alumni", label: "Alumni", icon: GraduationCap },
     { key: "photos", label: "Photos", icon: Image },
+    { key: "blog", label: "Blog", icon: BookOpen },
   ];
 
   const inputClass = "w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";
@@ -593,6 +608,59 @@ const AdminDashboard = () => {
                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => editPhoto(p)} className="p-1.5 rounded bg-background/80 text-primary hover:bg-background transition-colors"><Pencil size={12} /></button>
                       <button onClick={() => deletePhoto(p.id)} className="p-1.5 rounded bg-background/80 text-destructive hover:bg-background transition-colors"><Trash2 size={12} /></button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ════════ Blog Tab ════════ */}
+          {tab === "blog" && (
+            <div className="max-w-4xl mx-auto">
+              <p className="text-xs text-muted-foreground text-center mb-4">Review and publish member blog posts</p>
+              {blogPosts.length === 0 && <p className="text-center text-muted-foreground">No blog posts yet.</p>}
+              <div className="space-y-3">
+                {blogPosts.map((post: any) => (
+                  <motion.div key={post.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="p-4 rounded-xl glass">
+                    <div className="flex items-center justify-between gap-4 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm text-foreground">{post.title}</h4>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(post.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${
+                        post.published ? "bg-green-500/10 text-green-400" : "bg-yellow-500/10 text-yellow-400"
+                      }`}>
+                        {post.published ? "Published" : "Pending"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-3 mb-3">{post.content?.substring(0, 200)}</p>
+                    <div className="flex gap-2">
+                      {!post.published && (
+                        <button onClick={async () => {
+                          const { error } = await supabase.from("blog_posts").update({ published: true }).eq("id", post.id);
+                          if (error) toast.error("Failed"); else { toast.success("Blog post published!"); fetchData(); }
+                        }} className="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 text-xs font-medium transition-colors flex items-center gap-1">
+                          <Check size={12} /> Publish
+                        </button>
+                      )}
+                      {post.published && (
+                        <button onClick={async () => {
+                          const { error } = await supabase.from("blog_posts").update({ published: false }).eq("id", post.id);
+                          if (error) toast.error("Failed"); else { toast.success("Blog post unpublished"); fetchData(); }
+                        }} className="px-3 py-1.5 rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 text-xs font-medium transition-colors">
+                          Unpublish
+                        </button>
+                      )}
+                      <button onClick={async () => {
+                        const { error } = await supabase.from("blog_posts").delete().eq("id", post.id);
+                        if (error) toast.error("Failed"); else { toast.success("Blog post deleted"); fetchData(); }
+                      }} className="px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 text-xs font-medium transition-colors flex items-center gap-1">
+                        <Trash2 size={12} /> Delete
+                      </button>
                     </div>
                   </motion.div>
                 ))}

@@ -13,6 +13,7 @@ const navLinks = [
   { label: "Alumni", path: "/alumni" },
   { label: "Team", path: "/team" },
   { label: "Gallery", path: "/gallery" },
+  { label: "Blog", path: "/blog" },
   { label: "Contact", path: "/contact" },
 ];
 
