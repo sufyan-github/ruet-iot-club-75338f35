@@ -23,6 +23,7 @@ import BlogWrite from "./pages/BlogWrite";
 import Research from "./pages/Research";
 import Courses from "./pages/Courses";
 import CourseDetail from "./pages/CourseDetail";
+import Certificate from "./pages/Certificate";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

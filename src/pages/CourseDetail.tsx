@@ -196,6 +196,15 @@ const CourseDetail = () => {
                 />
               </div>
               <p className="text-xs text-muted-foreground mt-2">{completedLessons} of {lessons.length} lessons completed ({progressPercent}%)</p>
+              {certificate && (
+                <Link
+                  to={`/certificate/${certificate.id}`}
+                  className="mt-4 flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity"
+                >
+                  <Award size={18} /> View Certificate
+                  <ExternalLink size={14} />
+                </Link>
+              )}
             </div>
           )}
 
