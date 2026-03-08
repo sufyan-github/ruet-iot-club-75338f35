@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Award, Download, Calendar, User, BookOpen } from "lucide-react";
 import logo from "@/assets/logo.png";
+import signature from "@/assets/signature.jpg";
 
 const Certificate = () => {
   const { id } = useParams();
