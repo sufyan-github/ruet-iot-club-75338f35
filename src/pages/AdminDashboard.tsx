@@ -494,6 +494,10 @@ const AdminDashboard = () => {
                   className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${paymentSubTab === "event" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}>
                   Event Payments
                 </button>
+                <button onClick={() => setPaymentSubTab("course")}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${paymentSubTab === "course" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}>
+                  Course Payments
+                </button>
               </div>
 
               {/* ── Membership Payments ── */}
