@@ -34,8 +34,8 @@ const Footer = () => {
             <h4 className="font-semibold text-sm mb-4 text-foreground">Contact</h4>
             <div className="flex flex-col gap-3 text-sm text-muted-foreground">
               <span className="flex items-center gap-2"><MapPin size={14} className="text-primary" /> RUET, Rajshahi, Bangladesh</span>
-              <span className="flex items-center gap-2"><Mail size={14} className="text-primary" /> iotclub@ruet.ac.bd</span>
-              <span className="flex items-center gap-2"><Phone size={14} className="text-primary" /> +880 1XXX-XXXXXX</span>
+              <span className="flex items-center gap-2"><Mail size={14} className="text-primary" /> ruetiotclub@gmail.com</span>
+              <span className="flex items-center gap-2"><Phone size={14} className="text-primary" /> +880 1580-352238</span>
             </div>
           </div>
 
