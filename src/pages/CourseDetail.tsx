@@ -19,6 +19,7 @@ const CourseDetail = () => {
   const [registering, setRegistering] = useState(false);
   const [txnId, setTxnId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("bKash");
+  const [certificate, setCertificate] = useState<any>(null);
 
   useEffect(() => {
     const fetch = async () => {
