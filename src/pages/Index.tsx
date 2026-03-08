@@ -36,7 +36,7 @@ const Index = () => {
       {/* Hero Section */}
       <section className="relative min-h-[90vh] flex items-center overflow-hidden">
         <div className="absolute inset-0">
-          <img src={heroBg} alt="" className="w-full h-full object-cover opacity-20" />
+          <img src={heroBg} alt="" className="w-full h-full object-cover opacity-20" width={1504} height={846} fetchPriority="high" />
           <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
         </div>
         <div className="container relative z-10">
