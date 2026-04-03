@@ -633,25 +633,105 @@ const AdminDashboard = () => {
 
           {/* ════════ Members Tab ════════ */}
           {tab === "members" && (
-             <div className="space-y-3 max-w-4xl mx-auto">
+            <div className="space-y-3 max-w-4xl mx-auto">
+              {/* Member profile edit modal */}
+              {editingMemberProfile && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setEditingMemberProfile(null)}>
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-full max-w-lg p-6 rounded-xl bg-background border border-border space-y-4 max-h-[80vh] overflow-y-auto">
+                    <h3 className="font-display text-sm font-bold tracking-wider text-primary">Edit Member Profile</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Full Name</label>
+                        <input className={inputClass} value={memberProfileForm.full_name} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, full_name: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Email</label>
+                        <input className={inputClass} value={memberProfileForm.email} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, email: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Student ID</label>
+                        <input className={inputClass} value={memberProfileForm.student_id} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, student_id: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Department</label>
+                        <input className={inputClass} value={memberProfileForm.department} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, department: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Batch</label>
+                        <input className={inputClass} value={memberProfileForm.batch} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, batch: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Session</label>
+                        <input className={inputClass} value={memberProfileForm.session} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, session: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Phone</label>
+                        <input className={inputClass} value={memberProfileForm.phone} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, phone: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Skills</label>
+                        <input className={inputClass} value={memberProfileForm.skills} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, skills: e.target.value })} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">LinkedIn</label>
+                      <input className={inputClass} value={memberProfileForm.linkedin} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, linkedin: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">GitHub</label>
+                      <input className={inputClass} value={memberProfileForm.github} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, github: e.target.value })} />
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <button onClick={saveMemberProfile} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors">Save Changes</button>
+                      <button onClick={() => setEditingMemberProfile(null)} className="px-4 py-2 rounded-lg bg-secondary text-muted-foreground text-sm hover:bg-secondary/80 transition-colors">Cancel</button>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+
               {members.length === 0 && <p className="text-center text-muted-foreground">No members yet.</p>}
-              {members.map((m: any) => (
-                <motion.div key={m.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl glass flex items-center justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-sm text-foreground">{m.full_name}</h4>
-                    <p className="text-xs text-muted-foreground">{m.department || "—"} · {m.student_id || "—"} · {m.phone || "—"}</p>
-                    {m.membership_id && <p className="text-xs font-mono text-primary mt-1">ID: {m.membership_id}</p>}
-                  </div>
-                  <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${
-                    m.status === "approved" ? "bg-green-500/10 text-green-400" :
-                    m.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-yellow-500/10 text-yellow-400"
-                  }`}>{m.status}</span>
-                  <div className="flex gap-1 shrink-0">
-                    <button onClick={() => updateMemberStatus(m.user_id, "approved")} className="p-1.5 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"><Check size={14} /></button>
-                    <button onClick={() => updateMemberStatus(m.user_id, "rejected")} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><X size={14} /></button>
-                  </div>
-                </motion.div>
-              ))}
+              {members.map((m: any) => {
+                const role = getUserRole(m.user_id);
+                return (
+                  <motion.div key={m.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl glass">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-semibold text-sm text-foreground">{m.full_name}</h4>
+                          {role !== "none" && (
+                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                              role === "admin" ? "bg-primary/10 text-primary" :
+                              role === "moderator" ? "bg-accent/10 text-accent" : "bg-secondary text-muted-foreground"
+                            }`}>
+                              <Shield size={10} className="inline mr-0.5" />{role}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{m.department || "—"} · {m.student_id || "—"} · {m.phone || "—"} · {m.email || "—"}</p>
+                        {m.membership_id && <p className="text-xs font-mono text-primary mt-1">ID: {m.membership_id}</p>}
+                      </div>
+                      <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${
+                        m.status === "approved" ? "bg-green-500/10 text-green-400" :
+                        m.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-yellow-500/10 text-yellow-400"
+                      }`}>{m.status}</span>
+                      <div className="flex gap-1 shrink-0">
+                        <button onClick={() => startEditMemberProfile(m)} className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="Edit Profile"><Pencil size={14} /></button>
+                        <select value={role} onChange={(e) => assignRole(m.user_id, e.target.value)}
+                          className="text-[10px] px-1.5 py-1 rounded bg-secondary border border-border text-foreground">
+                          <option value="none">No role</option>
+                          <option value="member">Member</option>
+                          <option value="moderator">Moderator</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                        <button onClick={() => updateMemberStatus(m.user_id, "approved")} className="p-1.5 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors" title="Approve"><Check size={14} /></button>
+                        <button onClick={() => updateMemberStatus(m.user_id, "rejected")} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="Reject"><X size={14} /></button>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           )}
 
