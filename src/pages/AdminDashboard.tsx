@@ -481,6 +481,83 @@ const AdminDashboard = () => {
             ))}
           </div>
 
+          {/* ════════ Overview Tab ════════ */}
+          {tab === "overview" && (
+            <div className="max-w-5xl mx-auto">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                {[
+                  { label: "Total Members", value: overviewStats.totalMembers || 0, icon: Users, color: "text-primary" },
+                  { label: "Approved", value: overviewStats.approvedMembers || 0, icon: Check, color: "text-green-400" },
+                  { label: "Pending Applications", value: overviewStats.pendingMembers || 0, icon: FileText, color: "text-yellow-400" },
+                  { label: "Revenue (Membership)", value: `৳${overviewStats.totalRevenue || 0}`, icon: Eye, color: "text-primary" },
+                  { label: "Total Events", value: overviewStats.totalEvents || 0, icon: Calendar, color: "text-accent" },
+                  { label: "Event Registrations", value: overviewStats.eventRegistrations || 0, icon: Calendar, color: "text-primary" },
+                  { label: "Total Projects", value: overviewStats.totalProjects || 0, icon: FolderOpen, color: "text-primary" },
+                  { label: "Active Projects", value: overviewStats.activeProjects || 0, icon: FolderOpen, color: "text-green-400" },
+                  { label: "Published Courses", value: overviewStats.publishedCourses || 0, icon: BookOpen, color: "text-primary" },
+                  { label: "Course Enrollments", value: overviewStats.courseEnrollments || 0, icon: GraduationCap, color: "text-primary" },
+                  { label: "Certificates Issued", value: overviewStats.totalCertificates || 0, icon: Award, color: "text-primary" },
+                  { label: "Completed Courses", value: overviewStats.courseCompleted || 0, icon: Check, color: "text-green-400" },
+                  { label: "Pending Blogs", value: overviewStats.pendingBlogs || 0, icon: BookOpen, color: "text-yellow-400" },
+                  { label: "Alumni", value: overviewStats.totalAlumni || 0, icon: GraduationCap, color: "text-primary" },
+                  { label: "Pending Payments", value: overviewStats.pendingPayments || 0, icon: Eye, color: "text-yellow-400" },
+                  { label: "Total Courses", value: overviewStats.totalCourses || 0, icon: BookOpen, color: "text-primary" },
+                ].map((stat, i) => (
+                  <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+                    className="p-4 rounded-xl glass text-center">
+                    <stat.icon className={`mx-auto mb-2 ${stat.color}`} size={20} />
+                    <p className="text-xl font-display font-bold text-foreground">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
+                  </motion.div>
+                ))}
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="p-6 rounded-xl glass">
+                  <h3 className="font-display text-sm font-bold tracking-wider text-primary mb-4">Quick Actions</h3>
+                  <div className="space-y-2">
+                    {[
+                      { label: "Review Applications", tab: "applications" as TabType, count: overviewStats.pendingMembers },
+                      { label: "Verify Payments", tab: "payments" as TabType, count: overviewStats.pendingPayments },
+                      { label: "Approve Blog Posts", tab: "blog" as TabType, count: overviewStats.pendingBlogs },
+                    ].filter(a => a.count > 0).map((action) => (
+                      <button key={action.tab} onClick={() => setTab(action.tab)}
+                        className="w-full flex items-center justify-between p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors text-left">
+                        <span className="text-sm text-foreground">{action.label}</span>
+                        <span className="text-xs font-mono px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-400">{action.count}</span>
+                      </button>
+                    ))}
+                    {[overviewStats.pendingMembers, overviewStats.pendingPayments, overviewStats.pendingBlogs].every(v => !v) && (
+                      <p className="text-sm text-muted-foreground text-center py-4">All caught up! No pending actions.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-6 rounded-xl glass">
+                  <h3 className="font-display text-sm font-bold tracking-wider text-primary mb-4">Financial Summary</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Membership Revenue</span>
+                      <span className="text-sm font-semibold text-foreground">৳{overviewStats.totalRevenue || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Pending Payments</span>
+                      <span className="text-sm font-semibold text-yellow-400">{overviewStats.pendingPayments || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Course Enrollments</span>
+                      <span className="text-sm font-semibold text-foreground">{overviewStats.courseEnrollments || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Event Registrations</span>
+                      <span className="text-sm font-semibold text-foreground">{overviewStats.eventRegistrations || 0}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ════════ Applications Tab ════════ */}
           {tab === "applications" && (
             <div className="space-y-3 max-w-4xl mx-auto">
