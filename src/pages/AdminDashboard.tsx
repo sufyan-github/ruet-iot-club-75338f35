@@ -261,7 +261,60 @@ const AdminDashboard = () => {
     else { toast.success(`Course payment ${status}`); fetchData(); }
   };
 
-  // ─── Project CRUD ───
+  // ─── Role Management ───
+  const assignRole = async (userId: string, role: string) => {
+    // Remove existing roles first, then add new one
+    await supabase.from("user_roles").delete().eq("user_id", userId);
+    if (role !== "none") {
+      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: role as any });
+      if (error) { toast.error("Failed to assign role"); return; }
+    }
+    toast.success(`Role updated to ${role}`);
+    fetchData();
+  };
+
+  const getUserRole = (userId: string) => {
+    const role = memberRoles.find((r: any) => r.user_id === userId);
+    return role?.role || "none";
+  };
+
+  // ─── Admin Edit Member Profile ───
+  const startEditMemberProfile = (m: any) => {
+    setEditingMemberProfile(m);
+    setMemberProfileForm({
+      full_name: m.full_name || "",
+      phone: m.phone || "",
+      department: m.department || "",
+      batch: m.batch || "",
+      session: m.session || "",
+      student_id: m.student_id || "",
+      skills: m.skills || "",
+      linkedin: m.linkedin || "",
+      github: m.github || "",
+      email: m.email || "",
+    });
+  };
+
+  const saveMemberProfile = async () => {
+    if (!editingMemberProfile) return;
+    const { error } = await supabase.from("profiles").update({
+      full_name: memberProfileForm.full_name,
+      phone: memberProfileForm.phone || null,
+      department: memberProfileForm.department || null,
+      batch: memberProfileForm.batch || null,
+      session: memberProfileForm.session || null,
+      student_id: memberProfileForm.student_id || null,
+      skills: memberProfileForm.skills || null,
+      linkedin: memberProfileForm.linkedin || null,
+      github: memberProfileForm.github || null,
+      email: memberProfileForm.email || null,
+    }).eq("user_id", editingMemberProfile.user_id);
+    if (error) { toast.error("Failed to update profile"); return; }
+    toast.success("Profile updated!");
+    setEditingMemberProfile(null);
+    fetchData();
+  };
+
   const handleProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = { title: projectForm.title, description: projectForm.description || null, category: projectForm.category || null, status: projectForm.status, github_link: projectForm.github_link || null, image_url: projectForm.image_url || null };
