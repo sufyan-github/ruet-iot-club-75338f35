@@ -448,6 +448,7 @@ const AdminDashboard = () => {
   if (loading || !isAdmin) return null;
 
   const tabsList: { key: TabType; label: string; icon: typeof Users }[] = [
+    { key: "overview", label: "Overview", icon: BarChart3 },
     { key: "applications", label: "Applications", icon: FileText },
     { key: "members", label: "Members", icon: Users },
     { key: "payments", label: "Payments", icon: Eye },
