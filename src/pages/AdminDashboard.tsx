@@ -40,7 +40,11 @@ const emptyLessonForm = { title: "", video_url: "", pdf_file: "", sort_order: "0
 const AdminDashboard = () => {
   const { user, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<TabType>("applications");
+  const [tab, setTab] = useState<TabType>("overview");
+  const [overviewStats, setOverviewStats] = useState<any>({});
+  const [editingMemberProfile, setEditingMemberProfile] = useState<any>(null);
+  const [memberProfileForm, setMemberProfileForm] = useState<any>({});
+  const [memberRoles, setMemberRoles] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [eventPayments, setEventPayments] = useState<any[]>([]);
