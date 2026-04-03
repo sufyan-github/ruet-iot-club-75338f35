@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Award, Download, Calendar } from "lucide-react";
+import { Award, Download } from "lucide-react";
 import iotClubLogo from "@/assets/iot_club_logo.png";
 import ruetLogo from "@/assets/ruet_logo.png";
 import signature from "@/assets/signature.jpg";
@@ -69,6 +69,8 @@ const Certificate = () => {
     day: "numeric",
   });
 
+  const verifyUrl = `${window.location.origin}/verify`;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background flex flex-col items-center justify-start sm:justify-center py-4 sm:py-8 px-2 sm:px-4">
       {/* Actions */}
@@ -93,7 +95,7 @@ const Certificate = () => {
           {/* Inner subtle border */}
           <div className="absolute inset-[4%] sm:inset-[5%] border border-primary/15 rounded-md sm:rounded-lg pointer-events-none" />
 
-          {/* Corner ornaments - hidden on very small screens */}
+          {/* Corner ornaments */}
           <div className="hidden sm:block absolute top-[3.5%] left-[3.5%] w-8 h-8 border-t-2 border-l-2 border-primary/40 rounded-tl-lg pointer-events-none" />
           <div className="hidden sm:block absolute top-[3.5%] right-[3.5%] w-8 h-8 border-t-2 border-r-2 border-primary/40 rounded-tr-lg pointer-events-none" />
           <div className="hidden sm:block absolute bottom-[3.5%] left-[3.5%] w-8 h-8 border-b-2 border-l-2 border-primary/40 rounded-bl-lg pointer-events-none" />
@@ -107,7 +109,7 @@ const Certificate = () => {
                 <img src={iotClubLogo} alt="RUET IoT Club" className="w-10 h-10 sm:w-16 md:w-24 sm:h-16 md:h-24 object-contain" />
                 <div className="text-center flex-1 px-2">
                   <h1 className="text-xs sm:text-lg md:text-2xl font-bold text-gray-800 tracking-wide leading-tight">RUET IoT Club</h1>
-                  <p className="text-[6px] sm:text-[10px] md:text-xs text-gray-500 tracking-wider uppercase">Learning Management System</p>
+                  <p className="text-[6px] sm:text-[10px] md:text-xs text-gray-500 tracking-wider uppercase">Rajshahi University of Engineering & Technology</p>
                 </div>
                 <img src={ruetLogo} alt="RUET" className="w-10 h-10 sm:w-16 md:w-24 sm:h-16 md:h-24 object-contain" />
               </div>
@@ -123,41 +125,45 @@ const Certificate = () => {
               <h3 className="text-sm sm:text-2xl md:text-3xl font-serif font-bold text-primary mb-1 sm:mb-3 border-b sm:border-b-2 border-primary/30 pb-0.5 sm:pb-1.5 px-3 sm:px-6 inline-block mx-auto">
                 {profile?.full_name || "Student"}
               </h3>
+              {profile?.student_id && (
+                <p className="text-gray-400 text-[6px] sm:text-[10px] mb-1 sm:mb-2 font-mono">ID: {profile.student_id}</p>
+              )}
               <p className="text-gray-500 text-[7px] sm:text-xs mb-1 sm:mb-3 tracking-wide">has successfully completed the course</p>
               <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 rounded sm:rounded-lg py-1.5 sm:py-3 px-3 sm:px-6 mb-1 sm:mb-3 mx-auto max-w-md">
                 <h4 className="text-[9px] sm:text-base md:text-lg font-bold text-gray-800 leading-tight">{course.title}</h4>
-                {course.instructor && (
-                  <p className="text-[6px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">Instructed by {course.instructor}</p>
+                {course.duration && (
+                  <p className="text-[6px] sm:text-[10px] text-gray-400 mt-0.5">Duration: {course.duration}</p>
                 )}
               </div>
               <p className="text-gray-500 text-[7px] sm:text-xs tracking-wide">
-                demonstrating proficiency and commitment to learning.
+                demonstrating proficiency and commitment to learning in IoT technologies.
               </p>
             </div>
 
-            {/* Footer */}
+            {/* Footer with dual signatures */}
             <div className="w-full shrink-0">
               <div className="flex items-end justify-between px-0 sm:px-2">
-                {/* Signature */}
-                <div className="text-center w-16 sm:w-28 md:w-36">
-                  <img src={signature} alt="Authorized Signature" className="h-5 sm:h-8 md:h-10 object-contain mx-auto mb-0.5" />
+                {/* Course Mentor Signature */}
+                <div className="text-center w-20 sm:w-32 md:w-40">
+                  {course.instructor && (
+                    <p className="text-[6px] sm:text-xs font-medium text-gray-700 mb-0.5">{course.instructor}</p>
+                  )}
                   <div className="w-full border-t border-gray-400 mb-0.5" />
-                  <p className="text-[5px] sm:text-[10px] text-gray-500">Authorized Signature</p>
+                  <p className="text-[5px] sm:text-[10px] text-gray-500">Course Mentor</p>
                 </div>
 
-                {/* Certificate ID */}
-                <div className="text-center">
-                  <Award className="text-primary mx-auto mb-0.5 sm:mb-1" size={14} />
+                {/* Certificate ID & Seal */}
+                <div className="text-center flex flex-col items-center">
+                  <Award className="text-primary mb-0.5 sm:mb-1" size={14} />
                   <span className="text-[5px] sm:text-[10px] font-mono text-gray-500 block">{certificate.certificate_number}</span>
+                  <span className="text-[5px] sm:text-[9px] text-gray-400 mt-0.5">{issuedDate}</span>
                 </div>
 
-                {/* Date */}
-                <div className="text-center w-16 sm:w-28 md:w-36">
-                  <p className="text-[7px] sm:text-sm font-medium text-gray-700 mb-0.5">
-                    {issuedDate}
-                  </p>
+                {/* President Signature */}
+                <div className="text-center w-20 sm:w-32 md:w-40">
+                  <img src={signature} alt="President Signature" className="h-5 sm:h-8 md:h-10 object-contain mx-auto mb-0.5" />
                   <div className="w-full border-t border-gray-400 mb-0.5" />
-                  <p className="text-[5px] sm:text-[10px] text-gray-500">Date of Completion</p>
+                  <p className="text-[5px] sm:text-[10px] text-gray-500">President, RUET IoT Club</p>
                 </div>
               </div>
             </div>
@@ -171,7 +177,7 @@ const Certificate = () => {
           Certificate ID: <span className="font-mono text-primary">{certificate.certificate_number}</span>
         </p>
         <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-          Verify at: {window.location.href}
+          Verify at: <span className="text-primary">{verifyUrl}</span>
         </p>
       </div>
 

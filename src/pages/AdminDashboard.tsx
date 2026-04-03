@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Check, X, Users, FolderOpen, Calendar, Eye, GraduationCap, Pencil, Trash2, Plus, UserCog, Image, FileText, Download, ChevronDown, ChevronUp, BookOpen, Mail, FlaskConical, Video, Award } from "lucide-react";
+import { Check, X, Users, FolderOpen, Calendar, Eye, GraduationCap, Pencil, Trash2, Plus, UserCog, Image, FileText, Download, ChevronDown, ChevronUp, BookOpen, Mail, FlaskConical, Video, Award, BarChart3, Shield } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 
 const downloadCSV = (rows: Record<string, string>[], filename: string) => {
@@ -25,7 +25,7 @@ const downloadCSV = (rows: Record<string, string>[], filename: string) => {
   URL.revokeObjectURL(url);
 };
 
-type TabType = "applications" | "members" | "payments" | "team" | "projects" | "events" | "alumni" | "photos" | "blog" | "research" | "courses";
+type TabType = "overview" | "applications" | "members" | "payments" | "team" | "projects" | "events" | "alumni" | "photos" | "blog" | "research" | "courses";
 
 const emptyAlumniForm = { name: "", batch: "", department: "", company: "", linkedin: "" };
 const emptyProjectForm = { title: "", description: "", category: "", status: "idea", github_link: "", image_url: "" };
@@ -40,7 +40,11 @@ const emptyLessonForm = { title: "", video_url: "", pdf_file: "", sort_order: "0
 const AdminDashboard = () => {
   const { user, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<TabType>("applications");
+  const [tab, setTab] = useState<TabType>("overview");
+  const [overviewStats, setOverviewStats] = useState<any>({});
+  const [editingMemberProfile, setEditingMemberProfile] = useState<any>(null);
+  const [memberProfileForm, setMemberProfileForm] = useState<any>({});
+  const [memberRoles, setMemberRoles] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [eventPayments, setEventPayments] = useState<any[]>([]);
@@ -106,10 +110,49 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     switch (tab) {
+      case "overview": {
+        const [profilesRes, paymentsRes, eventsRes, projectsRes, coursesRes, blogRes, alumniRes, certsRes, courseRegsRes, eventRegsRes] = await Promise.all([
+          supabase.from("profiles").select("status, created_at"),
+          supabase.from("membership_payments").select("amount, payment_status"),
+          supabase.from("events").select("id"),
+          supabase.from("projects").select("id, status"),
+          supabase.from("courses").select("id, status"),
+          supabase.from("blog_posts").select("id, published"),
+          supabase.from("alumni").select("id"),
+          supabase.from("certificates").select("id"),
+          supabase.from("course_registrations").select("payment_status, completed"),
+          supabase.from("event_registrations").select("payment_status"),
+        ]);
+        const profiles = profilesRes.data || [];
+        const pays = paymentsRes.data || [];
+        setOverviewStats({
+          totalMembers: profiles.length,
+          approvedMembers: profiles.filter(p => p.status === "approved").length,
+          pendingMembers: profiles.filter(p => p.status === "pending").length,
+          totalRevenue: pays.filter(p => p.payment_status === "verified").reduce((s, p) => s + (p.amount || 0), 0),
+          pendingPayments: pays.filter(p => p.payment_status === "pending").length,
+          totalEvents: (eventsRes.data || []).length,
+          totalProjects: (projectsRes.data || []).length,
+          activeProjects: (projectsRes.data || []).filter(p => p.status !== "completed").length,
+          totalCourses: (coursesRes.data || []).length,
+          publishedCourses: (coursesRes.data || []).filter(c => c.status === "published").length,
+          pendingBlogs: (blogRes.data || []).filter(b => !b.published).length,
+          totalAlumni: (alumniRes.data || []).length,
+          totalCertificates: (certsRes.data || []).length,
+          courseEnrollments: (courseRegsRes.data || []).length,
+          courseCompleted: (courseRegsRes.data || []).filter(r => r.completed).length,
+          eventRegistrations: (eventRegsRes.data || []).length,
+        });
+        break;
+      }
       case "applications":
       case "members": {
-        const { data } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
-        setMembers(data || []);
+        const [profilesRes, rolesRes] = await Promise.all([
+          supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+          supabase.from("user_roles").select("*"),
+        ]);
+        setMembers(profilesRes.data || []);
+        setMemberRoles(rolesRes.data || []);
         break;
       }
       case "payments": {
@@ -218,7 +261,60 @@ const AdminDashboard = () => {
     else { toast.success(`Course payment ${status}`); fetchData(); }
   };
 
-  // ─── Project CRUD ───
+  // ─── Role Management ───
+  const assignRole = async (userId: string, role: string) => {
+    // Remove existing roles first, then add new one
+    await supabase.from("user_roles").delete().eq("user_id", userId);
+    if (role !== "none") {
+      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: role as any });
+      if (error) { toast.error("Failed to assign role"); return; }
+    }
+    toast.success(`Role updated to ${role}`);
+    fetchData();
+  };
+
+  const getUserRole = (userId: string) => {
+    const role = memberRoles.find((r: any) => r.user_id === userId);
+    return role?.role || "none";
+  };
+
+  // ─── Admin Edit Member Profile ───
+  const startEditMemberProfile = (m: any) => {
+    setEditingMemberProfile(m);
+    setMemberProfileForm({
+      full_name: m.full_name || "",
+      phone: m.phone || "",
+      department: m.department || "",
+      batch: m.batch || "",
+      session: m.session || "",
+      student_id: m.student_id || "",
+      skills: m.skills || "",
+      linkedin: m.linkedin || "",
+      github: m.github || "",
+      email: m.email || "",
+    });
+  };
+
+  const saveMemberProfile = async () => {
+    if (!editingMemberProfile) return;
+    const { error } = await supabase.from("profiles").update({
+      full_name: memberProfileForm.full_name,
+      phone: memberProfileForm.phone || null,
+      department: memberProfileForm.department || null,
+      batch: memberProfileForm.batch || null,
+      session: memberProfileForm.session || null,
+      student_id: memberProfileForm.student_id || null,
+      skills: memberProfileForm.skills || null,
+      linkedin: memberProfileForm.linkedin || null,
+      github: memberProfileForm.github || null,
+      email: memberProfileForm.email || null,
+    }).eq("user_id", editingMemberProfile.user_id);
+    if (error) { toast.error("Failed to update profile"); return; }
+    toast.success("Profile updated!");
+    setEditingMemberProfile(null);
+    fetchData();
+  };
+
   const handleProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = { title: projectForm.title, description: projectForm.description || null, category: projectForm.category || null, status: projectForm.status, github_link: projectForm.github_link || null, image_url: projectForm.image_url || null };
@@ -352,6 +448,7 @@ const AdminDashboard = () => {
   if (loading || !isAdmin) return null;
 
   const tabsList: { key: TabType; label: string; icon: typeof Users }[] = [
+    { key: "overview", label: "Overview", icon: BarChart3 },
     { key: "applications", label: "Applications", icon: FileText },
     { key: "members", label: "Members", icon: Users },
     { key: "payments", label: "Payments", icon: Eye },
@@ -383,6 +480,83 @@ const AdminDashboard = () => {
               </button>
             ))}
           </div>
+
+          {/* ════════ Overview Tab ════════ */}
+          {tab === "overview" && (
+            <div className="max-w-5xl mx-auto">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                {[
+                  { label: "Total Members", value: overviewStats.totalMembers || 0, icon: Users, color: "text-primary" },
+                  { label: "Approved", value: overviewStats.approvedMembers || 0, icon: Check, color: "text-green-400" },
+                  { label: "Pending Applications", value: overviewStats.pendingMembers || 0, icon: FileText, color: "text-yellow-400" },
+                  { label: "Revenue (Membership)", value: `৳${overviewStats.totalRevenue || 0}`, icon: Eye, color: "text-primary" },
+                  { label: "Total Events", value: overviewStats.totalEvents || 0, icon: Calendar, color: "text-accent" },
+                  { label: "Event Registrations", value: overviewStats.eventRegistrations || 0, icon: Calendar, color: "text-primary" },
+                  { label: "Total Projects", value: overviewStats.totalProjects || 0, icon: FolderOpen, color: "text-primary" },
+                  { label: "Active Projects", value: overviewStats.activeProjects || 0, icon: FolderOpen, color: "text-green-400" },
+                  { label: "Published Courses", value: overviewStats.publishedCourses || 0, icon: BookOpen, color: "text-primary" },
+                  { label: "Course Enrollments", value: overviewStats.courseEnrollments || 0, icon: GraduationCap, color: "text-primary" },
+                  { label: "Certificates Issued", value: overviewStats.totalCertificates || 0, icon: Award, color: "text-primary" },
+                  { label: "Completed Courses", value: overviewStats.courseCompleted || 0, icon: Check, color: "text-green-400" },
+                  { label: "Pending Blogs", value: overviewStats.pendingBlogs || 0, icon: BookOpen, color: "text-yellow-400" },
+                  { label: "Alumni", value: overviewStats.totalAlumni || 0, icon: GraduationCap, color: "text-primary" },
+                  { label: "Pending Payments", value: overviewStats.pendingPayments || 0, icon: Eye, color: "text-yellow-400" },
+                  { label: "Total Courses", value: overviewStats.totalCourses || 0, icon: BookOpen, color: "text-primary" },
+                ].map((stat, i) => (
+                  <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+                    className="p-4 rounded-xl glass text-center">
+                    <stat.icon className={`mx-auto mb-2 ${stat.color}`} size={20} />
+                    <p className="text-xl font-display font-bold text-foreground">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
+                  </motion.div>
+                ))}
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="p-6 rounded-xl glass">
+                  <h3 className="font-display text-sm font-bold tracking-wider text-primary mb-4">Quick Actions</h3>
+                  <div className="space-y-2">
+                    {[
+                      { label: "Review Applications", tab: "applications" as TabType, count: overviewStats.pendingMembers },
+                      { label: "Verify Payments", tab: "payments" as TabType, count: overviewStats.pendingPayments },
+                      { label: "Approve Blog Posts", tab: "blog" as TabType, count: overviewStats.pendingBlogs },
+                    ].filter(a => a.count > 0).map((action) => (
+                      <button key={action.tab} onClick={() => setTab(action.tab)}
+                        className="w-full flex items-center justify-between p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors text-left">
+                        <span className="text-sm text-foreground">{action.label}</span>
+                        <span className="text-xs font-mono px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-400">{action.count}</span>
+                      </button>
+                    ))}
+                    {[overviewStats.pendingMembers, overviewStats.pendingPayments, overviewStats.pendingBlogs].every(v => !v) && (
+                      <p className="text-sm text-muted-foreground text-center py-4">All caught up! No pending actions.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-6 rounded-xl glass">
+                  <h3 className="font-display text-sm font-bold tracking-wider text-primary mb-4">Financial Summary</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Membership Revenue</span>
+                      <span className="text-sm font-semibold text-foreground">৳{overviewStats.totalRevenue || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Pending Payments</span>
+                      <span className="text-sm font-semibold text-yellow-400">{overviewStats.pendingPayments || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Course Enrollments</span>
+                      <span className="text-sm font-semibold text-foreground">{overviewStats.courseEnrollments || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Event Registrations</span>
+                      <span className="text-sm font-semibold text-foreground">{overviewStats.eventRegistrations || 0}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ════════ Applications Tab ════════ */}
           {tab === "applications" && (
@@ -459,25 +633,105 @@ const AdminDashboard = () => {
 
           {/* ════════ Members Tab ════════ */}
           {tab === "members" && (
-             <div className="space-y-3 max-w-4xl mx-auto">
+            <div className="space-y-3 max-w-4xl mx-auto">
+              {/* Member profile edit modal */}
+              {editingMemberProfile && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setEditingMemberProfile(null)}>
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-full max-w-lg p-6 rounded-xl bg-background border border-border space-y-4 max-h-[80vh] overflow-y-auto">
+                    <h3 className="font-display text-sm font-bold tracking-wider text-primary">Edit Member Profile</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Full Name</label>
+                        <input className={inputClass} value={memberProfileForm.full_name} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, full_name: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Email</label>
+                        <input className={inputClass} value={memberProfileForm.email} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, email: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Student ID</label>
+                        <input className={inputClass} value={memberProfileForm.student_id} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, student_id: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Department</label>
+                        <input className={inputClass} value={memberProfileForm.department} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, department: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Batch</label>
+                        <input className={inputClass} value={memberProfileForm.batch} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, batch: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Session</label>
+                        <input className={inputClass} value={memberProfileForm.session} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, session: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Phone</label>
+                        <input className={inputClass} value={memberProfileForm.phone} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, phone: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Skills</label>
+                        <input className={inputClass} value={memberProfileForm.skills} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, skills: e.target.value })} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">LinkedIn</label>
+                      <input className={inputClass} value={memberProfileForm.linkedin} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, linkedin: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">GitHub</label>
+                      <input className={inputClass} value={memberProfileForm.github} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, github: e.target.value })} />
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <button onClick={saveMemberProfile} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors">Save Changes</button>
+                      <button onClick={() => setEditingMemberProfile(null)} className="px-4 py-2 rounded-lg bg-secondary text-muted-foreground text-sm hover:bg-secondary/80 transition-colors">Cancel</button>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+
               {members.length === 0 && <p className="text-center text-muted-foreground">No members yet.</p>}
-              {members.map((m: any) => (
-                <motion.div key={m.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl glass flex items-center justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-sm text-foreground">{m.full_name}</h4>
-                    <p className="text-xs text-muted-foreground">{m.department || "—"} · {m.student_id || "—"} · {m.phone || "—"}</p>
-                    {m.membership_id && <p className="text-xs font-mono text-primary mt-1">ID: {m.membership_id}</p>}
-                  </div>
-                  <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${
-                    m.status === "approved" ? "bg-green-500/10 text-green-400" :
-                    m.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-yellow-500/10 text-yellow-400"
-                  }`}>{m.status}</span>
-                  <div className="flex gap-1 shrink-0">
-                    <button onClick={() => updateMemberStatus(m.user_id, "approved")} className="p-1.5 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"><Check size={14} /></button>
-                    <button onClick={() => updateMemberStatus(m.user_id, "rejected")} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><X size={14} /></button>
-                  </div>
-                </motion.div>
-              ))}
+              {members.map((m: any) => {
+                const role = getUserRole(m.user_id);
+                return (
+                  <motion.div key={m.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl glass">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-semibold text-sm text-foreground">{m.full_name}</h4>
+                          {role !== "none" && (
+                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                              role === "admin" ? "bg-primary/10 text-primary" :
+                              role === "moderator" ? "bg-accent/10 text-accent" : "bg-secondary text-muted-foreground"
+                            }`}>
+                              <Shield size={10} className="inline mr-0.5" />{role}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{m.department || "—"} · {m.student_id || "—"} · {m.phone || "—"} · {m.email || "—"}</p>
+                        {m.membership_id && <p className="text-xs font-mono text-primary mt-1">ID: {m.membership_id}</p>}
+                      </div>
+                      <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${
+                        m.status === "approved" ? "bg-green-500/10 text-green-400" :
+                        m.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-yellow-500/10 text-yellow-400"
+                      }`}>{m.status}</span>
+                      <div className="flex gap-1 shrink-0">
+                        <button onClick={() => startEditMemberProfile(m)} className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="Edit Profile"><Pencil size={14} /></button>
+                        <select value={role} onChange={(e) => assignRole(m.user_id, e.target.value)}
+                          className="text-[10px] px-1.5 py-1 rounded bg-secondary border border-border text-foreground">
+                          <option value="none">No role</option>
+                          <option value="member">Member</option>
+                          <option value="moderator">Moderator</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                        <button onClick={() => updateMemberStatus(m.user_id, "approved")} className="p-1.5 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors" title="Approve"><Check size={14} /></button>
+                        <button onClick={() => updateMemberStatus(m.user_id, "rejected")} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="Reject"><X size={14} /></button>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           )}
 
