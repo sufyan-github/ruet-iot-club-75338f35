@@ -110,10 +110,49 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     switch (tab) {
+      case "overview": {
+        const [profilesRes, paymentsRes, eventsRes, projectsRes, coursesRes, blogRes, alumniRes, certsRes, courseRegsRes, eventRegsRes] = await Promise.all([
+          supabase.from("profiles").select("status, created_at"),
+          supabase.from("membership_payments").select("amount, payment_status"),
+          supabase.from("events").select("id"),
+          supabase.from("projects").select("id, status"),
+          supabase.from("courses").select("id, status"),
+          supabase.from("blog_posts").select("id, published"),
+          supabase.from("alumni").select("id"),
+          supabase.from("certificates").select("id"),
+          supabase.from("course_registrations").select("payment_status, completed"),
+          supabase.from("event_registrations").select("payment_status"),
+        ]);
+        const profiles = profilesRes.data || [];
+        const pays = paymentsRes.data || [];
+        setOverviewStats({
+          totalMembers: profiles.length,
+          approvedMembers: profiles.filter(p => p.status === "approved").length,
+          pendingMembers: profiles.filter(p => p.status === "pending").length,
+          totalRevenue: pays.filter(p => p.payment_status === "verified").reduce((s, p) => s + (p.amount || 0), 0),
+          pendingPayments: pays.filter(p => p.payment_status === "pending").length,
+          totalEvents: (eventsRes.data || []).length,
+          totalProjects: (projectsRes.data || []).length,
+          activeProjects: (projectsRes.data || []).filter(p => p.status !== "completed").length,
+          totalCourses: (coursesRes.data || []).length,
+          publishedCourses: (coursesRes.data || []).filter(c => c.status === "published").length,
+          pendingBlogs: (blogRes.data || []).filter(b => !b.published).length,
+          totalAlumni: (alumniRes.data || []).length,
+          totalCertificates: (certsRes.data || []).length,
+          courseEnrollments: (courseRegsRes.data || []).length,
+          courseCompleted: (courseRegsRes.data || []).filter(r => r.completed).length,
+          eventRegistrations: (eventRegsRes.data || []).length,
+        });
+        break;
+      }
       case "applications":
       case "members": {
-        const { data } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
-        setMembers(data || []);
+        const [profilesRes, rolesRes] = await Promise.all([
+          supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+          supabase.from("user_roles").select("*"),
+        ]);
+        setMembers(profilesRes.data || []);
+        setMemberRoles(rolesRes.data || []);
         break;
       }
       case "payments": {
