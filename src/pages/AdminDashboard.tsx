@@ -25,7 +25,7 @@ const downloadCSV = (rows: Record<string, string>[], filename: string) => {
   URL.revokeObjectURL(url);
 };
 
-type TabType = "applications" | "members" | "payments" | "team" | "projects" | "events" | "alumni" | "photos" | "blog" | "research" | "courses";
+type TabType = "overview" | "applications" | "members" | "payments" | "team" | "projects" | "events" | "alumni" | "photos" | "blog" | "research" | "courses";
 
 const emptyAlumniForm = { name: "", batch: "", department: "", company: "", linkedin: "" };
 const emptyProjectForm = { title: "", description: "", category: "", status: "idea", github_link: "", image_url: "" };
