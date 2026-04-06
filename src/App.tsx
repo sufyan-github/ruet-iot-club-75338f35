@@ -12,6 +12,7 @@ const About = lazy(() => import("./pages/About"));
 const Projects = lazy(() => import("./pages/Projects"));
 const Events = lazy(() => import("./pages/Events"));
 const Alumni = lazy(() => import("./pages/Alumni"));
+const Members = lazy(() => import("./pages/Members"));
 const Team = lazy(() => import("./pages/Team"));
 const Gallery = lazy(() => import("./pages/Gallery"));
 const JoinUs = lazy(() => import("./pages/JoinUs"));
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/projects" element={<Projects />} />
               <Route path="/events" element={<Events />} />
               <Route path="/alumni" element={<Alumni />} />
+              <Route path="/members" element={<Members />} />
               <Route path="/team" element={<Team />} />
               <Route path="/gallery" element={<Gallery />} />
               <Route path="/events/register" element={<EventRegistration />} />
