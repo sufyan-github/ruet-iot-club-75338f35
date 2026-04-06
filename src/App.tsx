@@ -12,6 +12,7 @@ const About = lazy(() => import("./pages/About"));
 const Projects = lazy(() => import("./pages/Projects"));
 const Events = lazy(() => import("./pages/Events"));
 const Alumni = lazy(() => import("./pages/Alumni"));
+const Members = lazy(() => import("./pages/Members"));
 const Team = lazy(() => import("./pages/Team"));
 const Gallery = lazy(() => import("./pages/Gallery"));
 const JoinUs = lazy(() => import("./pages/JoinUs"));
