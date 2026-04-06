@@ -210,6 +210,19 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Our Members */}
+      <section className="py-20">
+        <div className="container">
+          <SectionHeading title="Our Members" subtitle="Meet the approved members of RUET IoT Club" />
+          <MembersShowcase />
+          <div className="text-center mt-8">
+            <Link to="/team" className="text-sm text-primary hover:underline inline-flex items-center gap-1">
+              View Full Team <ArrowRight size={14} />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="py-20 bg-card/30">
         <div className="container text-center">
