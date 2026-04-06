@@ -5,6 +5,7 @@ import { ArrowRight, Cpu, Users, Lightbulb, Calendar, BookOpen, Wifi, FlaskConic
 import Layout from "@/components/Layout";
 import SectionHeading from "@/components/SectionHeading";
 import HeroCarousel from "@/components/HeroCarousel";
+import MembersShowcase from "@/components/MembersShowcase";
 import { supabase } from "@/integrations/supabase/client";
 import { getOptimizedImageUrl } from "@/lib/imageUtils";
 import heroBg from "@/assets/hero-bg.jpg";
