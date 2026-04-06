@@ -5,6 +5,7 @@ import { ArrowRight, Cpu, Users, Lightbulb, Calendar, BookOpen, Wifi, FlaskConic
 import Layout from "@/components/Layout";
 import SectionHeading from "@/components/SectionHeading";
 import HeroCarousel from "@/components/HeroCarousel";
+import MembersShowcase from "@/components/MembersShowcase";
 import { supabase } from "@/integrations/supabase/client";
 import { getOptimizedImageUrl } from "@/lib/imageUtils";
 import heroBg from "@/assets/hero-bg.jpg";
@@ -204,6 +205,19 @@ const Index = () => {
           <div className="text-center mt-8">
             <Link to="/events" className="text-sm text-primary hover:underline inline-flex items-center gap-1">
               View All Events <ArrowRight size={14} />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Our Members */}
+      <section className="py-20">
+        <div className="container">
+          <SectionHeading title="Our Members" subtitle="Meet the approved members of RUET IoT Club" />
+          <MembersShowcase />
+          <div className="text-center mt-8">
+            <Link to="/team" className="text-sm text-primary hover:underline inline-flex items-center gap-1">
+              View Full Team <ArrowRight size={14} />
             </Link>
           </div>
         </div>
