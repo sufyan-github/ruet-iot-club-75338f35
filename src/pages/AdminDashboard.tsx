@@ -221,6 +221,12 @@ const AdminDashboard = () => {
         setCourseProfiles(profData || []);
         break;
       }
+      }
+      case "hero": {
+        const { data } = await supabase.from("hero_slides").select("*").order("sort_order", { ascending: true });
+        setHeroSlides(data || []);
+        break;
+      }
     }
   };
 
