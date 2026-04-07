@@ -13,6 +13,7 @@ const navLinks = [
   { label: "Research", path: "/research" },
   { label: "Courses", path: "/courses" },
   { label: "Alumni", path: "/alumni" },
+  { label: "Members", path: "/members" },
   { label: "Team", path: "/team" },
   { label: "Gallery", path: "/gallery" },
   { label: "Blog", path: "/blog" },
