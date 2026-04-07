@@ -35,7 +35,7 @@ const emptyTeamForm = { name: "", position: "", department: "", bio: "", image_u
 const emptyPhotoForm = { title: "", image_url: "", description: "" };
 const emptyResearchForm = { title: "", authors: "", abstract: "", pdf_url: "", doi_link: "", status: "ongoing", research_area: "", tags: "" };
 const emptyCourseForm = { title: "", description: "", instructor: "", image_url: "", is_paid: false, price: "", category: "", duration: "", max_students: "", status: "draft" };
-const emptyLessonForm = { title: "", video_url: "", pdf_file: "", sort_order: "0" };
+const emptyHeroForm = { image_url: "", tagline: "", sort_order: "0", active: true };
 
 const AdminDashboard = () => {
   const { user, loading, isAdmin } = useAuth();
