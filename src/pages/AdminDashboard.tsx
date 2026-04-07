@@ -63,6 +63,10 @@ const AdminDashboard = () => {
   const [courseCertificates, setCourseCertificates] = useState<any[]>([]);
   const [courseProfiles, setCourseProfiles] = useState<any[]>([]);
   const [expandedApp, setExpandedApp] = useState<string | null>(null);
+  const [heroSlides, setHeroSlides] = useState<any[]>([]);
+  const [showHeroForm, setShowHeroForm] = useState(false);
+  const [heroForm, setHeroForm] = useState(emptyHeroForm);
+  const [editingHeroId, setEditingHeroId] = useState<string | null>(null);
 
   // Form states
   const [showProjectForm, setShowProjectForm] = useState(false);
