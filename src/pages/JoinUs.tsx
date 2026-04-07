@@ -110,7 +110,7 @@ const JoinUs = () => {
       }
 
       // Update profile with application details
-      const profilePayload: Record<string, any> = {
+      const profilePayload: { [key: string]: string | null } = {
         full_name: form.fullName,
         student_id: form.studentId,
         email: form.email,
