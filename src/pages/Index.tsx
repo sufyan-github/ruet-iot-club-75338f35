@@ -10,28 +10,78 @@ import { supabase } from "@/integrations/supabase/client";
 import { getOptimizedImageUrl } from "@/lib/imageUtils";
 import heroBg from "@/assets/hero-bg.jpg";
 
-const stats = [
-  { label: "Members", value: "120+", icon: Users },
-  { label: "Projects", value: "45+", icon: Cpu },
-  { label: "Workshops", value: "30+", icon: BookOpen },
-  { label: "Alumni", value: "80+", icon: Lightbulb },
-];
-
 const Index = () => {
   const [featuredProjects, setFeaturedProjects] = useState<any[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+  const [stats, setStats] = useState({ members: 0, projects: 0, events: 0, alumni: 0 });
+
+  const fetchProjects = async () => {
+    const { data } = await supabase.from("projects").select("*").order("created_at", { ascending: false }).limit(3);
+    setFeaturedProjects(data || []);
+  };
+
+  const fetchEvents = async () => {
+    const { data } = await supabase.from("events").select("*").order("date", { ascending: true }).limit(3);
+    setUpcomingEvents(data || []);
+  };
+
+  const fetchStats = async () => {
+    const [mRes, pRes, eRes, aRes] = await Promise.all([
+      supabase.from("profiles").select("id", { count: "exact", head: true }).eq("status", "approved"),
+      supabase.from("projects").select("id", { count: "exact", head: true }),
+      supabase.from("events").select("id", { count: "exact", head: true }),
+      supabase.from("alumni").select("id", { count: "exact", head: true }),
+    ]);
+    setStats({
+      members: mRes.count || 0,
+      projects: pRes.count || 0,
+      events: eRes.count || 0,
+      alumni: aRes.count || 0,
+    });
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      const [projRes, evtRes] = await Promise.all([
-        supabase.from("projects").select("*").order("created_at", { ascending: false }).limit(3),
-        supabase.from("events").select("*").order("date", { ascending: true }).limit(3),
-      ]);
-      setFeaturedProjects(projRes.data || []);
-      setUpcomingEvents(evtRes.data || []);
+    fetchProjects();
+    fetchEvents();
+    fetchStats();
+
+    // Realtime subscriptions for live updates
+    const projectsChannel = supabase
+      .channel("homepage_projects")
+      .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, () => {
+        fetchProjects();
+        fetchStats();
+      })
+      .subscribe();
+
+    const eventsChannel = supabase
+      .channel("homepage_events")
+      .on("postgres_changes", { event: "*", schema: "public", table: "events" }, () => {
+        fetchEvents();
+        fetchStats();
+      })
+      .subscribe();
+
+    const membersChannel = supabase
+      .channel("homepage_members")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => {
+        fetchStats();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(projectsChannel);
+      supabase.removeChannel(eventsChannel);
+      supabase.removeChannel(membersChannel);
     };
-    fetchData();
   }, []);
+
+  const statCards = [
+    { label: "Members", value: `${stats.members}+`, icon: Users },
+    { label: "Projects", value: `${stats.projects}+`, icon: Cpu },
+    { label: "Events", value: `${stats.events}+`, icon: BookOpen },
+    { label: "Alumni", value: `${stats.alumni}+`, icon: Lightbulb },
+  ];
 
   return (
     <Layout>
@@ -92,11 +142,11 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Stats */}
+      {/* Stats - now dynamic */}
       <section className="py-16 border-y border-border/30">
         <div className="container">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {stats.map((stat, i) => (
+            {statCards.map((stat, i) => (
               <motion.div
                 key={stat.label}
                 initial={{ opacity: 0, y: 20 }}
