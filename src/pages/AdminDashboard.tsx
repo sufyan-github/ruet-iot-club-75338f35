@@ -471,6 +471,7 @@ const AdminDashboard = () => {
     { key: "courses", label: "Courses", icon: BookOpen },
     { key: "photos", label: "Photos", icon: Image },
     { key: "blog", label: "Blog", icon: BookOpen },
+    { key: "hero", label: "Hero Slides", icon: Image },
   ];
 
   const inputClass = "w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";
