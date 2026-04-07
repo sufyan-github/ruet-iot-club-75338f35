@@ -350,6 +350,33 @@ export type Database = {
         }
         Relationships: []
       }
+      hero_slides: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          image_url: string
+          sort_order: number
+          tagline: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          image_url: string
+          sort_order?: number
+          tagline?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          image_url?: string
+          sort_order?: number
+          tagline?: string
+        }
+        Relationships: []
+      }
       lessons: {
         Row: {
           course_id: string
