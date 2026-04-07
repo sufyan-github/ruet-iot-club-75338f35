@@ -455,6 +455,23 @@ const AdminDashboard = () => {
   const deleteLesson = async (id: string) => { const { error } = await supabase.from("lessons").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Lesson deleted"); fetchData(); } };
   const resetLessonForm = () => { setLessonForm(emptyLessonForm); setEditingLessonId(null); setShowLessonForm(false); };
 
+  // ─── Hero Slides CRUD ───
+  const handleHeroSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload = { image_url: heroForm.image_url, tagline: heroForm.tagline, sort_order: parseInt(heroForm.sort_order) || 0, active: heroForm.active };
+    if (editingHeroId) {
+      const { error } = await supabase.from("hero_slides").update(payload).eq("id", editingHeroId);
+      if (error) toast.error("Failed"); else { toast.success("Slide updated!"); resetHeroForm(); fetchData(); }
+    } else {
+      const { error } = await supabase.from("hero_slides").insert(payload);
+      if (error) toast.error("Failed"); else { toast.success("Slide added!"); resetHeroForm(); fetchData(); }
+    }
+  };
+  const editHeroSlide = (s: any) => { setHeroForm({ image_url: s.image_url, tagline: s.tagline || "", sort_order: s.sort_order?.toString() || "0", active: s.active }); setEditingHeroId(s.id); setShowHeroForm(true); };
+  const deleteHeroSlide = async (id: string) => { const { error } = await supabase.from("hero_slides").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Slide deleted"); fetchData(); } };
+  const resetHeroForm = () => { setHeroForm(emptyHeroForm); setEditingHeroId(null); setShowHeroForm(false); };
+  const toggleHeroActive = async (id: string, active: boolean) => { await supabase.from("hero_slides").update({ active: !active }).eq("id", id); fetchData(); };
+
   if (loading || !isAdmin) return null;
 
   const tabsList: { key: TabType; label: string; icon: typeof Users }[] = [
