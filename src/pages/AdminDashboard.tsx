@@ -1634,6 +1634,67 @@ const AdminDashboard = () => {
               )}
             </div>
           )}
+
+          {/* ════════ Hero Slides Tab ════════ */}
+          {tab === "hero" && (
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-display text-sm font-bold tracking-wider text-primary">Hero Carousel Slides</h3>
+                <button onClick={() => { resetHeroForm(); setShowHeroForm(true); }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors">
+                  <Plus size={14} /> Add Slide
+                </button>
+              </div>
+
+              {heroSlides.length === 0 && <p className="text-center text-muted-foreground">No hero slides yet. Default images will be shown.</p>}
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {heroSlides.map((slide: any) => (
+                  <motion.div key={slide.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className={`rounded-xl glass overflow-hidden ${!slide.active ? "opacity-50" : ""}`}>
+                    {slide.image_url && (
+                      <img src={slide.image_url} alt={slide.tagline} className="w-full h-40 object-cover" loading="lazy" />
+                    )}
+                    <div className="p-4">
+                      <p className="text-sm font-semibold text-foreground mb-1">{slide.tagline || "No tagline"}</p>
+                      <p className="text-xs text-muted-foreground mb-3">Order: {slide.sort_order} · {slide.active ? "Active" : "Inactive"}</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => editHeroSlide(slide)} className="p-1.5 rounded bg-secondary text-muted-foreground hover:text-foreground transition-colors"><Pencil size={12} /></button>
+                        <button onClick={() => toggleHeroActive(slide.id, slide.active)} className="p-1.5 rounded bg-secondary text-muted-foreground hover:text-foreground transition-colors">
+                          {slide.active ? <X size={12} /> : <Check size={12} />}
+                        </button>
+                        <button onClick={() => deleteHeroSlide(slide.id)} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><Trash2 size={12} /></button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Hero Form Modal */}
+              {showHeroForm && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => resetHeroForm()}>
+                  <motion.form initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                    onClick={(e) => e.stopPropagation()} onSubmit={handleHeroSubmit}
+                    className="w-full max-w-md p-6 rounded-xl bg-background border border-border space-y-4">
+                    <h3 className="font-display text-sm font-bold tracking-wider text-primary">{editingHeroId ? "Edit Slide" : "Add Slide"}</h3>
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Image</label>
+                      <ImageUpload value={heroForm.image_url} onChange={(url) => setHeroForm({ ...heroForm, image_url: url })} folder="hero" />
+                    </div>
+                    <input placeholder="Tagline *" required value={heroForm.tagline} onChange={(e) => setHeroForm({ ...heroForm, tagline: e.target.value })} className={inputClass} />
+                    <input placeholder="Sort Order" type="number" value={heroForm.sort_order} onChange={(e) => setHeroForm({ ...heroForm, sort_order: e.target.value })} className={inputClass} />
+                    <label className="flex items-center gap-2 text-sm text-foreground">
+                      <input type="checkbox" checked={heroForm.active} onChange={(e) => setHeroForm({ ...heroForm, active: e.target.checked })} />
+                      Active
+                    </label>
+                    <div className="flex gap-2">
+                      <button type="submit" className="px-6 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">{editingHeroId ? "Update" : "Add"}</button>
+                      <button type="button" onClick={() => resetHeroForm()} className="px-6 py-2 rounded-lg bg-secondary text-muted-foreground font-semibold text-sm hover:bg-secondary/80 transition-colors">Cancel</button>
+                    </div>
+                  </motion.form>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </section>
     </Layout>
