@@ -110,7 +110,7 @@ const JoinUs = () => {
       }
 
       // Update profile with application details
-      const profilePayload: Record<string, any> = {
+      const profileUpdate = {
         full_name: form.fullName,
         student_id: form.studentId,
         email: form.email,
@@ -126,13 +126,13 @@ const JoinUs = () => {
         linkedin: form.linkedin || null,
         github: form.github || null,
         facebook_link: form.facebookLink || null,
+        ...(resumeUrl ? { resume_url: resumeUrl } : {}),
+        ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
       };
-      if (resumeUrl) profilePayload.resume_url = resumeUrl;
-      if (avatarUrl) profilePayload.avatar_url = avatarUrl;
 
       const { error: profileError } = await supabase
         .from("profiles")
-        .update(profilePayload)
+        .update(profileUpdate)
         .eq("user_id", user.id);
 
       if (profileError) {
