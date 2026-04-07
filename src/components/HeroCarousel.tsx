@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { getOptimizedImageUrl } from "@/lib/imageUtils";
 import activity1 from "@/assets/activity-1.jpg";
 import activity2 from "@/assets/activity-2.jpg";
 import activity3 from "@/assets/activity-3.jpg";
 import activity4 from "@/assets/activity-4.jpg";
 
-const slides = [
+const fallbackSlides = [
   { src: activity1, label: "Hands-on IoT Lab" },
   { src: activity2, label: "Workshop Sessions" },
   { src: activity3, label: "Hackathon Events" },
@@ -16,21 +18,54 @@ const slides = [
 const HeroCarousel = () => {
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(1);
+  const [slides, setSlides] = useState<{ src: string; label: string }[]>(fallbackSlides);
+
+  useEffect(() => {
+    const fetchSlides = async () => {
+      const { data } = await supabase
+        .from("hero_slides")
+        .select("*")
+        .eq("active", true)
+        .order("sort_order", { ascending: true });
+      if (data && data.length > 0) {
+        setSlides(data.map((s: any) => ({
+          src: getOptimizedImageUrl(s.image_url, { width: 600, height: 600 }),
+          label: s.tagline || "",
+        })));
+      }
+    };
+    fetchSlides();
+
+    // Realtime updates
+    const channel = supabase
+      .channel("hero_slides_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "hero_slides" }, () => {
+        fetchSlides();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const next = useCallback(() => {
     setDirection(1);
     setCurrent((prev) => (prev + 1) % slides.length);
-  }, []);
+  }, [slides.length]);
 
   const prev = useCallback(() => {
     setDirection(-1);
     setCurrent((prev) => (prev - 1 + slides.length) % slides.length);
-  }, []);
+  }, [slides.length]);
 
   useEffect(() => {
     const timer = setInterval(next, 4000);
     return () => clearInterval(timer);
   }, [next]);
+
+  // Reset current if slides change
+  useEffect(() => {
+    setCurrent(0);
+  }, [slides.length]);
 
   const variants = {
     enter: (dir: number) => ({ x: dir > 0 ? 300 : -300, opacity: 0, scale: 0.95 }),
@@ -38,9 +73,10 @@ const HeroCarousel = () => {
     exit: (dir: number) => ({ x: dir > 0 ? -300 : 300, opacity: 0, scale: 0.95 }),
   };
 
+  if (slides.length === 0) return null;
+
   return (
     <div className="relative w-full max-w-lg mx-auto">
-      {/* Decorative frame */}
       <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-primary/20 via-accent/10 to-primary/5 blur-sm" />
       <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-br from-primary/40 via-transparent to-accent/30" />
       
@@ -64,7 +100,6 @@ const HeroCarousel = () => {
               height={512}
               loading="lazy"
             />
-            {/* Gradient overlay at bottom */}
             <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/90 to-transparent" />
             <div className="absolute bottom-4 left-4 right-4">
               <span className="text-sm font-display font-semibold text-foreground tracking-wider">
@@ -74,7 +109,6 @@ const HeroCarousel = () => {
           </motion.div>
         </AnimatePresence>
 
-        {/* Nav buttons */}
         <button onClick={prev} aria-label="Previous slide"
           className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-background/60 backdrop-blur-sm text-foreground hover:bg-background/80 transition-colors z-10">
           <ChevronLeft size={18} />
@@ -85,7 +119,6 @@ const HeroCarousel = () => {
         </button>
       </div>
 
-      {/* Dots */}
       <div className="flex justify-center gap-2 mt-4">
         {slides.map((_, i) => (
           <button key={i} onClick={() => { setDirection(i > current ? 1 : -1); setCurrent(i); }}

@@ -25,7 +25,7 @@ const downloadCSV = (rows: Record<string, string>[], filename: string) => {
   URL.revokeObjectURL(url);
 };
 
-type TabType = "overview" | "applications" | "members" | "payments" | "team" | "projects" | "events" | "alumni" | "photos" | "blog" | "research" | "courses";
+type TabType = "overview" | "applications" | "members" | "payments" | "team" | "projects" | "events" | "alumni" | "photos" | "blog" | "research" | "courses" | "hero";
 
 const emptyAlumniForm = { name: "", batch: "", department: "", company: "", linkedin: "" };
 const emptyProjectForm = { title: "", description: "", category: "", status: "idea", github_link: "", image_url: "" };
@@ -36,6 +36,7 @@ const emptyPhotoForm = { title: "", image_url: "", description: "" };
 const emptyResearchForm = { title: "", authors: "", abstract: "", pdf_url: "", doi_link: "", status: "ongoing", research_area: "", tags: "" };
 const emptyCourseForm = { title: "", description: "", instructor: "", image_url: "", is_paid: false, price: "", category: "", duration: "", max_students: "", status: "draft" };
 const emptyLessonForm = { title: "", video_url: "", pdf_file: "", sort_order: "0" };
+const emptyHeroForm = { image_url: "", tagline: "", sort_order: "0", active: true };
 
 const AdminDashboard = () => {
   const { user, loading, isAdmin } = useAuth();
@@ -62,6 +63,10 @@ const AdminDashboard = () => {
   const [courseCertificates, setCourseCertificates] = useState<any[]>([]);
   const [courseProfiles, setCourseProfiles] = useState<any[]>([]);
   const [expandedApp, setExpandedApp] = useState<string | null>(null);
+  const [heroSlides, setHeroSlides] = useState<any[]>([]);
+  const [showHeroForm, setShowHeroForm] = useState(false);
+  const [heroForm, setHeroForm] = useState(emptyHeroForm);
+  const [editingHeroId, setEditingHeroId] = useState<string | null>(null);
 
   // Form states
   const [showProjectForm, setShowProjectForm] = useState(false);
@@ -216,6 +221,11 @@ const AdminDashboard = () => {
         setCourseProfiles(profData || []);
         break;
       }
+      case "hero": {
+        const { data } = await supabase.from("hero_slides").select("*").order("sort_order", { ascending: true });
+        setHeroSlides(data || []);
+        break;
+      }
     }
   };
 
@@ -339,7 +349,17 @@ const AdminDashboard = () => {
       if (error) toast.error("Failed"); else { toast.success("Event updated!"); resetEventForm(); fetchData(); }
     } else {
       const { error } = await supabase.from("events").insert(payload);
-      if (error) toast.error("Failed"); else { toast.success("Event created!"); resetEventForm(); fetchData(); }
+      if (error) toast.error("Failed"); else {
+        toast.success("Event created!");
+        // Notify all members
+        try {
+          await supabase.functions.invoke("send-notification", {
+            body: { type: "new_event", title: payload.title, date: payload.date, venue: payload.venue },
+          });
+          toast.success("Members notified via email!");
+        } catch { /* silent */ }
+        resetEventForm(); fetchData();
+      }
     }
   };
   const editEvent = (ev: any) => { setEventForm({ title: ev.title, date: ev.date ? new Date(ev.date).toISOString().slice(0, 16) : "", venue: ev.venue || "", description: ev.description || "", type: ev.type || "", max_participants: ev.max_participants?.toString() || "", image_url: ev.image_url || "", is_paid: ev.is_paid || false, registration_fee: ev.registration_fee?.toString() || "", payment_methods: ev.payment_methods || [], payment_number: ev.payment_number || "01580352238", bank_account: ev.bank_account || "4170331020181850" }); setEditingEventId(ev.id); setShowEventForm(true); };
@@ -421,7 +441,17 @@ const AdminDashboard = () => {
       if (error) toast.error("Failed"); else { toast.success("Course updated!"); resetCourseForm(); fetchData(); }
     } else {
       const { error } = await supabase.from("courses").insert(payload);
-      if (error) toast.error("Failed"); else { toast.success("Course created!"); resetCourseForm(); fetchData(); }
+      if (error) toast.error("Failed"); else {
+        toast.success("Course created!");
+        // Notify all members
+        try {
+          await supabase.functions.invoke("send-notification", {
+            body: { type: "new_course", title: payload.title, instructor: payload.instructor, duration: payload.duration },
+          });
+          toast.success("Members notified via email!");
+        } catch { /* silent */ }
+        resetCourseForm(); fetchData();
+      }
     }
   };
   const editCourse = (c: any) => { setCourseForm({ title: c.title, description: c.description || "", instructor: c.instructor || "", image_url: c.image_url || "", is_paid: c.is_paid || false, price: c.price?.toString() || "", category: c.category || "", duration: c.duration || "", max_students: c.max_students?.toString() || "", status: c.status || "draft" }); setEditingCourseId(c.id); setShowCourseForm(true); };
@@ -445,6 +475,23 @@ const AdminDashboard = () => {
   const deleteLesson = async (id: string) => { const { error } = await supabase.from("lessons").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Lesson deleted"); fetchData(); } };
   const resetLessonForm = () => { setLessonForm(emptyLessonForm); setEditingLessonId(null); setShowLessonForm(false); };
 
+  // ─── Hero Slides CRUD ───
+  const handleHeroSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload = { image_url: heroForm.image_url, tagline: heroForm.tagline, sort_order: parseInt(heroForm.sort_order) || 0, active: heroForm.active };
+    if (editingHeroId) {
+      const { error } = await supabase.from("hero_slides").update(payload).eq("id", editingHeroId);
+      if (error) toast.error("Failed"); else { toast.success("Slide updated!"); resetHeroForm(); fetchData(); }
+    } else {
+      const { error } = await supabase.from("hero_slides").insert(payload);
+      if (error) toast.error("Failed"); else { toast.success("Slide added!"); resetHeroForm(); fetchData(); }
+    }
+  };
+  const editHeroSlide = (s: any) => { setHeroForm({ image_url: s.image_url, tagline: s.tagline || "", sort_order: s.sort_order?.toString() || "0", active: s.active }); setEditingHeroId(s.id); setShowHeroForm(true); };
+  const deleteHeroSlide = async (id: string) => { const { error } = await supabase.from("hero_slides").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Slide deleted"); fetchData(); } };
+  const resetHeroForm = () => { setHeroForm(emptyHeroForm); setEditingHeroId(null); setShowHeroForm(false); };
+  const toggleHeroActive = async (id: string, active: boolean) => { await supabase.from("hero_slides").update({ active: !active }).eq("id", id); fetchData(); };
+
   if (loading || !isAdmin) return null;
 
   const tabsList: { key: TabType; label: string; icon: typeof Users }[] = [
@@ -460,6 +507,7 @@ const AdminDashboard = () => {
     { key: "courses", label: "Courses", icon: BookOpen },
     { key: "photos", label: "Photos", icon: Image },
     { key: "blog", label: "Blog", icon: BookOpen },
+    { key: "hero", label: "Hero Slides", icon: Image },
   ];
 
   const inputClass = "w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";
@@ -1600,6 +1648,67 @@ const AdminDashboard = () => {
                     <div className="flex gap-2">
                       <button type="submit" className="px-6 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">{editingLessonId ? "Update" : "Add"}</button>
                       <button type="button" onClick={() => resetLessonForm()} className="px-6 py-2 rounded-lg bg-secondary text-muted-foreground font-semibold text-sm hover:bg-secondary/80 transition-colors">Cancel</button>
+                    </div>
+                  </motion.form>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ════════ Hero Slides Tab ════════ */}
+          {tab === "hero" && (
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-display text-sm font-bold tracking-wider text-primary">Hero Carousel Slides</h3>
+                <button onClick={() => { resetHeroForm(); setShowHeroForm(true); }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors">
+                  <Plus size={14} /> Add Slide
+                </button>
+              </div>
+
+              {heroSlides.length === 0 && <p className="text-center text-muted-foreground">No hero slides yet. Default images will be shown.</p>}
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {heroSlides.map((slide: any) => (
+                  <motion.div key={slide.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className={`rounded-xl glass overflow-hidden ${!slide.active ? "opacity-50" : ""}`}>
+                    {slide.image_url && (
+                      <img src={slide.image_url} alt={slide.tagline} className="w-full h-40 object-cover" loading="lazy" />
+                    )}
+                    <div className="p-4">
+                      <p className="text-sm font-semibold text-foreground mb-1">{slide.tagline || "No tagline"}</p>
+                      <p className="text-xs text-muted-foreground mb-3">Order: {slide.sort_order} · {slide.active ? "Active" : "Inactive"}</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => editHeroSlide(slide)} className="p-1.5 rounded bg-secondary text-muted-foreground hover:text-foreground transition-colors"><Pencil size={12} /></button>
+                        <button onClick={() => toggleHeroActive(slide.id, slide.active)} className="p-1.5 rounded bg-secondary text-muted-foreground hover:text-foreground transition-colors">
+                          {slide.active ? <X size={12} /> : <Check size={12} />}
+                        </button>
+                        <button onClick={() => deleteHeroSlide(slide.id)} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><Trash2 size={12} /></button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Hero Form Modal */}
+              {showHeroForm && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => resetHeroForm()}>
+                  <motion.form initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                    onClick={(e) => e.stopPropagation()} onSubmit={handleHeroSubmit}
+                    className="w-full max-w-md p-6 rounded-xl bg-background border border-border space-y-4">
+                    <h3 className="font-display text-sm font-bold tracking-wider text-primary">{editingHeroId ? "Edit Slide" : "Add Slide"}</h3>
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Image</label>
+                      <ImageUpload currentUrl={heroForm.image_url} onUpload={(url) => setHeroForm({ ...heroForm, image_url: url })} folder="hero" />
+                    </div>
+                    <input placeholder="Tagline *" required value={heroForm.tagline} onChange={(e) => setHeroForm({ ...heroForm, tagline: e.target.value })} className={inputClass} />
+                    <input placeholder="Sort Order" type="number" value={heroForm.sort_order} onChange={(e) => setHeroForm({ ...heroForm, sort_order: e.target.value })} className={inputClass} />
+                    <label className="flex items-center gap-2 text-sm text-foreground">
+                      <input type="checkbox" checked={heroForm.active} onChange={(e) => setHeroForm({ ...heroForm, active: e.target.checked })} />
+                      Active
+                    </label>
+                    <div className="flex gap-2">
+                      <button type="submit" className="px-6 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">{editingHeroId ? "Update" : "Add"}</button>
+                      <button type="button" onClick={() => resetHeroForm()} className="px-6 py-2 rounded-lg bg-secondary text-muted-foreground font-semibold text-sm hover:bg-secondary/80 transition-colors">Cancel</button>
                     </div>
                   </motion.form>
                 </div>
