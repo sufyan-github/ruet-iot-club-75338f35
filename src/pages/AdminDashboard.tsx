@@ -349,7 +349,17 @@ const AdminDashboard = () => {
       if (error) toast.error("Failed"); else { toast.success("Event updated!"); resetEventForm(); fetchData(); }
     } else {
       const { error } = await supabase.from("events").insert(payload);
-      if (error) toast.error("Failed"); else { toast.success("Event created!"); resetEventForm(); fetchData(); }
+      if (error) toast.error("Failed"); else {
+        toast.success("Event created!");
+        // Notify all members
+        try {
+          await supabase.functions.invoke("send-notification", {
+            body: { type: "new_event", title: payload.title, date: payload.date, venue: payload.venue },
+          });
+          toast.success("Members notified via email!");
+        } catch { /* silent */ }
+        resetEventForm(); fetchData();
+      }
     }
   };
   const editEvent = (ev: any) => { setEventForm({ title: ev.title, date: ev.date ? new Date(ev.date).toISOString().slice(0, 16) : "", venue: ev.venue || "", description: ev.description || "", type: ev.type || "", max_participants: ev.max_participants?.toString() || "", image_url: ev.image_url || "", is_paid: ev.is_paid || false, registration_fee: ev.registration_fee?.toString() || "", payment_methods: ev.payment_methods || [], payment_number: ev.payment_number || "01580352238", bank_account: ev.bank_account || "4170331020181850" }); setEditingEventId(ev.id); setShowEventForm(true); };
