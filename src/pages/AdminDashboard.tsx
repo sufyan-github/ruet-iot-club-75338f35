@@ -1678,7 +1678,7 @@ const AdminDashboard = () => {
                     <h3 className="font-display text-sm font-bold tracking-wider text-primary">{editingHeroId ? "Edit Slide" : "Add Slide"}</h3>
                     <div>
                       <label className="text-xs text-muted-foreground mb-1 block">Image</label>
-                      <ImageUpload value={heroForm.image_url} onChange={(url) => setHeroForm({ ...heroForm, image_url: url })} folder="hero" />
+                      <ImageUpload currentUrl={heroForm.image_url} onUpload={(url) => setHeroForm({ ...heroForm, image_url: url })} folder="hero" />
                     </div>
                     <input placeholder="Tagline *" required value={heroForm.tagline} onChange={(e) => setHeroForm({ ...heroForm, tagline: e.target.value })} className={inputClass} />
                     <input placeholder="Sort Order" type="number" value={heroForm.sort_order} onChange={(e) => setHeroForm({ ...heroForm, sort_order: e.target.value })} className={inputClass} />
