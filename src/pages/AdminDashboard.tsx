@@ -441,7 +441,17 @@ const AdminDashboard = () => {
       if (error) toast.error("Failed"); else { toast.success("Course updated!"); resetCourseForm(); fetchData(); }
     } else {
       const { error } = await supabase.from("courses").insert(payload);
-      if (error) toast.error("Failed"); else { toast.success("Course created!"); resetCourseForm(); fetchData(); }
+      if (error) toast.error("Failed"); else {
+        toast.success("Course created!");
+        // Notify all members
+        try {
+          await supabase.functions.invoke("send-notification", {
+            body: { type: "new_course", title: payload.title, instructor: payload.instructor, duration: payload.duration },
+          });
+          toast.success("Members notified via email!");
+        } catch { /* silent */ }
+        resetCourseForm(); fetchData();
+      }
     }
   };
   const editCourse = (c: any) => { setCourseForm({ title: c.title, description: c.description || "", instructor: c.instructor || "", image_url: c.image_url || "", is_paid: c.is_paid || false, price: c.price?.toString() || "", category: c.category || "", duration: c.duration || "", max_students: c.max_students?.toString() || "", status: c.status || "draft" }); setEditingCourseId(c.id); setShowCourseForm(true); };
