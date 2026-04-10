@@ -95,6 +95,30 @@ export type Database = {
         }
         Relationships: []
       }
+      announcements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          message: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          message?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          message?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       blog_posts: {
         Row: {
           author_id: string | null

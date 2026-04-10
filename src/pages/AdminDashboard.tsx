@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Check, X, Users, FolderOpen, Calendar, Eye, GraduationCap, Pencil, Trash2, Plus, UserCog, Image, FileText, Download, ChevronDown, ChevronUp, BookOpen, Mail, FlaskConical, Video, Award, BarChart3, Shield } from "lucide-react";
+import { Check, X, Users, FolderOpen, Calendar, Eye, GraduationCap, Pencil, Trash2, Plus, UserCog, Image, FileText, Download, ChevronDown, ChevronUp, BookOpen, Mail, FlaskConical, Video, Award, BarChart3, Shield, Megaphone } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 
 const downloadCSV = (rows: Record<string, string>[], filename: string) => {
@@ -25,7 +25,7 @@ const downloadCSV = (rows: Record<string, string>[], filename: string) => {
   URL.revokeObjectURL(url);
 };
 
-type TabType = "overview" | "applications" | "members" | "payments" | "team" | "projects" | "events" | "alumni" | "photos" | "blog" | "research" | "courses" | "hero";
+type TabType = "overview" | "applications" | "members" | "payments" | "team" | "projects" | "events" | "alumni" | "photos" | "blog" | "research" | "courses" | "hero" | "announcements";
 
 const emptyAlumniForm = { name: "", batch: "", department: "", company: "", linkedin: "" };
 const emptyProjectForm = { title: "", description: "", category: "", status: "idea", github_link: "", image_url: "" };
@@ -37,6 +37,7 @@ const emptyResearchForm = { title: "", authors: "", abstract: "", pdf_url: "", d
 const emptyCourseForm = { title: "", description: "", instructor: "", image_url: "", is_paid: false, price: "", category: "", duration: "", max_students: "", status: "draft" };
 const emptyLessonForm = { title: "", video_url: "", pdf_file: "", sort_order: "0" };
 const emptyHeroForm = { image_url: "", tagline: "", sort_order: "0", active: true };
+const emptyAnnouncementForm = { title: "", message: "" };
 
 const AdminDashboard = () => {
   const { user, loading, isAdmin } = useAuth();
@@ -67,6 +68,10 @@ const AdminDashboard = () => {
   const [showHeroForm, setShowHeroForm] = useState(false);
   const [heroForm, setHeroForm] = useState(emptyHeroForm);
   const [editingHeroId, setEditingHeroId] = useState<string | null>(null);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
+  const [announcementForm, setAnnouncementForm] = useState(emptyAnnouncementForm);
+  const [editingAnnouncementId, setEditingAnnouncementId] = useState<string | null>(null);
 
   // Form states
   const [showProjectForm, setShowProjectForm] = useState(false);
@@ -224,6 +229,11 @@ const AdminDashboard = () => {
       case "hero": {
         const { data } = await supabase.from("hero_slides").select("*").order("sort_order", { ascending: true });
         setHeroSlides(data || []);
+        break;
+      }
+      case "announcements": {
+        const { data } = await supabase.from("announcements").select("*").order("created_at", { ascending: false });
+        setAnnouncements(data || []);
         break;
       }
     }
@@ -508,6 +518,7 @@ const AdminDashboard = () => {
     { key: "photos", label: "Photos", icon: Image },
     { key: "blog", label: "Blog", icon: BookOpen },
     { key: "hero", label: "Hero Slides", icon: Image },
+    { key: "announcements", label: "Announcements", icon: Megaphone },
   ];
 
   const inputClass = "w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";
@@ -1709,6 +1720,70 @@ const AdminDashboard = () => {
                     <div className="flex gap-2">
                       <button type="submit" className="px-6 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">{editingHeroId ? "Update" : "Add"}</button>
                       <button type="button" onClick={() => resetHeroForm()} className="px-6 py-2 rounded-lg bg-secondary text-muted-foreground font-semibold text-sm hover:bg-secondary/80 transition-colors">Cancel</button>
+                    </div>
+                  </motion.form>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ════════ Announcements Tab ════════ */}
+          {tab === "announcements" && (
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold text-foreground">Announcements</h3>
+                <button onClick={() => { setShowAnnouncementForm(true); setEditingAnnouncementId(null); setAnnouncementForm(emptyAnnouncementForm); }} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">
+                  <Plus size={16} /> New Announcement
+                </button>
+              </div>
+
+              {announcements.length === 0 && !showAnnouncementForm && (
+                <p className="text-muted-foreground text-center py-12">No announcements yet. Create one to notify members.</p>
+              )}
+
+              <div className="space-y-3">
+                {announcements.map((a) => (
+                  <div key={a.id} className="bg-secondary/30 border border-border/40 rounded-xl p-4 flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-foreground">{a.title}</h4>
+                      {a.message && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{a.message}</p>}
+                      <p className="text-xs text-muted-foreground mt-2">{new Date(a.created_at).toLocaleDateString()}</p>
+                    </div>
+                    <div className="flex gap-1.5 shrink-0">
+                      <button onClick={() => { setEditingAnnouncementId(a.id); setAnnouncementForm({ title: a.title, message: a.message || "" }); setShowAnnouncementForm(true); }} className="p-2 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"><Pencil size={14} /></button>
+                      <button onClick={async () => { await supabase.from("announcements").delete().eq("id", a.id); fetchData(); toast.success("Announcement deleted"); }} className="p-2 rounded-lg hover:bg-destructive/20 transition-colors text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {showAnnouncementForm && (
+                <div className="mt-6">
+                  <motion.form
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-secondary/30 border border-border/40 rounded-xl p-6 space-y-4"
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const payload = { title: announcementForm.title, message: announcementForm.message || null, created_by: user?.id };
+                      if (editingAnnouncementId) {
+                        await supabase.from("announcements").update(payload).eq("id", editingAnnouncementId);
+                        toast.success("Announcement updated");
+                      } else {
+                        await supabase.from("announcements").insert(payload);
+                        toast.success("Announcement published");
+                      }
+                      setShowAnnouncementForm(false);
+                      setAnnouncementForm(emptyAnnouncementForm);
+                      setEditingAnnouncementId(null);
+                      fetchData();
+                    }}
+                  >
+                    <input value={announcementForm.title} onChange={(e) => setAnnouncementForm({ ...announcementForm, title: e.target.value })} placeholder="Announcement title *" required className={inputClass} />
+                    <textarea value={announcementForm.message} onChange={(e) => setAnnouncementForm({ ...announcementForm, message: e.target.value })} placeholder="Message (optional)" rows={3} className={inputClass} />
+                    <div className="flex gap-2">
+                      <button type="submit" className="px-6 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">{editingAnnouncementId ? "Update" : "Publish"}</button>
+                      <button type="button" onClick={() => { setShowAnnouncementForm(false); setAnnouncementForm(emptyAnnouncementForm); setEditingAnnouncementId(null); }} className="px-6 py-2 rounded-lg bg-secondary text-muted-foreground font-semibold text-sm hover:bg-secondary/80 transition-colors">Cancel</button>
                     </div>
                   </motion.form>
                 </div>
