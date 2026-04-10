@@ -68,6 +68,10 @@ const AdminDashboard = () => {
   const [showHeroForm, setShowHeroForm] = useState(false);
   const [heroForm, setHeroForm] = useState(emptyHeroForm);
   const [editingHeroId, setEditingHeroId] = useState<string | null>(null);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
+  const [announcementForm, setAnnouncementForm] = useState(emptyAnnouncementForm);
+  const [editingAnnouncementId, setEditingAnnouncementId] = useState<string | null>(null);
 
   // Form states
   const [showProjectForm, setShowProjectForm] = useState(false);
