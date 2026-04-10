@@ -37,6 +37,7 @@ const emptyResearchForm = { title: "", authors: "", abstract: "", pdf_url: "", d
 const emptyCourseForm = { title: "", description: "", instructor: "", image_url: "", is_paid: false, price: "", category: "", duration: "", max_students: "", status: "draft" };
 const emptyLessonForm = { title: "", video_url: "", pdf_file: "", sort_order: "0" };
 const emptyHeroForm = { image_url: "", tagline: "", sort_order: "0", active: true };
+const emptyAnnouncementForm = { title: "", message: "" };
 
 const AdminDashboard = () => {
   const { user, loading, isAdmin } = useAuth();
