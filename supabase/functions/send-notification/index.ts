@@ -105,6 +105,26 @@ Deno.serve(async (req) => {
       });
     }
 
+    // --- New Announcement Notification ---
+    if (type === "new_announcement") {
+      const { title, message } = payload;
+      const memberEmails = await getApprovedMemberEmails();
+      if (memberEmails.length === 0) {
+        return new Response(JSON.stringify({ success: true, message: "No members to notify" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const subject = `📢 Announcement: ${title}`;
+      const body = `Dear RUET IoT Club Member,\n\n${title}\n\n${message || ""}\n\nVisit the RUET IoT Club website for more details.\n\nBest regards,\nRUET IoT Club Team`;
+      for (let i = 0; i < memberEmails.length; i += 49) {
+        const batch = memberEmails.slice(i, i + 49);
+        await sendEmail(batch, subject, body);
+      }
+      return new Response(JSON.stringify({ success: true, message: `Notified ${memberEmails.length} members about announcement` }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // --- Membership Notification ---
     const { user_id, status } = payload;
     if (!user_id || !status) {
