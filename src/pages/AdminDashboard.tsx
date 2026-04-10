@@ -1772,6 +1772,12 @@ const AdminDashboard = () => {
                       } else {
                         await supabase.from("announcements").insert(payload);
                         toast.success("Announcement published");
+                        // Send email notification to all members
+                        try {
+                          await supabase.functions.invoke("send-notification", {
+                            body: { type: "new_announcement", title: announcementForm.title, message: announcementForm.message },
+                          });
+                        } catch (e) { console.error("Notification error:", e); }
                       }
                       setShowAnnouncementForm(false);
                       setAnnouncementForm(emptyAnnouncementForm);
