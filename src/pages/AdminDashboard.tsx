@@ -231,6 +231,11 @@ const AdminDashboard = () => {
         setHeroSlides(data || []);
         break;
       }
+      case "announcements": {
+        const { data } = await supabase.from("announcements").select("*").order("created_at", { ascending: false });
+        setAnnouncements(data || []);
+        break;
+      }
     }
   };
 
@@ -513,6 +518,7 @@ const AdminDashboard = () => {
     { key: "photos", label: "Photos", icon: Image },
     { key: "blog", label: "Blog", icon: BookOpen },
     { key: "hero", label: "Hero Slides", icon: Image },
+    { key: "announcements", label: "Announcements", icon: Megaphone },
   ];
 
   const inputClass = "w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";
