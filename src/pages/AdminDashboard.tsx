@@ -1726,6 +1726,70 @@ const AdminDashboard = () => {
               )}
             </div>
           )}
+
+          {/* ════════ Announcements Tab ════════ */}
+          {tab === "announcements" && (
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold text-foreground">Announcements</h3>
+                <button onClick={() => { setShowAnnouncementForm(true); setEditingAnnouncementId(null); setAnnouncementForm(emptyAnnouncementForm); }} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">
+                  <Plus size={16} /> New Announcement
+                </button>
+              </div>
+
+              {announcements.length === 0 && !showAnnouncementForm && (
+                <p className="text-muted-foreground text-center py-12">No announcements yet. Create one to notify members.</p>
+              )}
+
+              <div className="space-y-3">
+                {announcements.map((a) => (
+                  <div key={a.id} className="bg-secondary/30 border border-border/40 rounded-xl p-4 flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-foreground">{a.title}</h4>
+                      {a.message && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{a.message}</p>}
+                      <p className="text-xs text-muted-foreground mt-2">{new Date(a.created_at).toLocaleDateString()}</p>
+                    </div>
+                    <div className="flex gap-1.5 shrink-0">
+                      <button onClick={() => { setEditingAnnouncementId(a.id); setAnnouncementForm({ title: a.title, message: a.message || "" }); setShowAnnouncementForm(true); }} className="p-2 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"><Pencil size={14} /></button>
+                      <button onClick={async () => { await supabase.from("announcements").delete().eq("id", a.id); fetchData(); toast.success("Announcement deleted"); }} className="p-2 rounded-lg hover:bg-destructive/20 transition-colors text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {showAnnouncementForm && (
+                <div className="mt-6">
+                  <motion.form
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-secondary/30 border border-border/40 rounded-xl p-6 space-y-4"
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const payload = { title: announcementForm.title, message: announcementForm.message || null, created_by: user?.id };
+                      if (editingAnnouncementId) {
+                        await supabase.from("announcements").update(payload).eq("id", editingAnnouncementId);
+                        toast.success("Announcement updated");
+                      } else {
+                        await supabase.from("announcements").insert(payload);
+                        toast.success("Announcement published");
+                      }
+                      setShowAnnouncementForm(false);
+                      setAnnouncementForm(emptyAnnouncementForm);
+                      setEditingAnnouncementId(null);
+                      fetchData();
+                    }}
+                  >
+                    <input value={announcementForm.title} onChange={(e) => setAnnouncementForm({ ...announcementForm, title: e.target.value })} placeholder="Announcement title *" required className={inputClass} />
+                    <textarea value={announcementForm.message} onChange={(e) => setAnnouncementForm({ ...announcementForm, message: e.target.value })} placeholder="Message (optional)" rows={3} className={inputClass} />
+                    <div className="flex gap-2">
+                      <button type="submit" className="px-6 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">{editingAnnouncementId ? "Update" : "Publish"}</button>
+                      <button type="button" onClick={() => { setShowAnnouncementForm(false); setAnnouncementForm(emptyAnnouncementForm); setEditingAnnouncementId(null); }} className="px-6 py-2 rounded-lg bg-secondary text-muted-foreground font-semibold text-sm hover:bg-secondary/80 transition-colors">Cancel</button>
+                    </div>
+                  </motion.form>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </section>
     </Layout>
