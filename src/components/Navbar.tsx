@@ -100,6 +100,7 @@ const Navbar = () => {
             </Link>
           )}
 
+          {user && <NotificationBell />}
           <div className="w-px h-6 bg-border/50 mx-2" />
 
           {user ? (
