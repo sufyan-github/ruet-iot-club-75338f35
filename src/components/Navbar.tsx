@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import NotificationBell from "@/components/NotificationBell";
 import logo from "@/assets/iot_club_logo.png";
 
 const navLinks = [
@@ -99,6 +100,7 @@ const Navbar = () => {
             </Link>
           )}
 
+          {user && <NotificationBell />}
           <div className="w-px h-6 bg-border/50 mx-2" />
 
           {user ? (
@@ -172,6 +174,11 @@ const Navbar = () => {
                 >
                   <Shield size={14} /> Admin
                 </Link>
+              )}
+              {user && (
+                <div className="px-4 py-1">
+                  <NotificationBell />
+                </div>
               )}
               <div className="h-px bg-border/30 my-2" />
               {user ? (
