@@ -175,6 +175,11 @@ const Navbar = () => {
                   <Shield size={14} /> Admin
                 </Link>
               )}
+              {user && (
+                <div className="px-4 py-1">
+                  <NotificationBell />
+                </div>
+              )}
               <div className="h-px bg-border/30 my-2" />
               {user ? (
                 <Link
