@@ -1,13 +1,17 @@
 import { useState, useEffect, useRef } from "react";
 import { Bell } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 
+type NotificationType = "event" | "course" | "activity" | "announcement";
+
 interface Notification {
   id: string;
   title: string;
-  type: "event" | "course" | "activity";
+  message?: string | null;
+  type: NotificationType;
   created_at: string;
 }
 
@@ -16,6 +20,7 @@ const NotificationBell = () => {
   const [open, setOpen] = useState(false);
   const [lastSeen, setLastSeen] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     setLastSeen(localStorage.getItem("notifications_last_seen"));
@@ -26,6 +31,7 @@ const NotificationBell = () => {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "events" }, () => fetchNotifications())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "courses" }, () => fetchNotifications())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "activities" }, () => fetchNotifications())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "announcements" }, () => fetchNotifications())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
@@ -40,19 +46,21 @@ const NotificationBell = () => {
   }, []);
 
   const fetchNotifications = async () => {
-    const [events, courses, activities] = await Promise.all([
+    const [events, courses, activities, announcements] = await Promise.all([
       supabase.from("events").select("id, title, created_at").order("created_at", { ascending: false }).limit(5),
       supabase.from("courses").select("id, title, created_at").order("created_at", { ascending: false }).limit(5),
       supabase.from("activities").select("id, title, created_at").order("created_at", { ascending: false }).limit(5),
+      supabase.from("announcements").select("id, title, message, created_at").order("created_at", { ascending: false }).limit(5),
     ]);
 
     const all: Notification[] = [
       ...(events.data || []).map((e) => ({ ...e, type: "event" as const })),
       ...(courses.data || []).map((c) => ({ ...c, type: "course" as const })),
       ...(activities.data || []).map((a) => ({ ...a, type: "activity" as const })),
+      ...(announcements.data || []).map((a) => ({ ...a, type: "announcement" as const })),
     ]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 10);
+      .slice(0, 15);
 
     setNotifications(all);
   };
@@ -70,12 +78,30 @@ const NotificationBell = () => {
     }
   };
 
-  const typeLabel = (type: string) => {
+  const handleClick = (n: Notification) => {
+    setOpen(false);
+    switch (n.type) {
+      case "event":
+        navigate(`/events`);
+        break;
+      case "course":
+        navigate(`/courses/${n.id}`);
+        break;
+      case "activity":
+        navigate(`/gallery`);
+        break;
+      case "announcement":
+        // no dedicated page, just close
+        break;
+    }
+  };
+
+  const typeLabel = (type: NotificationType) => {
     switch (type) {
       case "event": return "📅 New Event";
       case "course": return "📚 New Course";
       case "activity": return "🔔 Activity";
-      default: return "📢 Update";
+      case "announcement": return "📢 Announcement";
     }
   };
 
@@ -111,13 +137,18 @@ const NotificationBell = () => {
               ) : (
                 notifications.map((n) => {
                   const isNew = lastSeen ? new Date(n.created_at) > new Date(lastSeen) : false;
+                  const isClickable = n.type !== "announcement";
                   return (
                     <div
                       key={`${n.type}-${n.id}`}
-                      className={`px-4 py-3 border-b border-border/20 hover:bg-secondary/30 transition-colors ${isNew ? "bg-primary/5" : ""}`}
+                      onClick={() => handleClick(n)}
+                      className={`px-4 py-3 border-b border-border/20 hover:bg-secondary/30 transition-colors ${isNew ? "bg-primary/5" : ""} ${isClickable ? "cursor-pointer" : ""}`}
                     >
                       <p className="text-xs text-muted-foreground">{typeLabel(n.type)}</p>
                       <p className="text-sm font-medium text-foreground mt-0.5 line-clamp-1">{n.title}</p>
+                      {n.type === "announcement" && n.message && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                      )}
                       <p className="text-xs text-muted-foreground mt-1">
                         {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                       </p>
