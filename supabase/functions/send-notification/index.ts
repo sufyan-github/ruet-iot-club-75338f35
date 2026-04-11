@@ -63,6 +63,23 @@ Deno.serve(async (req) => {
       });
     }
 
+    // --- Contact Reply from Admin ---
+    if (type === "contact_reply") {
+      const { to_email, to_name, original_subject, reply_message } = payload;
+      if (!to_email || !reply_message) {
+        return new Response(JSON.stringify({ error: "Missing reply fields" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const emailSubject = `Re: ${original_subject || "Your message"} — RUET IoT Club`;
+      const emailBody = `Dear ${to_name || "User"},\n\nThank you for contacting the RUET IoT Club. Here is our reply to your message:\n\n${reply_message}\n\n---\nBest regards,\nRUET IoT Club Team\nEmail: ruetiotclub@gmail.com\nPhone: +880 1580-352238`;
+      await sendEmail([to_email], emailSubject, emailBody);
+      // Also CC admin
+      await sendEmail([ADMIN_EMAIL], `[Reply Sent] Re: ${original_subject}`, `Reply sent to ${to_name} (${to_email}):\n\n${reply_message}`);
+      return new Response(JSON.stringify({ success: true, message: `Reply sent to ${to_email}` }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+
     // --- New Event Notification ---
     if (type === "new_event") {
       const { title, date, venue } = payload;
