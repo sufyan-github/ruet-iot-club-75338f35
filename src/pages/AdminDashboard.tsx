@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Check, X, Users, FolderOpen, Calendar, Eye, GraduationCap, Pencil, Trash2, Plus, UserCog, Image, FileText, Download, ChevronDown, ChevronUp, BookOpen, Mail, FlaskConical, Video, Award, BarChart3, Shield, Megaphone } from "lucide-react";
+import { Check, X, Users, FolderOpen, Calendar, Eye, GraduationCap, Pencil, Trash2, Plus, UserCog, Image, FileText, Download, ChevronDown, ChevronUp, BookOpen, Mail, FlaskConical, Video, Award, BarChart3, Shield, Megaphone, MessageSquare, Send, Reply } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 
 const downloadCSV = (rows: Record<string, string>[], filename: string) => {
@@ -25,7 +25,7 @@ const downloadCSV = (rows: Record<string, string>[], filename: string) => {
   URL.revokeObjectURL(url);
 };
 
-type TabType = "overview" | "applications" | "members" | "payments" | "team" | "projects" | "events" | "alumni" | "photos" | "blog" | "research" | "courses" | "hero" | "announcements";
+type TabType = "overview" | "applications" | "members" | "payments" | "team" | "projects" | "events" | "alumni" | "photos" | "blog" | "research" | "courses" | "hero" | "announcements" | "messages";
 
 const emptyAlumniForm = { name: "", batch: "", department: "", company: "", linkedin: "" };
 const emptyProjectForm = { title: "", description: "", category: "", status: "idea", github_link: "", image_url: "" };

@@ -18,7 +18,17 @@ const Contact = () => {
     }
     setSubmitting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("send-notification", {
+      // Save to database
+      const { error: dbError } = await supabase.from("contact_messages").insert({
+        name: form.name,
+        email: form.email,
+        subject: form.subject,
+        message: form.message,
+      });
+      if (dbError) throw dbError;
+
+      // Also send email notification to admin
+      await supabase.functions.invoke("send-notification", {
         body: {
           type: "contact",
           name: form.name,
@@ -27,7 +37,6 @@ const Contact = () => {
           message: form.message,
         },
       });
-      if (error) throw error;
       toast.success("Message sent! We'll get back to you soon.");
       setForm({ name: "", email: "", subject: "", message: "" });
     } catch (err: any) {
