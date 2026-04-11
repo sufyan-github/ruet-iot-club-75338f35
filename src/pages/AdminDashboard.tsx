@@ -72,6 +72,10 @@ const AdminDashboard = () => {
   const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState(emptyAnnouncementForm);
   const [editingAnnouncementId, setEditingAnnouncementId] = useState<string | null>(null);
+  const [contactMessages, setContactMessages] = useState<any[]>([]);
+  const [replyingMessageId, setReplyingMessageId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
 
   // Form states
   const [showProjectForm, setShowProjectForm] = useState(false);
