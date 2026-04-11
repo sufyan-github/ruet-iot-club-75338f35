@@ -1806,6 +1806,126 @@ const AdminDashboard = () => {
               )}
             </div>
           )}
+          {/* ════════ Messages Tab ════════ */}
+          {tab === "messages" && (
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold text-foreground">Contact Messages</h3>
+                <span className="text-sm text-muted-foreground">{contactMessages.filter(m => m.status === 'new').length} new</span>
+              </div>
+
+              {contactMessages.length === 0 && (
+                <p className="text-muted-foreground text-center py-12">No contact messages yet.</p>
+              )}
+
+              <div className="space-y-3">
+                {contactMessages.map((msg) => (
+                  <div key={msg.id} className={`border rounded-xl p-4 ${msg.status === 'new' ? 'bg-primary/5 border-primary/30' : 'bg-secondary/30 border-border/40'}`}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-semibold text-foreground">{msg.subject}</h4>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                            msg.status === 'new' ? 'bg-primary/20 text-primary' :
+                            msg.status === 'replied' ? 'bg-green-500/20 text-green-400' :
+                            'bg-secondary text-muted-foreground'
+                          }`}>{msg.status}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          From: <span className="text-foreground">{msg.name}</span> ({msg.email}) · {new Date(msg.created_at).toLocaleString()}
+                        </p>
+                        <p className="text-sm text-foreground/80 whitespace-pre-wrap">{msg.message}</p>
+
+                        {msg.admin_reply && (
+                          <div className="mt-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                            <p className="text-xs text-primary font-medium mb-1">Admin Reply · {msg.replied_at ? new Date(msg.replied_at).toLocaleString() : ''}</p>
+                            <p className="text-sm text-foreground/80 whitespace-pre-wrap">{msg.admin_reply}</p>
+                          </div>
+                        )}
+
+                        {replyingMessageId === msg.id && (
+                          <div className="mt-3 space-y-2">
+                            <textarea
+                              value={replyText}
+                              onChange={(e) => setReplyText(e.target.value)}
+                              placeholder="Type your reply..."
+                              rows={3}
+                              className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                disabled={sendingReply || !replyText.trim()}
+                                onClick={async () => {
+                                  setSendingReply(true);
+                                  try {
+                                    // Update DB
+                                    await supabase.from("contact_messages").update({
+                                      admin_reply: replyText,
+                                      replied_at: new Date().toISOString(),
+                                      replied_by: user?.id,
+                                      status: 'replied',
+                                    }).eq("id", msg.id);
+
+                                    // Send reply email
+                                    await supabase.functions.invoke("send-notification", {
+                                      body: {
+                                        type: "contact_reply",
+                                        to_email: msg.email,
+                                        to_name: msg.name,
+                                        original_subject: msg.subject,
+                                        reply_message: replyText,
+                                      },
+                                    });
+
+                                    toast.success("Reply sent successfully!");
+                                    setReplyingMessageId(null);
+                                    setReplyText("");
+                                    fetchData();
+                                  } catch (err) {
+                                    toast.error("Failed to send reply");
+                                    console.error(err);
+                                  } finally {
+                                    setSendingReply(false);
+                                  }
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
+                              >
+                                <Send size={14} /> {sendingReply ? "Sending..." : "Send Reply"}
+                              </button>
+                              <button
+                                onClick={() => { setReplyingMessageId(null); setReplyText(""); }}
+                                className="px-4 py-2 rounded-lg bg-secondary text-muted-foreground font-semibold text-sm hover:bg-secondary/80 transition-colors"
+                              >Cancel</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-1.5 shrink-0">
+                        {msg.status === 'new' && (
+                          <button onClick={async () => {
+                            await supabase.from("contact_messages").update({ status: 'read' }).eq("id", msg.id);
+                            fetchData();
+                          }} className="p-2 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground" title="Mark as read">
+                            <Eye size={14} />
+                          </button>
+                        )}
+                        <button onClick={() => { setReplyingMessageId(msg.id); setReplyText(msg.admin_reply || ""); }} className="p-2 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-primary" title="Reply">
+                          <Reply size={14} />
+                        </button>
+                        <button onClick={async () => {
+                          await supabase.from("contact_messages").delete().eq("id", msg.id);
+                          fetchData();
+                          toast.success("Message deleted");
+                        }} className="p-2 rounded-lg hover:bg-destructive/20 transition-colors text-muted-foreground hover:text-destructive" title="Delete">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </Layout>
