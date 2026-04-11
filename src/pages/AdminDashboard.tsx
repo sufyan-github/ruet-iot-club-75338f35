@@ -240,6 +240,11 @@ const AdminDashboard = () => {
         setAnnouncements(data || []);
         break;
       }
+      case "messages": {
+        const { data } = await supabase.from("contact_messages").select("*").order("created_at", { ascending: false });
+        setContactMessages(data || []);
+        break;
+      }
     }
   };
 
@@ -523,6 +528,7 @@ const AdminDashboard = () => {
     { key: "blog", label: "Blog", icon: BookOpen },
     { key: "hero", label: "Hero Slides", icon: Image },
     { key: "announcements", label: "Announcements", icon: Megaphone },
+    { key: "messages", label: "Messages", icon: MessageSquare },
   ];
 
   const inputClass = "w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";
