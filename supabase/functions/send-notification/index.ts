@@ -79,6 +79,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true, message: `Reply sent to ${to_email}` }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
 
     // --- New Event Notification ---
     if (type === "new_event") {
