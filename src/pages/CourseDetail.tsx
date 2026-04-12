@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { BookOpen, Play, FileText, CheckCircle, Lock, ArrowLeft, Award, ExternalLink, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import PaymentSlip from "@/components/PaymentSlip";
 
 const getYouTubeEmbedUrl = (url: string): string => {
   try {
@@ -80,10 +81,16 @@ const CourseDetail = () => {
     setRegistering(true);
     const payload: any = { course_id: id, user_id: user.id };
     if (course.is_paid) {
-      if (!txnId.trim()) { toast.error("Please enter transaction ID"); setRegistering(false); return; }
-      payload.payment_method = paymentMethod;
-      payload.transaction_id = txnId;
-      payload.payment_status = "pending";
+      if (paymentMethod === "Cash") {
+        payload.payment_method = "Cash";
+        payload.transaction_id = "CASH-UNPAID";
+        payload.payment_status = "unpaid";
+      } else {
+        if (!txnId.trim()) { toast.error("Please enter transaction ID"); setRegistering(false); return; }
+        payload.payment_method = paymentMethod;
+        payload.transaction_id = txnId;
+        payload.payment_status = "pending";
+      }
     } else {
       payload.payment_status = "confirmed";
     }
@@ -92,7 +99,13 @@ const CourseDetail = () => {
       if (error.code === "23505") toast.error("Already registered!");
       else toast.error("Registration failed");
     } else {
-      toast.success(course.is_paid ? "Registration submitted! Awaiting payment verification." : "Enrolled successfully!");
+      toast.success(
+        paymentMethod === "Cash"
+          ? "Registration submitted! Please pay cash to the admin."
+          : course.is_paid
+          ? "Registration submitted! Awaiting payment verification."
+          : "Enrolled successfully!"
+      );
       const { data: reg } = await supabase
         .from("course_registrations")
         .select("*")
@@ -181,7 +194,7 @@ const CourseDetail = () => {
                     <option value="bKash">bKash</option>
                     <option value="Nagad">Nagad</option>
                     <option value="Rocket">Rocket</option>
-                    <option value="Online Banking">Online Banking</option>
+                    <option value="Cash">Cash Payment</option>
                   </select>
                   {(paymentMethod === "bKash" || paymentMethod === "Nagad" || paymentMethod === "Rocket") && (
                     <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm text-muted-foreground">
@@ -190,8 +203,16 @@ const CourseDetail = () => {
                       <p className="text-xs mt-1">({paymentMethod} Personal) — Use "Send Money" option and note the Transaction ID.</p>
                     </div>
                   )}
-                  <input placeholder="Transaction ID *" value={txnId} onChange={(e) => setTxnId(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                  {paymentMethod === "Cash" && (
+                    <div className="p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20 text-sm text-muted-foreground">
+                      <p className="font-semibold text-yellow-400">💵 Cash Payment</p>
+                      <p className="text-xs mt-1">Pay <strong className="text-foreground">৳{course.price}</strong> directly to the club admin. An unpaid payslip will be generated for tracking.</p>
+                    </div>
+                  )}
+                  {paymentMethod !== "Cash" && (
+                    <input placeholder="Transaction ID *" value={txnId} onChange={(e) => setTxnId(e.target.value)}
+                      className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                  )}
                 </div>
               )}
               <button onClick={handleRegister} disabled={registering}
