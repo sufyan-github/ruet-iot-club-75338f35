@@ -220,10 +220,30 @@ const CourseDetail = () => {
                 {registering ? "Processing..." : course.is_paid ? "Submit Payment & Enroll" : "Enroll for Free"}
               </button>
             </motion.div>
-          ) : registration.payment_status === "pending" && course.is_paid ? (
-            <div className="rounded-xl glass p-6 mb-8 text-center">
-              <p className="text-yellow-400 font-medium">⏳ Payment verification pending</p>
-              <p className="text-xs text-muted-foreground mt-1">Your enrollment will be confirmed once payment is verified.</p>
+          ) : (registration.payment_status === "pending" || registration.payment_status === "unpaid") && course.is_paid ? (
+            <div className="rounded-xl glass p-6 mb-8 space-y-4">
+              <div className="text-center">
+                <p className="text-yellow-400 font-medium">
+                  {registration.payment_status === "unpaid" ? "💵 Cash Payment - Unpaid" : "⏳ Payment verification pending"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {registration.payment_status === "unpaid"
+                    ? "Please pay cash to the club admin to confirm enrollment."
+                    : "Your enrollment will be confirmed once payment is verified."}
+                </p>
+              </div>
+              <PaymentSlip
+                type="course"
+                title={course.title}
+                name={user?.email || ""}
+                email={user?.email || ""}
+                amount={course.price || 0}
+                paymentMethod={registration.payment_method || ""}
+                transactionId={registration.transaction_id || ""}
+                status={registration.payment_status as "pending" | "confirmed" | "unpaid"}
+                date={registration.registered_at}
+                registrationId={registration.id}
+              />
             </div>
           ) : (
             <div className="rounded-xl glass p-6 mb-8">
