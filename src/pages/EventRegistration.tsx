@@ -183,7 +183,7 @@ const EventRegistration = () => {
                     {(form.payment_method === "bKash" || form.payment_method === "Nagad" || form.payment_method === "Rocket") && (
                       <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm text-muted-foreground mb-3">
                         <p>Send ৳{event.registration_fee} to <strong className="text-foreground">
-                          {event.payment_number || "01580352238"} ({form.payment_method} Personal)
+                          {event.payment_number || "+8801580352238"} ({form.payment_method} Personal)
                         </strong></p>
                         <p className="mt-1 text-xs">Use "Send Money" option and note the Transaction ID.</p>
                       </div>
