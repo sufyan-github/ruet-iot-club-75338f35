@@ -360,7 +360,7 @@ const JoinUs = () => {
               <h3 className="font-display text-sm font-bold tracking-wider text-primary">Membership Fee (৳300)</h3>
               <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm text-muted-foreground">
                 <p>Send <strong className="text-foreground">৳300</strong> to our bKash/Nagad/Rocket number:</p>
-                <p className="text-primary font-mono text-lg font-bold mt-1">01580-352238</p>
+                <p className="text-primary font-mono text-lg font-bold mt-1">+8801580352238</p>
                 <p className="mt-1 text-xs">Use "Send Money" option and note the Transaction ID.</p>
               </div>
               <div className="grid md:grid-cols-2 gap-4">

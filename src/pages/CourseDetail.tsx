@@ -183,6 +183,13 @@ const CourseDetail = () => {
                     <option value="Rocket">Rocket</option>
                     <option value="Online Banking">Online Banking</option>
                   </select>
+                  {(paymentMethod === "bKash" || paymentMethod === "Nagad" || paymentMethod === "Rocket") && (
+                    <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm text-muted-foreground">
+                      <p>Send <strong className="text-foreground">৳{course.price}</strong> to:</p>
+                      <p className="text-primary font-mono text-lg font-bold mt-1">+8801580352238</p>
+                      <p className="text-xs mt-1">({paymentMethod} Personal) — Use "Send Money" option and note the Transaction ID.</p>
+                    </div>
+                  )}
                   <input placeholder="Transaction ID *" value={txnId} onChange={(e) => setTxnId(e.target.value)}
                     className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
                 </div>
