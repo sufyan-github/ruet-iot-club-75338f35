@@ -371,7 +371,7 @@ const JoinUs = () => {
                     <option value="bkash">bKash</option>
                     <option value="nagad">Nagad</option>
                     <option value="rocket">Rocket</option>
-                    <option value="manual">Manual Payment</option>
+                    <option value="cash">Cash Payment</option>
                   </select>
                 </div>
                 <div>

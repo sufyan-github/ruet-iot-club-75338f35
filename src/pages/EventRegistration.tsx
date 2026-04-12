@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { getOptimizedImageUrl } from "@/lib/imageUtils";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import SectionHeading from "@/components/SectionHeading";
@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Calendar, MapPin, Users, CreditCard, CheckCircle } from "lucide-react";
+import PaymentSlip from "@/components/PaymentSlip";
 
 const EventRegistration = () => {
   const location = useLocation();
@@ -25,6 +26,7 @@ const EventRegistration = () => {
   });
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [registrationResult, setRegistrationResult] = useState<any>(null);
 
   if (!event) {
     return (
@@ -49,14 +51,19 @@ const EventRegistration = () => {
       return;
     }
 
-    if (event.is_paid && (!form.payment_method || !form.transaction_id)) {
-      toast.error("Please complete payment details");
+    const isCash = form.payment_method === "Cash";
+    if (event.is_paid && !form.payment_method) {
+      toast.error("Please select a payment method");
+      return;
+    }
+    if (event.is_paid && !isCash && !form.transaction_id) {
+      toast.error("Please enter transaction ID");
       return;
     }
 
     setSubmitting(true);
 
-    const { error } = await supabase.from("event_registrations").insert({
+    const { data, error } = await supabase.from("event_registrations").insert({
       event_id: event.id,
       user_id: user.id,
       name: form.name,
@@ -64,9 +71,9 @@ const EventRegistration = () => {
       phone: form.phone || null,
       department: form.department || null,
       payment_method: event.is_paid ? form.payment_method : null,
-      transaction_id: event.is_paid ? form.transaction_id : null,
-      payment_status: event.is_paid ? "pending" : "confirmed",
-    });
+      transaction_id: event.is_paid ? (isCash ? "CASH-UNPAID" : form.transaction_id) : null,
+      payment_status: event.is_paid ? (isCash ? "unpaid" : "pending") : "confirmed",
+    }).select().single();
 
     setSubmitting(false);
 
@@ -79,6 +86,7 @@ const EventRegistration = () => {
       return;
     }
 
+    setRegistrationResult(data);
     setSuccess(true);
     toast.success("Registration successful!");
   };
@@ -95,9 +103,30 @@ const EventRegistration = () => {
             </motion.div>
             <h2 className="font-display text-2xl font-bold text-foreground mb-4">Registration Successful!</h2>
             <p className="text-muted-foreground mb-2">You have been registered for <strong className="text-foreground">{event.title}</strong>.</p>
-            {event.is_paid && (
+            {event.is_paid && form.payment_method === "Cash" && (
+              <p className="text-sm text-yellow-400 mb-4">Please pay ৳{event.registration_fee} cash to the club admin.</p>
+            )}
+            {event.is_paid && form.payment_method !== "Cash" && (
               <p className="text-sm text-yellow-400 mb-4">Your payment is pending verification by the admin.</p>
             )}
+
+            {event.is_paid && registrationResult && (
+              <div className="mt-4 max-w-sm mx-auto">
+                <PaymentSlip
+                  type="event"
+                  title={event.title}
+                  name={form.name}
+                  email={form.email}
+                  amount={event.registration_fee || 0}
+                  paymentMethod={form.payment_method}
+                  transactionId={form.payment_method === "Cash" ? "CASH-UNPAID" : form.transaction_id}
+                  status={form.payment_method === "Cash" ? "unpaid" : "pending"}
+                  date={registrationResult.registered_at || new Date().toISOString()}
+                  registrationId={registrationResult.id}
+                />
+              </div>
+            )}
+
             <button onClick={() => navigate("/events")}
               className="mt-6 px-6 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">
               Back to Events
@@ -158,21 +187,18 @@ const EventRegistration = () => {
                 <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <CreditCard size={16} className="text-primary" /> Payment Details
                 </h4>
-                <p className="text-xs text-muted-foreground">
-                  Please send <strong className="text-foreground">৳{event.registration_fee}</strong> using one of the methods below, then enter the transaction ID.
-                </p>
 
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Payment Method *</label>
                   <div className="flex flex-wrap gap-2">
-                    {(event.payment_methods || []).map((method: string) => (
+                    {["bKash", "Nagad", "Rocket", "Cash"].map((method) => (
                       <button key={method} type="button" onClick={() => setForm({ ...form, payment_method: method })}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                           form.payment_method === method
                             ? "bg-primary text-primary-foreground"
                             : "bg-secondary text-muted-foreground hover:text-foreground"
                         }`}>
-                        {method}
+                        {method === "Cash" ? "💵 Cash" : method}
                       </button>
                     ))}
                   </div>
@@ -188,14 +214,16 @@ const EventRegistration = () => {
                         <p className="mt-1 text-xs">Use "Send Money" option and note the Transaction ID.</p>
                       </div>
                     )}
-                    {form.payment_method === "Online Banking" && event.bank_account && (
-                      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm text-muted-foreground mb-3">
-                        <p>Transfer ৳{event.registration_fee} to Card/Account: <strong className="text-foreground">{event.bank_account}</strong></p>
-                        <p className="mt-1 text-xs">Note the Transaction/Reference ID after transfer.</p>
+                    {form.payment_method === "Cash" && (
+                      <div className="p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20 text-sm text-muted-foreground mb-3">
+                        <p className="font-semibold text-yellow-400">💵 Cash Payment</p>
+                        <p className="text-xs mt-1">Pay <strong className="text-foreground">৳{event.registration_fee}</strong> directly to the club admin. An unpaid payslip will be generated for tracking.</p>
                       </div>
                     )}
-                    <input placeholder="Transaction ID *" required value={form.transaction_id}
-                      onChange={(e) => setForm({ ...form, transaction_id: e.target.value })} className={inputClass} />
+                    {form.payment_method !== "Cash" && (
+                      <input placeholder="Transaction ID *" required value={form.transaction_id}
+                        onChange={(e) => setForm({ ...form, transaction_id: e.target.value })} className={inputClass} />
+                    )}
                   </motion.div>
                 )}
               </div>
@@ -203,7 +231,11 @@ const EventRegistration = () => {
 
             <button type="submit" disabled={submitting}
               className="w-full px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 glow-border">
-              {submitting ? "Submitting..." : event.is_paid ? `Register & Pay ৳${event.registration_fee}` : "Register Now"}
+              {submitting ? "Submitting..." : event.is_paid
+                ? form.payment_method === "Cash"
+                  ? `Register (Pay ৳${event.registration_fee} Cash)`
+                  : `Register & Pay ৳${event.registration_fee}`
+                : "Register Now"}
             </button>
           </motion.form>
         </div>
