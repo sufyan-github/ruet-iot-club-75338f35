@@ -302,6 +302,21 @@ const AdminDashboard = () => {
     else { toast.success(`Payment ${status}`); fetchData(); }
   };
 
+  const updateEventApproval = async (id: string, approval_status: "approved" | "rejected" | "pending") => {
+    const { error } = await supabase.from("event_registrations").update({ approval_status }).eq("id", id);
+    if (error) { toast.error("Failed to update approval"); return; }
+    toast.success(`Registration ${approval_status}`);
+    fetchData();
+  };
+
+  const deleteEventRegistration = async (id: string) => {
+    if (!confirm("Delete this registration permanently?")) return;
+    const { error } = await supabase.from("event_registrations").delete().eq("id", id);
+    if (error) { toast.error("Failed to delete"); return; }
+    toast.success("Registration deleted");
+    fetchData();
+  };
+
   const updateCoursePaymentStatus = async (id: string, status: string) => {
     const { error } = await supabase.from("course_registrations").update({ payment_status: status }).eq("id", id);
     if (error) toast.error("Failed to update payment");
