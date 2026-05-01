@@ -194,6 +194,20 @@ const AdminDashboard = () => {
       case "events": {
         const { data } = await supabase.from("events").select("*").order("date", { ascending: false });
         setEvents(data || []);
+        const { data: regs } = await supabase
+          .from("event_registrations")
+          .select("*, events(title, date)")
+          .order("registered_at", { ascending: false });
+        setEventRegistrations(regs || []);
+        break;
+      }
+      case "participants": {
+        const [evRes, regsRes] = await Promise.all([
+          supabase.from("events").select("id, title, date").order("date", { ascending: false }),
+          supabase.from("event_registrations").select("*, events(title, date)").order("registered_at", { ascending: false }),
+        ]);
+        setEvents(evRes.data || []);
+        setEventRegistrations(regsRes.data || []);
         break;
       }
       case "alumni": {
