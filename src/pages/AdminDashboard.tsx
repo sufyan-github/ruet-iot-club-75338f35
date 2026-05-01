@@ -1285,22 +1285,185 @@ const AdminDashboard = () => {
               )}
               <div className="space-y-3">
                 {events.length === 0 && <p className="text-center text-muted-foreground">No events yet.</p>}
-                {events.map((ev: any) => (
-                  <motion.div key={ev.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl glass flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      {ev.image_url && <img src={ev.image_url} alt={ev.title} className="w-12 h-12 rounded-lg object-cover shrink-0" />}
-                      <div className="min-w-0">
-                        <h4 className="font-semibold text-sm text-foreground">{ev.title}</h4>
-                        <p className="text-xs text-muted-foreground">{ev.type || "—"} · {ev.venue || "—"} · {new Date(ev.date).toLocaleDateString()}{ev.is_paid && <span className="ml-1 text-primary"> · ৳{ev.registration_fee}</span>}</p>
+                {events.map((ev: any) => {
+                  const evRegs = eventRegistrations.filter((r: any) => r.event_id === ev.id);
+                  const pending = evRegs.filter((r: any) => r.approval_status === "pending").length;
+                  const approved = evRegs.filter((r: any) => r.approval_status === "approved").length;
+                  const isOpen = expandedEventId === ev.id;
+                  return (
+                    <motion.div key={ev.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl glass overflow-hidden">
+                      <div className="p-4 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          {ev.image_url && <img src={ev.image_url} alt={ev.title} className="w-12 h-12 rounded-lg object-cover shrink-0" />}
+                          <div className="min-w-0">
+                            <h4 className="font-semibold text-sm text-foreground">{ev.title}</h4>
+                            <p className="text-xs text-muted-foreground">{ev.type || "—"} · {ev.venue || "—"} · {new Date(ev.date).toLocaleDateString()}{ev.is_paid && <span className="ml-1 text-primary"> · ৳{ev.registration_fee}</span>}</p>
+                            <div className="flex items-center gap-3 mt-1 text-xs">
+                              <span className="text-muted-foreground">Total: <span className="text-foreground font-medium">{evRegs.length}</span></span>
+                              <span className="text-green-400">✓ {approved}</span>
+                              {pending > 0 && <span className="text-yellow-400">⏳ {pending} pending</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <button
+                            onClick={() => setExpandedEventId(isOpen ? null : ev.id)}
+                            className="p-1.5 rounded bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
+                            title={isOpen ? "Hide participants" : "Show participants"}
+                          >
+                            {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                          </button>
+                          <button onClick={() => editEvent(ev)} className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"><Pencil size={14} /></button>
+                          <button onClick={() => deleteEvent(ev.id)} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><Trash2 size={14} /></button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      <button onClick={() => editEvent(ev)} className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"><Pencil size={14} /></button>
-                      <button onClick={() => deleteEvent(ev.id)} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><Trash2 size={14} /></button>
-                    </div>
-                  </motion.div>
-                ))}
+
+                      <AnimatePresence>
+                        {isOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="border-t border-border/40 overflow-hidden"
+                          >
+                            <div className="p-4 space-y-2">
+                              {evRegs.length === 0 ? (
+                                <p className="text-xs text-muted-foreground italic">No registrations yet.</p>
+                              ) : (
+                                <>
+                                  <div className="flex justify-end mb-2">
+                                    <button
+                                      onClick={() => downloadCSV(
+                                        evRegs.map((r: any) => ({
+                                          Name: r.name || "",
+                                          Email: r.email || "",
+                                          Phone: r.phone || "",
+                                          Department: r.department || "",
+                                          "Approval Status": r.approval_status,
+                                          "Payment Status": r.payment_status,
+                                          "Payment Method": r.payment_method || "—",
+                                          "Transaction ID": r.transaction_id || "—",
+                                          Registered: new Date(r.registered_at).toLocaleString(),
+                                        })),
+                                        `${ev.title.replace(/\s+/g, "_")}_participants.csv`
+                                      )}
+                                      className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors flex items-center gap-1"
+                                    >
+                                      <Download size={12} /> Export CSV
+                                    </button>
+                                  </div>
+                                  {evRegs.map((r: any) => (
+                                    <ParticipantRow
+                                      key={r.id}
+                                      reg={r}
+                                      onApprove={() => updateEventApproval(r.id, "approved")}
+                                      onReject={() => updateEventApproval(r.id, "rejected")}
+                                      onPending={() => updateEventApproval(r.id, "pending")}
+                                      onDelete={() => deleteEventRegistration(r.id)}
+                                      onPaymentConfirm={() => updateEventPaymentStatus(r.id, "confirmed")}
+                                      showEvent={false}
+                                    />
+                                  ))}
+                                </>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                })}
               </div>
+            </div>
+          )}
+
+          {/* ════════ Participants Tab ════════ */}
+          {tab === "participants" && (
+            <div className="max-w-5xl mx-auto">
+              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                <select
+                  value={participantFilter}
+                  onChange={(e) => setParticipantFilter(e.target.value)}
+                  className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                >
+                  <option value="all">All Events</option>
+                  {events.map((ev: any) => (
+                    <option key={ev.id} value={ev.id}>{ev.title}</option>
+                  ))}
+                </select>
+                <div className="flex gap-1 flex-wrap">
+                  {(["all", "pending", "approved", "rejected"] as const).map(s => (
+                    <button
+                      key={s}
+                      onClick={() => setParticipantStatusFilter(s)}
+                      className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors capitalize ${
+                        participantStatusFilter === s
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+                <div className="sm:ml-auto">
+                  {(() => {
+                    const filtered = eventRegistrations.filter((r: any) =>
+                      (participantFilter === "all" || r.event_id === participantFilter) &&
+                      (participantStatusFilter === "all" || r.approval_status === participantStatusFilter)
+                    );
+                    return (
+                      <button
+                        onClick={() => downloadCSV(
+                          filtered.map((r: any) => ({
+                            Event: r.events?.title || "",
+                            Name: r.name || "",
+                            Email: r.email || "",
+                            Phone: r.phone || "",
+                            Department: r.department || "",
+                            "Approval Status": r.approval_status,
+                            "Payment Status": r.payment_status,
+                            "Payment Method": r.payment_method || "—",
+                            "Transaction ID": r.transaction_id || "—",
+                            Registered: new Date(r.registered_at).toLocaleString(),
+                          })),
+                          `event_participants_${Date.now()}.csv`
+                        )}
+                        disabled={filtered.length === 0}
+                        className="px-4 py-2 rounded-lg bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition-colors flex items-center gap-2 disabled:opacity-50"
+                      >
+                        <Download size={14} /> Export ({filtered.length})
+                      </button>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {(() => {
+                const filtered = eventRegistrations.filter((r: any) =>
+                  (participantFilter === "all" || r.event_id === participantFilter) &&
+                  (participantStatusFilter === "all" || r.approval_status === participantStatusFilter)
+                );
+                if (filtered.length === 0) {
+                  return <p className="text-center text-muted-foreground py-8">No registrations match the selected filters.</p>;
+                }
+                return (
+                  <div className="space-y-2">
+                    {filtered.map((r: any) => (
+                      <ParticipantRow
+                        key={r.id}
+                        reg={r}
+                        onApprove={() => updateEventApproval(r.id, "approved")}
+                        onReject={() => updateEventApproval(r.id, "rejected")}
+                        onPending={() => updateEventApproval(r.id, "pending")}
+                        onDelete={() => deleteEventRegistration(r.id)}
+                        onPaymentConfirm={() => updateEventPaymentStatus(r.id, "confirmed")}
+                        showEvent={true}
+                      />
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
