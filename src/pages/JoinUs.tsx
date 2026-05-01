@@ -373,27 +373,46 @@ const JoinUs = () => {
             {/* Payment */}
             <div className="p-6 rounded-xl glass space-y-4">
               <h3 className="font-display text-sm font-bold tracking-wider text-primary">Membership Fee (৳300)</h3>
-              <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm text-muted-foreground">
-                <p>Send <strong className="text-foreground">৳300</strong> to our bKash/Nagad/Rocket number:</p>
-                <p className="text-primary font-mono text-lg font-bold mt-1">+8801580352238</p>
-                <p className="mt-1 text-xs">Use "Send Money" option and note the Transaction ID.</p>
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Payment Method *</label>
-                  <select name="paymentMethod" required value={form.paymentMethod} onChange={handleChange} className={inputClass}>
-                    <option value="">Select payment method</option>
-                    <option value="bkash">bKash</option>
-                    <option value="nagad">Nagad</option>
-                    <option value="rocket">Rocket</option>
-                    <option value="cash">Cash Payment</option>
-                  </select>
+              <div>
+                <label className="text-xs text-muted-foreground mb-2 block">Payment Method *</label>
+                <div className="flex flex-wrap gap-2">
+                  {["bKash", "Nagad", "Rocket", "Cash"].map((method) => (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => setForm({ ...form, paymentMethod: method, transactionId: method === "Cash" ? "" : form.transactionId })}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        form.paymentMethod === method
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {method === "Cash" ? "💵 Cash" : method}
+                    </button>
+                  ))}
                 </div>
+              </div>
+
+              {(form.paymentMethod === "bKash" || form.paymentMethod === "Nagad" || form.paymentMethod === "Rocket") && (
+                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm text-muted-foreground">
+                  <p>Send <strong className="text-foreground">৳300</strong> to:</p>
+                  <p className="text-primary font-mono text-lg font-bold mt-1">+8801580352238</p>
+                  <p className="mt-1 text-xs">({form.paymentMethod} Personal) — Use "Send Money" option and note the Transaction ID.</p>
+                </div>
+              )}
+              {form.paymentMethod === "Cash" && (
+                <div className="p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20 text-sm text-muted-foreground">
+                  <p className="font-semibold text-yellow-400">💵 Cash Payment</p>
+                  <p className="text-xs mt-1">Pay <strong className="text-foreground">৳300</strong> directly to the club admin. An unpaid status will be recorded for tracking until payment is received.</p>
+                </div>
+              )}
+
+              {form.paymentMethod && form.paymentMethod !== "Cash" && (
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Transaction ID *</label>
-                  <input name="transactionId" placeholder="Enter transaction ID" required value={form.transactionId} onChange={handleChange} className={inputClass} />
+                  <input name="transactionId" placeholder="Enter transaction ID" value={form.transactionId} onChange={handleChange} className={inputClass} />
                 </div>
-              </div>
+              )}
             </div>
 
             <button type="submit" disabled={submitting || !user}
