@@ -21,7 +21,14 @@ const Index = () => {
   };
 
   const fetchEvents = async () => {
-    const { data } = await supabase.from("events").select("*").order("date", { ascending: true }).limit(3);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const { data } = await supabase
+      .from("events")
+      .select("*")
+      .gte("date", todayStart.toISOString())
+      .order("date", { ascending: true })
+      .limit(3);
     setUpcomingEvents(data || []);
   };
 

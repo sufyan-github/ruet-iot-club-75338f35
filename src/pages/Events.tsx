@@ -14,7 +14,14 @@ const Events = () => {
 
   useEffect(() => {
     const fetchEvents = async () => {
-      const { data } = await supabase.from("events").select("*").order("date", { ascending: true });
+      // Only show upcoming events (today or future) on the public Events page
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const { data } = await supabase
+        .from("events")
+        .select("*")
+        .gte("date", todayStart.toISOString())
+        .order("date", { ascending: true });
       setEvents(data || []);
       setLoading(false);
     };
