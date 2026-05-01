@@ -2144,3 +2144,101 @@ const InfoRow = ({ label, value, isLink }: { label: string; value?: string | nul
 };
 
 export default AdminDashboard;
+
+// ─── Participant Row Component ───
+interface ParticipantRowProps {
+  reg: any;
+  showEvent: boolean;
+  onApprove: () => void;
+  onReject: () => void;
+  onPending: () => void;
+  onDelete: () => void;
+  onPaymentConfirm: () => void;
+}
+
+const ParticipantRow = ({ reg, showEvent, onApprove, onReject, onPending, onDelete, onPaymentConfirm }: ParticipantRowProps) => {
+  const approvalColor =
+    reg.approval_status === "approved" ? "bg-green-500/10 text-green-400" :
+    reg.approval_status === "rejected" ? "bg-red-500/10 text-red-400" :
+    "bg-yellow-500/10 text-yellow-400";
+  const paymentColor =
+    reg.payment_status === "confirmed" ? "bg-green-500/10 text-green-400" :
+    reg.payment_status === "unpaid" ? "bg-red-500/10 text-red-400" :
+    "bg-yellow-500/10 text-yellow-400";
+
+  return (
+    <div className="p-3 rounded-lg bg-secondary/30 border border-border/40">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          {showEvent && reg.events?.title && (
+            <p className="text-[11px] font-mono text-primary mb-1 truncate">📅 {reg.events.title}</p>
+          )}
+          <p className="text-sm font-medium text-foreground truncate">{reg.name || "Unnamed"}</p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
+            {reg.email && <span>✉ {reg.email}</span>}
+            {reg.phone && <span>📞 {reg.phone}</span>}
+            {reg.department && <span>🎓 {reg.department}</span>}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${approvalColor}`}>
+              {reg.approval_status}
+            </span>
+            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${paymentColor}`}>
+              💳 {reg.payment_status}
+            </span>
+            {reg.payment_method && (
+              <span className="text-[10px] text-muted-foreground">
+                {reg.payment_method}{reg.transaction_id ? ` · ${reg.transaction_id}` : ""}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1.5 shrink-0">
+          {reg.approval_status !== "approved" && (
+            <button
+              onClick={onApprove}
+              className="px-2.5 py-1.5 rounded-lg bg-green-500/10 text-green-400 text-xs font-semibold hover:bg-green-500/20 transition-colors flex items-center gap-1"
+              title="Approve"
+            >
+              <Check size={12} /> Approve
+            </button>
+          )}
+          {reg.approval_status !== "rejected" && (
+            <button
+              onClick={onReject}
+              className="px-2.5 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-xs font-semibold hover:bg-red-500/20 transition-colors flex items-center gap-1"
+              title="Reject"
+            >
+              <X size={12} /> Reject
+            </button>
+          )}
+          {reg.approval_status !== "pending" && (
+            <button
+              onClick={onPending}
+              className="px-2.5 py-1.5 rounded-lg bg-yellow-500/10 text-yellow-400 text-xs font-semibold hover:bg-yellow-500/20 transition-colors flex items-center gap-1"
+              title="Mark pending"
+            >
+              <Clock size={12} />
+            </button>
+          )}
+          {reg.payment_status !== "confirmed" && reg.payment_method && (
+            <button
+              onClick={onPaymentConfirm}
+              className="px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors flex items-center gap-1"
+              title="Confirm payment"
+            >
+              💳 Confirm
+            </button>
+          )}
+          <button
+            onClick={onDelete}
+            className="px-2.5 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors"
+            title="Delete"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
