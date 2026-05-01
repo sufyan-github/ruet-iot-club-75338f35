@@ -554,6 +554,7 @@ const AdminDashboard = () => {
     { key: "team", label: "Team", icon: UserCog },
     { key: "projects", label: "Projects", icon: FolderOpen },
     { key: "events", label: "Events", icon: Calendar },
+    { key: "participants", label: "Participants", icon: UserCheck },
     { key: "alumni", label: "Alumni", icon: GraduationCap },
     { key: "research", label: "Research", icon: FlaskConical },
     { key: "courses", label: "Courses", icon: BookOpen },
