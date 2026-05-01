@@ -75,6 +75,20 @@ const JoinUs = () => {
       return;
     }
 
+    if (!avatarFile) {
+      toast.error("Please upload your profile photo");
+      return;
+    }
+    if (!form.paymentMethod) {
+      toast.error("Please select a payment method");
+      return;
+    }
+    const isCashPayment = form.paymentMethod === "Cash";
+    if (!isCashPayment && !form.transactionId.trim()) {
+      toast.error("Please enter your Transaction ID");
+      return;
+    }
+
     setSubmitting(true);
     try {
       let resumeUrl = null;
@@ -143,13 +157,14 @@ const JoinUs = () => {
       }
 
       // Submit payment
-      if (form.paymentMethod && form.transactionId) {
+      if (form.paymentMethod) {
         const { error: paymentError } = await supabase
           .from("membership_payments")
           .insert({
             user_id: user.id,
             payment_method: form.paymentMethod,
-            transaction_id: form.transactionId,
+            transaction_id: isCashPayment ? "CASH-UNPAID" : form.transactionId,
+            payment_status: isCashPayment ? "unpaid" : "pending",
           });
 
         if (paymentError) {
