@@ -103,11 +103,12 @@ const EventRegistration = () => {
             </motion.div>
             <h2 className="font-display text-2xl font-bold text-foreground mb-4">Registration Successful!</h2>
             <p className="text-muted-foreground mb-2">You have been registered for <strong className="text-foreground">{event.title}</strong>.</p>
+            <p className="text-sm text-yellow-400 mb-2">⏳ Awaiting admin approval — you'll be notified once your registration is reviewed.</p>
             {event.is_paid && form.payment_method === "Cash" && (
-              <p className="text-sm text-yellow-400 mb-4">Please pay ৳{event.registration_fee} cash to the club admin.</p>
+              <p className="text-sm text-muted-foreground mb-4">Please pay ৳{event.registration_fee} cash to the club admin to complete your registration.</p>
             )}
             {event.is_paid && form.payment_method !== "Cash" && (
-              <p className="text-sm text-yellow-400 mb-4">Your payment is pending verification by the admin.</p>
+              <p className="text-sm text-muted-foreground mb-4">Your payment will also be verified by the admin.</p>
             )}
 
             {event.is_paid && registrationResult && (
