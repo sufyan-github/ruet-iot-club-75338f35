@@ -4,12 +4,14 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import SectionHeading from "@/components/SectionHeading";
-import { Calendar, MapPin, Users, CreditCard } from "lucide-react";
+import { Calendar, MapPin, Users, CreditCard, UserCheck, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const Events = () => {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [registrations, setRegistrations] = useState<Record<string, { name: string | null }[]>>({});
+  const [expanded, setExpanded] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,7 +24,23 @@ const Events = () => {
         .select("*")
         .gte("date", todayStart.toISOString())
         .order("date", { ascending: true });
-      setEvents(data || []);
+      const evs = data || [];
+      setEvents(evs);
+
+      // Fetch approved participant names per event (RLS allows public read of approved rows)
+      if (evs.length > 0) {
+        const { data: regs } = await supabase
+          .from("event_registrations")
+          .select("event_id, name")
+          .eq("approval_status", "approved")
+          .in("event_id", evs.map(e => e.id));
+        const grouped: Record<string, { name: string | null }[]> = {};
+        (regs || []).forEach((r: any) => {
+          if (!grouped[r.event_id]) grouped[r.event_id] = [];
+          grouped[r.event_id].push({ name: r.name });
+        });
+        setRegistrations(grouped);
+      }
       setLoading(false);
     };
     fetchEvents();
@@ -80,12 +98,38 @@ const Events = () => {
                               <MapPin size={12} className="text-primary" /> {event.venue}
                             </span>
                           )}
-                          {event.max_participants && (
-                            <span className="flex items-center gap-1">
-                              <Users size={12} className="text-primary" /> {event.max_participants} spots
-                            </span>
-                          )}
+                          <span className="flex items-center gap-1">
+                            <Users size={12} className="text-primary" />
+                            {(registrations[event.id]?.length || 0)}
+                            {event.max_participants ? ` / ${event.max_participants}` : ""} confirmed
+                          </span>
                         </div>
+                        {(registrations[event.id]?.length || 0) > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setExpanded(expanded === event.id ? null : event.id)}
+                            className="mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                          >
+                            <UserCheck size={12} />
+                            {expanded === event.id ? "Hide" : "View"} confirmed participants
+                            {expanded === event.id ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                          </button>
+                        )}
+                        {expanded === event.id && (registrations[event.id]?.length || 0) > 0 && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            className="mt-3 p-3 rounded-lg bg-secondary/40 border border-border/40"
+                          >
+                            <div className="flex flex-wrap gap-1.5">
+                              {registrations[event.id].map((p, idx) => (
+                                <span key={idx} className="inline-block px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
+                                  {p.name || "Anonymous"}
+                                </span>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
                       </div>
                       <button
                         onClick={() => navigate("/events/register", { state: { event } })}

@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Check, X, Users, FolderOpen, Calendar, Eye, GraduationCap, Pencil, Trash2, Plus, UserCog, Image, FileText, Download, ChevronDown, ChevronUp, BookOpen, Mail, FlaskConical, Video, Award, BarChart3, Shield, Megaphone, MessageSquare, Send, Reply } from "lucide-react";
+import { Check, X, Users, FolderOpen, Calendar, Eye, GraduationCap, Pencil, Trash2, Plus, UserCog, Image, FileText, Download, ChevronDown, ChevronUp, BookOpen, Mail, FlaskConical, Video, Award, BarChart3, Shield, Megaphone, MessageSquare, Send, Reply, UserCheck, Clock } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 
 const downloadCSV = (rows: Record<string, string>[], filename: string) => {
@@ -25,7 +25,7 @@ const downloadCSV = (rows: Record<string, string>[], filename: string) => {
   URL.revokeObjectURL(url);
 };
 
-type TabType = "overview" | "applications" | "members" | "payments" | "team" | "projects" | "events" | "alumni" | "photos" | "blog" | "research" | "courses" | "hero" | "announcements" | "messages";
+type TabType = "overview" | "applications" | "members" | "payments" | "team" | "projects" | "events" | "participants" | "alumni" | "photos" | "blog" | "research" | "courses" | "hero" | "announcements" | "messages";
 
 const emptyAlumniForm = { name: "", batch: "", department: "", company: "", linkedin: "" };
 const emptyProjectForm = { title: "", description: "", category: "", status: "idea", github_link: "", image_url: "" };
@@ -76,6 +76,10 @@ const AdminDashboard = () => {
   const [replyingMessageId, setReplyingMessageId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
+  const [eventRegistrations, setEventRegistrations] = useState<any[]>([]);
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
+  const [participantFilter, setParticipantFilter] = useState<string>("all");
+  const [participantStatusFilter, setParticipantStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
 
   // Form states
   const [showProjectForm, setShowProjectForm] = useState(false);
@@ -190,6 +194,20 @@ const AdminDashboard = () => {
       case "events": {
         const { data } = await supabase.from("events").select("*").order("date", { ascending: false });
         setEvents(data || []);
+        const { data: regs } = await supabase
+          .from("event_registrations")
+          .select("*, events(title, date)")
+          .order("registered_at", { ascending: false });
+        setEventRegistrations(regs || []);
+        break;
+      }
+      case "participants": {
+        const [evRes, regsRes] = await Promise.all([
+          supabase.from("events").select("id, title, date").order("date", { ascending: false }),
+          supabase.from("event_registrations").select("*, events(title, date)").order("registered_at", { ascending: false }),
+        ]);
+        setEvents(evRes.data || []);
+        setEventRegistrations(regsRes.data || []);
         break;
       }
       case "alumni": {
@@ -282,6 +300,21 @@ const AdminDashboard = () => {
     const { error } = await supabase.from("event_registrations").update({ payment_status: status }).eq("id", id);
     if (error) toast.error("Failed to update payment");
     else { toast.success(`Payment ${status}`); fetchData(); }
+  };
+
+  const updateEventApproval = async (id: string, approval_status: "approved" | "rejected" | "pending") => {
+    const { error } = await supabase.from("event_registrations").update({ approval_status }).eq("id", id);
+    if (error) { toast.error("Failed to update approval"); return; }
+    toast.success(`Registration ${approval_status}`);
+    fetchData();
+  };
+
+  const deleteEventRegistration = async (id: string) => {
+    if (!confirm("Delete this registration permanently?")) return;
+    const { error } = await supabase.from("event_registrations").delete().eq("id", id);
+    if (error) { toast.error("Failed to delete"); return; }
+    toast.success("Registration deleted");
+    fetchData();
   };
 
   const updateCoursePaymentStatus = async (id: string, status: string) => {
@@ -521,6 +554,7 @@ const AdminDashboard = () => {
     { key: "team", label: "Team", icon: UserCog },
     { key: "projects", label: "Projects", icon: FolderOpen },
     { key: "events", label: "Events", icon: Calendar },
+    { key: "participants", label: "Participants", icon: UserCheck },
     { key: "alumni", label: "Alumni", icon: GraduationCap },
     { key: "research", label: "Research", icon: FlaskConical },
     { key: "courses", label: "Courses", icon: BookOpen },
@@ -1251,22 +1285,185 @@ const AdminDashboard = () => {
               )}
               <div className="space-y-3">
                 {events.length === 0 && <p className="text-center text-muted-foreground">No events yet.</p>}
-                {events.map((ev: any) => (
-                  <motion.div key={ev.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl glass flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      {ev.image_url && <img src={ev.image_url} alt={ev.title} className="w-12 h-12 rounded-lg object-cover shrink-0" />}
-                      <div className="min-w-0">
-                        <h4 className="font-semibold text-sm text-foreground">{ev.title}</h4>
-                        <p className="text-xs text-muted-foreground">{ev.type || "—"} · {ev.venue || "—"} · {new Date(ev.date).toLocaleDateString()}{ev.is_paid && <span className="ml-1 text-primary"> · ৳{ev.registration_fee}</span>}</p>
+                {events.map((ev: any) => {
+                  const evRegs = eventRegistrations.filter((r: any) => r.event_id === ev.id);
+                  const pending = evRegs.filter((r: any) => r.approval_status === "pending").length;
+                  const approved = evRegs.filter((r: any) => r.approval_status === "approved").length;
+                  const isOpen = expandedEventId === ev.id;
+                  return (
+                    <motion.div key={ev.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl glass overflow-hidden">
+                      <div className="p-4 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          {ev.image_url && <img src={ev.image_url} alt={ev.title} className="w-12 h-12 rounded-lg object-cover shrink-0" />}
+                          <div className="min-w-0">
+                            <h4 className="font-semibold text-sm text-foreground">{ev.title}</h4>
+                            <p className="text-xs text-muted-foreground">{ev.type || "—"} · {ev.venue || "—"} · {new Date(ev.date).toLocaleDateString()}{ev.is_paid && <span className="ml-1 text-primary"> · ৳{ev.registration_fee}</span>}</p>
+                            <div className="flex items-center gap-3 mt-1 text-xs">
+                              <span className="text-muted-foreground">Total: <span className="text-foreground font-medium">{evRegs.length}</span></span>
+                              <span className="text-green-400">✓ {approved}</span>
+                              {pending > 0 && <span className="text-yellow-400">⏳ {pending} pending</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <button
+                            onClick={() => setExpandedEventId(isOpen ? null : ev.id)}
+                            className="p-1.5 rounded bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
+                            title={isOpen ? "Hide participants" : "Show participants"}
+                          >
+                            {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                          </button>
+                          <button onClick={() => editEvent(ev)} className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"><Pencil size={14} /></button>
+                          <button onClick={() => deleteEvent(ev.id)} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><Trash2 size={14} /></button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      <button onClick={() => editEvent(ev)} className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"><Pencil size={14} /></button>
-                      <button onClick={() => deleteEvent(ev.id)} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><Trash2 size={14} /></button>
-                    </div>
-                  </motion.div>
-                ))}
+
+                      <AnimatePresence>
+                        {isOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="border-t border-border/40 overflow-hidden"
+                          >
+                            <div className="p-4 space-y-2">
+                              {evRegs.length === 0 ? (
+                                <p className="text-xs text-muted-foreground italic">No registrations yet.</p>
+                              ) : (
+                                <>
+                                  <div className="flex justify-end mb-2">
+                                    <button
+                                      onClick={() => downloadCSV(
+                                        evRegs.map((r: any) => ({
+                                          Name: r.name || "",
+                                          Email: r.email || "",
+                                          Phone: r.phone || "",
+                                          Department: r.department || "",
+                                          "Approval Status": r.approval_status,
+                                          "Payment Status": r.payment_status,
+                                          "Payment Method": r.payment_method || "—",
+                                          "Transaction ID": r.transaction_id || "—",
+                                          Registered: new Date(r.registered_at).toLocaleString(),
+                                        })),
+                                        `${ev.title.replace(/\s+/g, "_")}_participants.csv`
+                                      )}
+                                      className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors flex items-center gap-1"
+                                    >
+                                      <Download size={12} /> Export CSV
+                                    </button>
+                                  </div>
+                                  {evRegs.map((r: any) => (
+                                    <ParticipantRow
+                                      key={r.id}
+                                      reg={r}
+                                      onApprove={() => updateEventApproval(r.id, "approved")}
+                                      onReject={() => updateEventApproval(r.id, "rejected")}
+                                      onPending={() => updateEventApproval(r.id, "pending")}
+                                      onDelete={() => deleteEventRegistration(r.id)}
+                                      onPaymentConfirm={() => updateEventPaymentStatus(r.id, "confirmed")}
+                                      showEvent={false}
+                                    />
+                                  ))}
+                                </>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                })}
               </div>
+            </div>
+          )}
+
+          {/* ════════ Participants Tab ════════ */}
+          {tab === "participants" && (
+            <div className="max-w-5xl mx-auto">
+              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                <select
+                  value={participantFilter}
+                  onChange={(e) => setParticipantFilter(e.target.value)}
+                  className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                >
+                  <option value="all">All Events</option>
+                  {events.map((ev: any) => (
+                    <option key={ev.id} value={ev.id}>{ev.title}</option>
+                  ))}
+                </select>
+                <div className="flex gap-1 flex-wrap">
+                  {(["all", "pending", "approved", "rejected"] as const).map(s => (
+                    <button
+                      key={s}
+                      onClick={() => setParticipantStatusFilter(s)}
+                      className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors capitalize ${
+                        participantStatusFilter === s
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+                <div className="sm:ml-auto">
+                  {(() => {
+                    const filtered = eventRegistrations.filter((r: any) =>
+                      (participantFilter === "all" || r.event_id === participantFilter) &&
+                      (participantStatusFilter === "all" || r.approval_status === participantStatusFilter)
+                    );
+                    return (
+                      <button
+                        onClick={() => downloadCSV(
+                          filtered.map((r: any) => ({
+                            Event: r.events?.title || "",
+                            Name: r.name || "",
+                            Email: r.email || "",
+                            Phone: r.phone || "",
+                            Department: r.department || "",
+                            "Approval Status": r.approval_status,
+                            "Payment Status": r.payment_status,
+                            "Payment Method": r.payment_method || "—",
+                            "Transaction ID": r.transaction_id || "—",
+                            Registered: new Date(r.registered_at).toLocaleString(),
+                          })),
+                          `event_participants_${Date.now()}.csv`
+                        )}
+                        disabled={filtered.length === 0}
+                        className="px-4 py-2 rounded-lg bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition-colors flex items-center gap-2 disabled:opacity-50"
+                      >
+                        <Download size={14} /> Export ({filtered.length})
+                      </button>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {(() => {
+                const filtered = eventRegistrations.filter((r: any) =>
+                  (participantFilter === "all" || r.event_id === participantFilter) &&
+                  (participantStatusFilter === "all" || r.approval_status === participantStatusFilter)
+                );
+                if (filtered.length === 0) {
+                  return <p className="text-center text-muted-foreground py-8">No registrations match the selected filters.</p>;
+                }
+                return (
+                  <div className="space-y-2">
+                    {filtered.map((r: any) => (
+                      <ParticipantRow
+                        key={r.id}
+                        reg={r}
+                        onApprove={() => updateEventApproval(r.id, "approved")}
+                        onReject={() => updateEventApproval(r.id, "rejected")}
+                        onPending={() => updateEventApproval(r.id, "pending")}
+                        onDelete={() => deleteEventRegistration(r.id)}
+                        onPaymentConfirm={() => updateEventPaymentStatus(r.id, "confirmed")}
+                        showEvent={true}
+                      />
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -1947,3 +2144,101 @@ const InfoRow = ({ label, value, isLink }: { label: string; value?: string | nul
 };
 
 export default AdminDashboard;
+
+// ─── Participant Row Component ───
+interface ParticipantRowProps {
+  reg: any;
+  showEvent: boolean;
+  onApprove: () => void;
+  onReject: () => void;
+  onPending: () => void;
+  onDelete: () => void;
+  onPaymentConfirm: () => void;
+}
+
+const ParticipantRow = ({ reg, showEvent, onApprove, onReject, onPending, onDelete, onPaymentConfirm }: ParticipantRowProps) => {
+  const approvalColor =
+    reg.approval_status === "approved" ? "bg-green-500/10 text-green-400" :
+    reg.approval_status === "rejected" ? "bg-red-500/10 text-red-400" :
+    "bg-yellow-500/10 text-yellow-400";
+  const paymentColor =
+    reg.payment_status === "confirmed" ? "bg-green-500/10 text-green-400" :
+    reg.payment_status === "unpaid" ? "bg-red-500/10 text-red-400" :
+    "bg-yellow-500/10 text-yellow-400";
+
+  return (
+    <div className="p-3 rounded-lg bg-secondary/30 border border-border/40">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          {showEvent && reg.events?.title && (
+            <p className="text-[11px] font-mono text-primary mb-1 truncate">📅 {reg.events.title}</p>
+          )}
+          <p className="text-sm font-medium text-foreground truncate">{reg.name || "Unnamed"}</p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
+            {reg.email && <span>✉ {reg.email}</span>}
+            {reg.phone && <span>📞 {reg.phone}</span>}
+            {reg.department && <span>🎓 {reg.department}</span>}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${approvalColor}`}>
+              {reg.approval_status}
+            </span>
+            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${paymentColor}`}>
+              💳 {reg.payment_status}
+            </span>
+            {reg.payment_method && (
+              <span className="text-[10px] text-muted-foreground">
+                {reg.payment_method}{reg.transaction_id ? ` · ${reg.transaction_id}` : ""}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1.5 shrink-0">
+          {reg.approval_status !== "approved" && (
+            <button
+              onClick={onApprove}
+              className="px-2.5 py-1.5 rounded-lg bg-green-500/10 text-green-400 text-xs font-semibold hover:bg-green-500/20 transition-colors flex items-center gap-1"
+              title="Approve"
+            >
+              <Check size={12} /> Approve
+            </button>
+          )}
+          {reg.approval_status !== "rejected" && (
+            <button
+              onClick={onReject}
+              className="px-2.5 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-xs font-semibold hover:bg-red-500/20 transition-colors flex items-center gap-1"
+              title="Reject"
+            >
+              <X size={12} /> Reject
+            </button>
+          )}
+          {reg.approval_status !== "pending" && (
+            <button
+              onClick={onPending}
+              className="px-2.5 py-1.5 rounded-lg bg-yellow-500/10 text-yellow-400 text-xs font-semibold hover:bg-yellow-500/20 transition-colors flex items-center gap-1"
+              title="Mark pending"
+            >
+              <Clock size={12} />
+            </button>
+          )}
+          {reg.payment_status !== "confirmed" && reg.payment_method && (
+            <button
+              onClick={onPaymentConfirm}
+              className="px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors flex items-center gap-1"
+              title="Confirm payment"
+            >
+              💳 Confirm
+            </button>
+          )}
+          <button
+            onClick={onDelete}
+            className="px-2.5 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors"
+            title="Delete"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
