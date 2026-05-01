@@ -314,6 +314,7 @@ export type Database = {
       }
       event_registrations: {
         Row: {
+          approval_status: string
           department: string | null
           email: string | null
           event_id: string
@@ -327,6 +328,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          approval_status?: string
           department?: string | null
           email?: string | null
           event_id: string
@@ -340,6 +342,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          approval_status?: string
           department?: string | null
           email?: string | null
           event_id?: string
