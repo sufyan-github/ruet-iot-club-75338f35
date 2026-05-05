@@ -133,6 +133,19 @@ const AdminDashboard = () => {
     if (isAdmin) fetchData();
   }, [isAdmin, tab]);
 
+  const logActivity = async (action: string, entity_type?: string, entity_id?: string, details?: any) => {
+    if (!user) return;
+    try {
+      await supabase.from("admin_activity_log").insert({
+        admin_id: user.id,
+        action,
+        entity_type: entity_type || null,
+        entity_id: entity_id || null,
+        details: details || {},
+      });
+    } catch { /* silent */ }
+  };
+
   const fetchData = async () => {
     switch (tab) {
       case "overview": {
@@ -596,6 +609,7 @@ const AdminDashboard = () => {
     { key: "hero", label: "Hero Slides", icon: Image },
     { key: "announcements", label: "Announcements", icon: Megaphone },
     { key: "messages", label: "Messages", icon: MessageSquare },
+    { key: "reports", label: "Reports", icon: BarChart3 },
   ];
 
   const inputClass = "w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";
