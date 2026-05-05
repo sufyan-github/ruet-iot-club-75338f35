@@ -25,7 +25,7 @@ const downloadCSV = (rows: Record<string, string>[], filename: string) => {
   URL.revokeObjectURL(url);
 };
 
-type TabType = "overview" | "applications" | "members" | "payments" | "team" | "projects" | "events" | "participants" | "alumni" | "photos" | "blog" | "research" | "courses" | "hero" | "announcements" | "messages";
+type TabType = "overview" | "applications" | "members" | "payments" | "team" | "projects" | "events" | "participants" | "alumni" | "photos" | "blog" | "research" | "courses" | "hero" | "announcements" | "messages" | "reports";
 
 const emptyAlumniForm = { name: "", batch: "", department: "", company: "", linkedin: "" };
 const emptyProjectForm = { title: "", description: "", category: "", status: "idea", github_link: "", image_url: "" };
@@ -80,6 +80,13 @@ const AdminDashboard = () => {
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [participantFilter, setParticipantFilter] = useState<string>("all");
   const [participantStatusFilter, setParticipantStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+
+  // ─── Reports state ───
+  const today = new Date();
+  const monthAgo = new Date(today.getTime() - 30 * 86400000);
+  const [reportFrom, setReportFrom] = useState<string>(monthAgo.toISOString().slice(0, 10));
+  const [reportTo, setReportTo] = useState<string>(today.toISOString().slice(0, 10));
+  const [reportData, setReportData] = useState<any>({ membership: [], events: [], courses: [], activity: [] });
 
   // Form states
   const [showProjectForm, setShowProjectForm] = useState(false);
@@ -263,6 +270,27 @@ const AdminDashboard = () => {
         setContactMessages(data || []);
         break;
       }
+      case "reports": {
+        const fromISO = new Date(reportFrom + "T00:00:00").toISOString();
+        const toISO = new Date(reportTo + "T23:59:59").toISOString();
+        const [memRes, evRes, crRes, actRes, eventsRes, coursesRes] = await Promise.all([
+          supabase.from("membership_payments").select("*").gte("created_at", fromISO).lte("created_at", toISO).order("created_at", { ascending: false }),
+          supabase.from("event_registrations").select("*, events(title, registration_fee)").gte("registered_at", fromISO).lte("registered_at", toISO).order("registered_at", { ascending: false }),
+          supabase.from("course_registrations").select("*").gte("registered_at", fromISO).lte("registered_at", toISO).order("registered_at", { ascending: false }),
+          supabase.from("admin_activity_log").select("*").gte("created_at", fromISO).lte("created_at", toISO).order("created_at", { ascending: false }).limit(200),
+          supabase.from("events").select("id, title, registration_fee"),
+          supabase.from("courses").select("id, title, price"),
+        ]);
+        setReportData({
+          membership: memRes.data || [],
+          events: evRes.data || [],
+          courses: crRes.data || [],
+          activity: actRes.data || [],
+          eventMap: Object.fromEntries((eventsRes.data || []).map((e: any) => [e.id, e])),
+          courseMap: Object.fromEntries((coursesRes.data || []).map((c: any) => [c.id, c])),
+        });
+        break;
+      }
     }
   };
 
@@ -293,7 +321,11 @@ const AdminDashboard = () => {
   const updatePaymentStatus = async (id: string, status: string) => {
     const { error } = await supabase.from("membership_payments").update({ payment_status: status }).eq("id", id);
     if (error) toast.error("Failed to update payment");
-    else { toast.success(`Payment ${status}`); fetchData(); }
+    else {
+      toast.success(`Payment ${status}`);
+      logActivity("payment_updated", "membership_payment", id, { status });
+      fetchData();
+    }
   };
 
   const updateEventPaymentStatus = async (id: string, status: string) => {
@@ -306,6 +338,7 @@ const AdminDashboard = () => {
     const { error } = await supabase.from("event_registrations").update({ approval_status }).eq("id", id);
     if (error) { toast.error("Failed to update approval"); return; }
     toast.success(`Registration ${approval_status}`);
+    logActivity("event_approval_updated", "event_registration", id, { approval_status });
     fetchData();
   };
 
