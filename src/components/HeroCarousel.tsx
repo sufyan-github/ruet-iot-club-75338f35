@@ -74,6 +74,9 @@ const HeroCarousel = () => {
   };
 
   if (slides.length === 0) return null;
+  const safeIndex = current >= slides.length ? 0 : current;
+  const slide = slides[safeIndex];
+  if (!slide) return null;
 
   return (
     <div className="relative w-full max-w-lg mx-auto">
@@ -83,7 +86,7 @@ const HeroCarousel = () => {
       <div className="relative rounded-2xl overflow-hidden bg-card aspect-square">
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
-            key={current}
+            key={safeIndex}
             custom={direction}
             variants={variants}
             initial="enter"
@@ -93,8 +96,8 @@ const HeroCarousel = () => {
             className="absolute inset-0"
           >
             <img
-              src={slides[current].src}
-              alt={slides[current].label}
+              src={slide.src}
+              alt={slide.label}
               className="w-full h-full object-cover"
               width={512}
               height={512}
@@ -103,7 +106,7 @@ const HeroCarousel = () => {
             <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/90 to-transparent" />
             <div className="absolute bottom-4 left-4 right-4">
               <span className="text-sm font-display font-semibold text-foreground tracking-wider">
-                {slides[current].label}
+                {slide.label}
               </span>
             </div>
           </motion.div>

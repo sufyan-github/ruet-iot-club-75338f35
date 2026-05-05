@@ -25,7 +25,7 @@ const downloadCSV = (rows: Record<string, string>[], filename: string) => {
   URL.revokeObjectURL(url);
 };
 
-type TabType = "overview" | "applications" | "members" | "payments" | "team" | "projects" | "events" | "participants" | "alumni" | "photos" | "blog" | "research" | "courses" | "hero" | "announcements" | "messages";
+type TabType = "overview" | "applications" | "members" | "payments" | "team" | "projects" | "events" | "participants" | "alumni" | "photos" | "blog" | "research" | "courses" | "hero" | "announcements" | "messages" | "reports";
 
 const emptyAlumniForm = { name: "", batch: "", department: "", company: "", linkedin: "" };
 const emptyProjectForm = { title: "", description: "", category: "", status: "idea", github_link: "", image_url: "" };
@@ -81,6 +81,13 @@ const AdminDashboard = () => {
   const [participantFilter, setParticipantFilter] = useState<string>("all");
   const [participantStatusFilter, setParticipantStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
 
+  // ─── Reports state ───
+  const today = new Date();
+  const monthAgo = new Date(today.getTime() - 30 * 86400000);
+  const [reportFrom, setReportFrom] = useState<string>(monthAgo.toISOString().slice(0, 10));
+  const [reportTo, setReportTo] = useState<string>(today.toISOString().slice(0, 10));
+  const [reportData, setReportData] = useState<any>({ membership: [], events: [], courses: [], activity: [] });
+
   // Form states
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [projectForm, setProjectForm] = useState(emptyProjectForm);
@@ -125,6 +132,19 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (isAdmin) fetchData();
   }, [isAdmin, tab]);
+
+  const logActivity = async (action: string, entity_type?: string, entity_id?: string, details?: any) => {
+    if (!user) return;
+    try {
+      await supabase.from("admin_activity_log").insert({
+        admin_id: user.id,
+        action,
+        entity_type: entity_type || null,
+        entity_id: entity_id || null,
+        details: details || {},
+      });
+    } catch { /* silent */ }
+  };
 
   const fetchData = async () => {
     switch (tab) {
@@ -263,6 +283,27 @@ const AdminDashboard = () => {
         setContactMessages(data || []);
         break;
       }
+      case "reports": {
+        const fromISO = new Date(reportFrom + "T00:00:00").toISOString();
+        const toISO = new Date(reportTo + "T23:59:59").toISOString();
+        const [memRes, evRes, crRes, actRes, eventsRes, coursesRes] = await Promise.all([
+          supabase.from("membership_payments").select("*").gte("created_at", fromISO).lte("created_at", toISO).order("created_at", { ascending: false }),
+          supabase.from("event_registrations").select("*, events(title, registration_fee)").gte("registered_at", fromISO).lte("registered_at", toISO).order("registered_at", { ascending: false }),
+          supabase.from("course_registrations").select("*").gte("registered_at", fromISO).lte("registered_at", toISO).order("registered_at", { ascending: false }),
+          supabase.from("admin_activity_log").select("*").gte("created_at", fromISO).lte("created_at", toISO).order("created_at", { ascending: false }).limit(200),
+          supabase.from("events").select("id, title, registration_fee"),
+          supabase.from("courses").select("id, title, price"),
+        ]);
+        setReportData({
+          membership: memRes.data || [],
+          events: evRes.data || [],
+          courses: crRes.data || [],
+          activity: actRes.data || [],
+          eventMap: Object.fromEntries((eventsRes.data || []).map((e: any) => [e.id, e])),
+          courseMap: Object.fromEntries((coursesRes.data || []).map((c: any) => [c.id, c])),
+        });
+        break;
+      }
     }
   };
 
@@ -293,7 +334,11 @@ const AdminDashboard = () => {
   const updatePaymentStatus = async (id: string, status: string) => {
     const { error } = await supabase.from("membership_payments").update({ payment_status: status }).eq("id", id);
     if (error) toast.error("Failed to update payment");
-    else { toast.success(`Payment ${status}`); fetchData(); }
+    else {
+      toast.success(`Payment ${status}`);
+      logActivity("payment_updated", "membership_payment", id, { status });
+      fetchData();
+    }
   };
 
   const updateEventPaymentStatus = async (id: string, status: string) => {
@@ -306,6 +351,7 @@ const AdminDashboard = () => {
     const { error } = await supabase.from("event_registrations").update({ approval_status }).eq("id", id);
     if (error) { toast.error("Failed to update approval"); return; }
     toast.success(`Registration ${approval_status}`);
+    logActivity("event_approval_updated", "event_registration", id, { approval_status });
     fetchData();
   };
 
@@ -563,6 +609,7 @@ const AdminDashboard = () => {
     { key: "hero", label: "Hero Slides", icon: Image },
     { key: "announcements", label: "Announcements", icon: Megaphone },
     { key: "messages", label: "Messages", icon: MessageSquare },
+    { key: "reports", label: "Reports", icon: BarChart3 },
   ];
 
   const inputClass = "w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";
@@ -2123,11 +2170,155 @@ const AdminDashboard = () => {
               </div>
             </div>
           )}
+
+          {/* ════════ Reports Tab ════════ */}
+          {tab === "reports" && (
+            <div className="max-w-6xl mx-auto space-y-6">
+              <div className="p-4 rounded-xl glass flex flex-wrap items-end gap-4">
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">From</label>
+                  <input type="date" value={reportFrom} onChange={(e) => setReportFrom(e.target.value)} className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">To</label>
+                  <input type="date" value={reportTo} onChange={(e) => setReportTo(e.target.value)} className={inputClass} />
+                </div>
+                <button onClick={() => fetchData()} className="px-4 py-3 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors">
+                  Apply Range
+                </button>
+                {(() => {
+                  const memRev = (reportData.membership || []).filter((p: any) => p.payment_status === "verified").reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+                  const evRev = (reportData.events || []).filter((r: any) => r.payment_status === "confirmed").reduce((s: number, r: any) => s + Number(r.events?.registration_fee || reportData.eventMap?.[r.event_id]?.registration_fee || 0), 0);
+                  const crRev = (reportData.courses || []).filter((r: any) => r.payment_status === "verified").reduce((s: number, r: any) => s + Number(reportData.courseMap?.[r.course_id]?.price || 0), 0);
+                  const total = memRev + evRev + crRev;
+                  return (
+                    <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <Stat label="Membership Revenue" value={`৳${memRev}`} color="text-primary" />
+                      <Stat label="Event Revenue" value={`৳${evRev}`} color="text-accent" />
+                      <Stat label="Course Revenue" value={`৳${crRev}`} color="text-green-400" />
+                      <Stat label="Total Revenue" value={`৳${total}`} color="text-primary" />
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Membership payments report */}
+              <div className="p-5 rounded-xl glass">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-display text-sm font-bold tracking-wider text-primary">Membership Payments ({(reportData.membership || []).length})</h3>
+                  <button onClick={() => downloadCSV((reportData.membership || []).map((p: any) => ({ created_at: p.created_at, amount: String(p.amount || 0), method: p.payment_method, status: p.payment_status, txn: p.transaction_id || "" })), `membership_payments_${reportFrom}_${reportTo}.csv`)} className="px-3 py-1.5 rounded-lg bg-secondary text-foreground text-xs font-semibold hover:bg-secondary/80 transition-colors flex items-center gap-1">
+                    <Download size={12} /> CSV
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead><tr className="text-left text-muted-foreground border-b border-border/50"><th className="py-2 pr-2">Date</th><th className="py-2 pr-2">Amount</th><th className="py-2 pr-2">Method</th><th className="py-2 pr-2">Status</th><th className="py-2">Txn ID</th></tr></thead>
+                    <tbody>
+                      {(reportData.membership || []).slice(0, 50).map((p: any) => (
+                        <tr key={p.id} className="border-b border-border/20">
+                          <td className="py-2 pr-2">{new Date(p.created_at).toLocaleDateString()}</td>
+                          <td className="py-2 pr-2">৳{p.amount}</td>
+                          <td className="py-2 pr-2">{p.payment_method}</td>
+                          <td className="py-2 pr-2"><span className={`px-2 py-0.5 rounded ${p.payment_status === "verified" ? "bg-green-500/10 text-green-400" : p.payment_status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-yellow-500/10 text-yellow-400"}`}>{p.payment_status}</span></td>
+                          <td className="py-2 font-mono">{p.transaction_id || "—"}</td>
+                        </tr>
+                      ))}
+                      {(reportData.membership || []).length === 0 && <tr><td colSpan={5} className="py-4 text-center text-muted-foreground">No membership payments in range</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Event registrations report */}
+              <div className="p-5 rounded-xl glass">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-display text-sm font-bold tracking-wider text-primary">Event Registrations ({(reportData.events || []).length})</h3>
+                  <button onClick={() => downloadCSV((reportData.events || []).map((r: any) => ({ date: r.registered_at, event: r.events?.title || "", name: r.name || "", email: r.email || "", method: r.payment_method || "free", status: r.payment_status, approval: r.approval_status })), `event_registrations_${reportFrom}_${reportTo}.csv`)} className="px-3 py-1.5 rounded-lg bg-secondary text-foreground text-xs font-semibold hover:bg-secondary/80 transition-colors flex items-center gap-1">
+                    <Download size={12} /> CSV
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead><tr className="text-left text-muted-foreground border-b border-border/50"><th className="py-2 pr-2">Date</th><th className="py-2 pr-2">Event</th><th className="py-2 pr-2">Name</th><th className="py-2 pr-2">Method</th><th className="py-2 pr-2">Approval</th><th className="py-2">Payment</th></tr></thead>
+                    <tbody>
+                      {(reportData.events || []).slice(0, 50).map((r: any) => (
+                        <tr key={r.id} className="border-b border-border/20">
+                          <td className="py-2 pr-2">{new Date(r.registered_at).toLocaleDateString()}</td>
+                          <td className="py-2 pr-2 truncate max-w-[180px]">{r.events?.title || "—"}</td>
+                          <td className="py-2 pr-2">{r.name || "—"}</td>
+                          <td className="py-2 pr-2">{r.payment_method || "free"}</td>
+                          <td className="py-2 pr-2"><span className={`px-2 py-0.5 rounded ${r.approval_status === "approved" ? "bg-green-500/10 text-green-400" : r.approval_status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-yellow-500/10 text-yellow-400"}`}>{r.approval_status}</span></td>
+                          <td className="py-2"><span className={`px-2 py-0.5 rounded ${r.payment_status === "confirmed" ? "bg-green-500/10 text-green-400" : "bg-yellow-500/10 text-yellow-400"}`}>{r.payment_status}</span></td>
+                        </tr>
+                      ))}
+                      {(reportData.events || []).length === 0 && <tr><td colSpan={6} className="py-4 text-center text-muted-foreground">No event registrations in range</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Course enrollments report */}
+              <div className="p-5 rounded-xl glass">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-display text-sm font-bold tracking-wider text-primary">Course Enrollments ({(reportData.courses || []).length})</h3>
+                  <button onClick={() => downloadCSV((reportData.courses || []).map((r: any) => ({ date: r.registered_at, course: reportData.courseMap?.[r.course_id]?.title || r.course_id, method: r.payment_method || "free", status: r.payment_status, completed: r.completed ? "yes" : "no" })), `course_enrollments_${reportFrom}_${reportTo}.csv`)} className="px-3 py-1.5 rounded-lg bg-secondary text-foreground text-xs font-semibold hover:bg-secondary/80 transition-colors flex items-center gap-1">
+                    <Download size={12} /> CSV
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead><tr className="text-left text-muted-foreground border-b border-border/50"><th className="py-2 pr-2">Date</th><th className="py-2 pr-2">Course</th><th className="py-2 pr-2">Method</th><th className="py-2 pr-2">Payment</th><th className="py-2">Completed</th></tr></thead>
+                    <tbody>
+                      {(reportData.courses || []).slice(0, 50).map((r: any) => (
+                        <tr key={r.id} className="border-b border-border/20">
+                          <td className="py-2 pr-2">{new Date(r.registered_at).toLocaleDateString()}</td>
+                          <td className="py-2 pr-2 truncate max-w-[200px]">{reportData.courseMap?.[r.course_id]?.title || "—"}</td>
+                          <td className="py-2 pr-2">{r.payment_method || "free"}</td>
+                          <td className="py-2 pr-2">{r.payment_status}</td>
+                          <td className="py-2">{r.completed ? <span className="text-green-400">✓</span> : "—"}</td>
+                        </tr>
+                      ))}
+                      {(reportData.courses || []).length === 0 && <tr><td colSpan={5} className="py-4 text-center text-muted-foreground">No course enrollments in range</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Activity log */}
+              <div className="p-5 rounded-xl glass">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-display text-sm font-bold tracking-wider text-primary">Admin Activity Log ({(reportData.activity || []).length})</h3>
+                  <button onClick={() => downloadCSV((reportData.activity || []).map((a: any) => ({ time: a.created_at, action: a.action, entity: a.entity_type || "", entity_id: a.entity_id || "", details: JSON.stringify(a.details || {}) })), `activity_log_${reportFrom}_${reportTo}.csv`)} className="px-3 py-1.5 rounded-lg bg-secondary text-foreground text-xs font-semibold hover:bg-secondary/80 transition-colors flex items-center gap-1">
+                    <Download size={12} /> CSV
+                  </button>
+                </div>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {(reportData.activity || []).map((a: any) => (
+                    <div key={a.id} className="flex items-start justify-between gap-3 p-3 rounded-lg bg-secondary/30 text-xs">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-foreground">{a.action}</p>
+                        <p className="text-muted-foreground truncate">{a.entity_type || "—"} {a.entity_id ? `· ${a.entity_id.slice(0, 8)}` : ""} · {JSON.stringify(a.details || {})}</p>
+                      </div>
+                      <span className="text-muted-foreground shrink-0">{new Date(a.created_at).toLocaleString()}</span>
+                    </div>
+                  ))}
+                  {(reportData.activity || []).length === 0 && <p className="text-center text-muted-foreground text-sm py-4">No admin activity recorded in this range.</p>}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </Layout>
   );
 };
+
+const Stat = ({ label, value, color }: { label: string; value: string; color: string }) => (
+  <div className="p-3 rounded-lg bg-secondary/40 text-center">
+    <p className={`text-lg font-display font-bold ${color}`}>{value}</p>
+    <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wider">{label}</p>
+  </div>
+);
 
 const InfoRow = ({ label, value, isLink }: { label: string; value?: string | null; isLink?: boolean }) => {
   if (!value) return null;
