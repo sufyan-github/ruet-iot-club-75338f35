@@ -781,6 +781,7 @@ export type Database = {
       }
       team_members: {
         Row: {
+          batch: string | null
           bio: string | null
           category: string | null
           created_at: string
@@ -791,10 +792,12 @@ export type Database = {
           image_url: string | null
           linkedin: string | null
           name: string
+          phone: string | null
           position: string
           sort_order: number | null
         }
         Insert: {
+          batch?: string | null
           bio?: string | null
           category?: string | null
           created_at?: string
@@ -805,10 +808,12 @@ export type Database = {
           image_url?: string | null
           linkedin?: string | null
           name: string
+          phone?: string | null
           position: string
           sort_order?: number | null
         }
         Update: {
+          batch?: string | null
           bio?: string | null
           category?: string | null
           created_at?: string
@@ -819,6 +824,7 @@ export type Database = {
           image_url?: string | null
           linkedin?: string | null
           name?: string
+          phone?: string | null
           position?: string
           sort_order?: number | null
         }
