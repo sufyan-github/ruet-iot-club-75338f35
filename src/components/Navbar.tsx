@@ -24,7 +24,7 @@ const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, loading } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -102,7 +102,7 @@ const Navbar = () => {
           {user && <NotificationBell />}
           <div className="w-px h-6 bg-border/50 mx-2" />
 
-          {user ? (
+          {loading ? null : user ? (
             <Link
               to="/dashboard"
               className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-all duration-200 glow-border"
@@ -180,7 +180,7 @@ const Navbar = () => {
                 </div>
               )}
               <div className="h-px bg-border/30 my-2" />
-              {user ? (
+              {loading ? null : user ? (
                 <Link
                   to="/dashboard"
                   onClick={() => setOpen(false)}

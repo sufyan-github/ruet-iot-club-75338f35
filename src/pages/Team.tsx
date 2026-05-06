@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import SectionHeading from "@/components/SectionHeading";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Linkedin, Github, Mail, Filter } from "lucide-react";
+import { Search, Linkedin, Github, Mail, Filter, Phone } from "lucide-react";
 
 const CATEGORY_ORDER = ["Executive Board", "Advisory Board", "Core Team"];
 const CATEGORY_SUBTITLES: Record<string, string> = {
@@ -20,6 +20,10 @@ const Team = () => {
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
   const [batchFilter, setBatchFilter] = useState("");
+  const [teamSearch, setTeamSearch] = useState("");
+  const [teamPosFilter, setTeamPosFilter] = useState("");
+  const [teamDeptFilter, setTeamDeptFilter] = useState("");
+  const [teamBatchFilter, setTeamBatchFilter] = useState("");
   const [activeTab, setActiveTab] = useState<"team" | "members">("team");
 
   useEffect(() => {
@@ -38,22 +42,42 @@ const Team = () => {
     fetchAll();
   }, []);
 
+  const teamPositions = useMemo(() => [...new Set(team.map(t => t.position).filter(Boolean))].sort(), [team]);
+  const teamDepartments = useMemo(() => [...new Set(team.map(t => t.department).filter(Boolean))].sort(), [team]);
+  const teamBatches = useMemo(() => [...new Set(team.map(t => t.batch).filter(Boolean))].sort(), [team]);
+
+  const filteredTeam = useMemo(() => {
+    return team.filter((m) => {
+      const q = teamSearch.toLowerCase();
+      const matchesSearch = !q ||
+        m.name?.toLowerCase().includes(q) ||
+        m.position?.toLowerCase().includes(q) ||
+        m.department?.toLowerCase().includes(q) ||
+        m.email?.toLowerCase().includes(q) ||
+        m.phone?.toLowerCase().includes(q);
+      const matchesPos = !teamPosFilter || m.position === teamPosFilter;
+      const matchesDept = !teamDeptFilter || m.department === teamDeptFilter;
+      const matchesBatch = !teamBatchFilter || m.batch === teamBatchFilter;
+      return matchesSearch && matchesPos && matchesDept && matchesBatch;
+    });
+  }, [team, teamSearch, teamPosFilter, teamDeptFilter, teamBatchFilter]);
+
   const grouped = useMemo(() => {
     const groups = CATEGORY_ORDER
       .map((cat) => ({
         category: cat,
-        members: team.filter((m) => (m.category || "Executive Board") === cat),
+        members: filteredTeam.filter((m) => (m.category || "Executive Board") === cat),
       }))
       .filter((g) => g.members.length > 0);
 
-    const otherCategories = [...new Set(team.map((m) => m.category || "Executive Board"))]
+    const otherCategories = [...new Set(filteredTeam.map((m) => m.category || "Executive Board"))]
       .filter((c) => !CATEGORY_ORDER.includes(c));
     otherCategories.forEach((cat) => {
-      const catMembers = team.filter((m) => m.category === cat);
+      const catMembers = filteredTeam.filter((m) => m.category === cat);
       if (catMembers.length > 0) groups.push({ category: cat, members: catMembers });
     });
     return groups;
-  }, [team]);
+  }, [filteredTeam]);
 
   const departments = useMemo(() => [...new Set(members.map(m => m.department).filter(Boolean))].sort(), [members]);
   const batches = useMemo(() => [...new Set(members.map(m => m.batch).filter(Boolean))].sort(), [members]);
@@ -113,7 +137,35 @@ const Team = () => {
             team.length === 0 ? (
               <p className="text-center text-muted-foreground">Team members coming soon.</p>
             ) : (
-              <div className="space-y-16">
+              <>
+                <div className="flex flex-col sm:flex-row flex-wrap gap-3 max-w-4xl mx-auto mb-10">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Search by name, designation, dept..."
+                      value={teamSearch}
+                      onChange={(e) => setTeamSearch(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                  </div>
+                  <select value={teamPosFilter} onChange={(e) => setTeamPosFilter(e.target.value)} className={selectClass}>
+                    <option value="">All Designations</option>
+                    {teamPositions.map(p => <option key={p} value={p!}>{p}</option>)}
+                  </select>
+                  <select value={teamDeptFilter} onChange={(e) => setTeamDeptFilter(e.target.value)} className={selectClass}>
+                    <option value="">All Departments</option>
+                    {teamDepartments.map(d => <option key={d} value={d!}>{d}</option>)}
+                  </select>
+                  <select value={teamBatchFilter} onChange={(e) => setTeamBatchFilter(e.target.value)} className={selectClass}>
+                    <option value="">All Batches</option>
+                    {teamBatches.map(b => <option key={b} value={b!}>{b}</option>)}
+                  </select>
+                </div>
+                {filteredTeam.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">No team members match your filters.</p>
+                ) : (
+                <div className="space-y-16">
                 {grouped.map((group, gi) => (
                   <motion.div
                     key={group.category}
@@ -152,19 +204,29 @@ const Team = () => {
                           )}
                           <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">{member.name}</h3>
                           <p className="text-xs font-mono text-primary mt-1">{member.position}</p>
-                          {member.department && <p className="text-xs text-muted-foreground mt-1">{member.department}</p>}
+                          {(member.department || member.batch) && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {member.department}{member.department && member.batch && " · "}{member.batch && `Batch ${member.batch}`}
+                            </p>
+                          )}
                           {member.bio && <p className="text-xs text-muted-foreground mt-2 leading-relaxed line-clamp-3">{member.bio}</p>}
                           <div className="flex justify-center gap-3 mt-3">
                             {member.linkedin && <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Linkedin size={15} /></a>}
                             {member.github && <a href={member.github} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Github size={15} /></a>}
                             {member.email && <a href={`mailto:${member.email}`} className="text-muted-foreground hover:text-primary transition-colors"><Mail size={15} /></a>}
+                            {member.phone && <a href={`tel:${member.phone}`} className="text-muted-foreground hover:text-primary transition-colors"><Phone size={15} /></a>}
                           </div>
+                          {member.phone && (
+                            <p className="text-[11px] text-muted-foreground mt-2 font-mono">{member.phone}</p>
+                          )}
                         </motion.div>
                       ))}
                     </div>
                   </motion.div>
                 ))}
-              </div>
+                </div>
+                )}
+              </>
             )
           ) : (
             /* Members Section */

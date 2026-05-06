@@ -18,6 +18,8 @@ const Gallery = lazy(() => import("./pages/Gallery"));
 const JoinUs = lazy(() => import("./pages/JoinUs"));
 const Contact = lazy(() => import("./pages/Contact"));
 const Auth = lazy(() => import("./pages/Auth"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const EventRegistration = lazy(() => import("./pages/EventRegistration"));
@@ -54,6 +56,8 @@ const App = () => (
               <Route path="/join" element={<JoinUs />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/blog" element={<Blog />} />
