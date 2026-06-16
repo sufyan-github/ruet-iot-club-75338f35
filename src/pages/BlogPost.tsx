@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Calendar, Tag } from "lucide-react";
 import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
+import SEO from "@/components/SEO";
 
 const BlogPost = () => {
   const { id } = useParams();
@@ -27,6 +28,22 @@ const BlogPost = () => {
 
   return (
     <Layout>
+      <SEO
+        title={`${post.title} | RUET IoT Club Blog`}
+        description={(post.excerpt || (post.content || "").slice(0, 155)).replace(/\s+/g, " ").trim()}
+        path={`/blog/${post.id}`}
+        type="article"
+        image={post.cover_image || undefined}
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "BlogPosting",
+          headline: post.title,
+          datePublished: post.created_at,
+          author: { "@type": "Person", name: post.author_name || "RUET IoT Club" },
+          articleSection: post.category || undefined,
+          image: post.cover_image || undefined,
+        }}
+      />
       <section className="py-20">
         <div className="container max-w-3xl">
           <Link to="/blog" className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 mb-6">
