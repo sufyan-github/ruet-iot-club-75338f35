@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getOptimizedImageUrl } from "@/lib/imageUtils";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -21,6 +22,7 @@ const Gallery = () => {
 
   return (
     <Layout>
+      <SEO title="Photo Gallery | RUET IoT Club" description="Photos from RUET IoT Club workshops, projects, hackathons, and community events at RUET." path="/gallery" />
       <section className="py-20">
         <div className="container">
           <SectionHeading title="Gallery" subtitle="Moments from our journey" />

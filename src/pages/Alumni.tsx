@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
 import { supabase } from "@/integrations/supabase/client";
 import { Linkedin } from "lucide-react";
@@ -23,6 +24,7 @@ const Alumni = () => {
 
   return (
     <Layout>
+      <SEO title="Alumni Network | RUET IoT Club" description="Meet the alumni of RUET IoT Club building careers in IoT, embedded systems, and technology across the world." path="/alumni" />
       <section className="py-20">
         <div className="container">
           <SectionHeading title="Alumni Network" subtitle="Our graduated members making an impact" />

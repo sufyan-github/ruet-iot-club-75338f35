@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Cpu, Users, Lightbulb, Calendar, BookOpen, Wifi, FlaskConical } from "lucide-react";
 import Layout from "@/components/Layout";
 import SectionHeading from "@/components/SectionHeading";
+import SEO from "@/components/SEO";
 import HeroCarousel from "@/components/HeroCarousel";
 import MembersShowcase from "@/components/MembersShowcase";
 import { supabase } from "@/integrations/supabase/client";
@@ -92,6 +93,11 @@ const Index = () => {
 
   return (
     <Layout>
+      <SEO
+        title="RUET IoT Club — IoT Innovation & Research at RUET"
+        description="The official Internet of Things community at Rajshahi University of Engineering & Technology. Projects, research, workshops, courses, and hackathons in IoT, embedded systems, and AI."
+        path="/"
+      />
       {/* Hero Section */}
       <section className="relative min-h-[90vh] flex items-center overflow-hidden">
         <div className="absolute inset-0">
@@ -112,6 +118,9 @@ const Index = () => {
               <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold tracking-wide leading-tight mb-6">
                 <span className="text-foreground">RUET</span>{" "}
                 <span className="text-gradient glow-text">IoT Club</span>
+                <span className="block text-base md:text-xl font-medium tracking-normal text-muted-foreground mt-3">
+                  Innovating through IoT, Embedded Systems & AI Research
+                </span>
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground max-w-xl mb-4 leading-relaxed">
                 Innovating the future through Internet of Things. Building smart solutions, fostering research, and empowering the next generation of IoT engineers.

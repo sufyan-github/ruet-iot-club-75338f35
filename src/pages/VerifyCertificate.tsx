@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import { Award, Search, CheckCircle, XCircle, Calendar, BookOpen, User } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -40,6 +41,7 @@ const VerifyCertificate = () => {
 
   return (
     <Layout>
+      <SEO title="Verify Certificate | RUET IoT Club" description="Verify the authenticity of certificates issued by RUET IoT Club for completed courses and events." path="/verify" />
       <section className="py-20">
         <div className="container max-w-2xl">
           <div className="text-center mb-10">

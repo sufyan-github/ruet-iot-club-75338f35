@@ -3,6 +3,7 @@ import { getOptimizedImageUrl } from "@/lib/imageUtils";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
 import { Calendar, MapPin, Users, CreditCard, UserCheck, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +49,7 @@ const Events = () => {
 
   return (
     <Layout>
+      <SEO title="Upcoming Events & Workshops | RUET IoT Club" description="Register for IoT workshops, hackathons, seminars, and competitions hosted by RUET IoT Club at RUET, Rajshahi." path="/events" />
       <section className="py-20">
         <div className="container">
           <SectionHeading title="Events" subtitle="Workshops, hackathons, and more" />

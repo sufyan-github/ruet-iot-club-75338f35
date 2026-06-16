@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { useState } from "react";
@@ -49,6 +50,7 @@ const Contact = () => {
 
   return (
     <Layout>
+      <SEO title="Contact RUET IoT Club" description="Get in touch with RUET IoT Club via email, phone, or our contact form. Based at RUET, Rajshahi, Bangladesh." path="/contact" />
       <section className="py-20">
         <div className="container">
           <SectionHeading title="Contact Us" subtitle="Get in touch with RUET IoT Club" />

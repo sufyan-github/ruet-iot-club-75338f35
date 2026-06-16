@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -194,6 +195,7 @@ const JoinUs = () => {
   if (success) {
     return (
       <Layout>
+      <SEO title="Join RUET IoT Club — Membership Application" description="Apply for membership in RUET IoT Club and join an active community of IoT engineers, researchers, and innovators." path="/join" />
         <section className="py-20">
           <div className="container max-w-lg mx-auto text-center">
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="mb-6">

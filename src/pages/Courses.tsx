@@ -3,6 +3,7 @@ import { getOptimizedImageUrl } from "@/lib/imageUtils";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
 import { supabase } from "@/integrations/supabase/client";
 import { BookOpen, Clock, Users, DollarSign } from "lucide-react";
@@ -34,6 +35,7 @@ const Courses = () => {
 
   return (
     <Layout>
+      <SEO title="IoT Courses & Learning | RUET IoT Club" description="Enroll in free and paid IoT, embedded systems, and AI courses offered through the RUET IoT Club learning platform." path="/courses" />
       <section className="py-24">
         <div className="container max-w-6xl">
           <SectionHeading
