@@ -31,10 +31,7 @@ const Team = () => {
     const fetchAll = async () => {
       const [teamRes, membersRes] = await Promise.all([
         supabase.from("team_members").select("*").order("sort_order", { ascending: true }),
-        supabase.from("profiles")
-          .select("id, full_name, avatar_url, student_id, department, batch, session, membership_id")
-          .eq("status", "approved")
-          .order("full_name", { ascending: true }),
+        supabase.rpc("get_public_members"),
       ]);
       setTeam(teamRes.data || []);
       setMembers(membersRes.data || []);
