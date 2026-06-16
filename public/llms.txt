@@ -1,0 +1,19 @@
+# RUET IoT Club
+
+> The official Internet of Things innovation community at Rajshahi University of Engineering & Technology (RUET), Bangladesh — running research, projects, workshops, and courses in IoT, embedded systems, and AI.
+
+## Pages
+
+- [About](/about): Mission, vision, history, and research focus of the club.
+- [Projects](/projects): Student-built IoT, embedded, and AI projects with status and category filters.
+- [Events](/events): Upcoming and past workshops, hackathons, and seminars with public registration.
+- [Team](/team): Executive board, advisors, and members directory.
+- [Members](/members): Approved club members showcase.
+- [Alumni](/alumni): Alumni directory and contributions.
+- [Gallery](/gallery): Photos from club activities.
+- [Blog](/blog): Articles, tutorials, and announcements from members.
+- [Research](/research): Research publications and ongoing work in IoT and AI.
+- [Courses](/courses): Learning Management System with IoT and embedded courses.
+- [Join Us](/join): Membership application and recruitment information.
+- [Contact](/contact): Email, phone, and address for the club.
+- [Verify Certificate](/verify): Public verification of issued course certificates.
