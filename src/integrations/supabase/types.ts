@@ -855,6 +855,30 @@ export type Database = {
     Functions: {
       generate_certificate_number: { Args: never; Returns: string }
       generate_membership_id: { Args: never; Returns: string }
+      get_approved_member_count: { Args: never; Returns: number }
+      get_certificate_holder: {
+        Args: { _user_id: string }
+        Returns: {
+          department: string
+          full_name: string
+        }[]
+      }
+      get_public_members: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          batch: string
+          created_at: string
+          department: string
+          full_name: string
+          id: string
+          membership_id: string
+          session: string
+          status: string
+          student_id: string
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

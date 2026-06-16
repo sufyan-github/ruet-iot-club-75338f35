@@ -35,13 +35,13 @@ const Index = () => {
 
   const fetchStats = async () => {
     const [mRes, pRes, eRes, aRes] = await Promise.all([
-      supabase.from("profiles").select("id", { count: "exact", head: true }).eq("status", "approved"),
+      supabase.rpc("get_approved_member_count"),
       supabase.from("projects").select("id", { count: "exact", head: true }),
       supabase.from("events").select("id", { count: "exact", head: true }),
       supabase.from("alumni").select("id", { count: "exact", head: true }),
     ]);
     setStats({
-      members: mRes.count || 0,
+      members: (mRes.data as number) || 0,
       projects: pRes.count || 0,
       events: eRes.count || 0,
       alumni: aRes.count || 0,
