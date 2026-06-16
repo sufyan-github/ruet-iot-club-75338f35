@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
 import { supabase } from "@/integrations/supabase/client";
 import { FileText, ExternalLink, Tag, Clock, CheckCircle } from "lucide-react";
@@ -27,6 +28,7 @@ const Research = () => {
 
   return (
     <Layout>
+      <SEO title="Research Publications | RUET IoT Club" description="Published and ongoing research papers in IoT, embedded systems, and AI by members of RUET IoT Club." path="/research" />
       <section className="py-24">
         <div className="container max-w-5xl">
           <SectionHeading

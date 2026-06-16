@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { getOptimizedImageUrl } from "@/lib/imageUtils";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
 import { supabase } from "@/integrations/supabase/client";
 import { Search, Linkedin, Github, Mail, Filter, Phone } from "lucide-react";
@@ -98,6 +99,7 @@ const Team = () => {
 
   return (
     <Layout>
+      <SEO title="Executive Board & Team | RUET IoT Club" description="Meet the executive board, advisors, and core team members leading RUET IoT Club's research and community initiatives." path="/team" />
       <section className="py-24">
         <div className="container max-w-6xl">
           <SectionHeading title="Our People" subtitle="Meet the team and members driving RUET IoT Club" />

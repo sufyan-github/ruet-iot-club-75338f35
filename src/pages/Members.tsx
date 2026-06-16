@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
 import { supabase } from "@/integrations/supabase/client";
 import { getOptimizedImageUrl } from "@/lib/imageUtils";
@@ -53,6 +54,7 @@ const Members = () => {
 
   return (
     <Layout>
+      <SEO title="Our Members | RUET IoT Club" description="Browse approved members of RUET IoT Club from departments across Rajshahi University of Engineering & Technology." path="/members" />
       <section className="py-24">
         <div className="container max-w-6xl">
           <SectionHeading title="Our Members" subtitle="Meet the approved members of RUET IoT Club" />

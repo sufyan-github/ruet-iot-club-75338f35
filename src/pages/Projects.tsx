@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getOptimizedImageUrl } from "@/lib/imageUtils";
 import { motion, AnimatePresence } from "framer-motion";
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
 import { ExternalLink, Github, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +28,7 @@ const Projects = () => {
 
   return (
     <Layout>
+      <SEO title="IoT Projects | RUET IoT Club" description="Explore student-built Internet of Things, embedded systems, and AI projects developed by members of RUET IoT Club." path="/projects" />
       <section className="py-20">
         <div className="container">
           <SectionHeading title="Projects" subtitle="Explore our innovations and ongoing research" />

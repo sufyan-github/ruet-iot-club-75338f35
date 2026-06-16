@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Calendar, ArrowRight, PenLine, BookOpen, Tag } from "lucide-react";
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -46,6 +47,7 @@ const Blog = () => {
 
   return (
     <Layout>
+      <SEO title="Blog — Articles & Tutorials | RUET IoT Club" description="Read articles, tutorials, and project showcases on IoT, embedded systems, robotics, and machine learning by RUET IoT Club members." path="/blog" />
       <section className="py-24">
         <div className="container max-w-6xl">
           {/* Header */}

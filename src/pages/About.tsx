@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
 import { Target, Eye, Zap, Users, Award, BookOpen } from "lucide-react";
 
@@ -13,6 +14,7 @@ const values = [
 const About = () => {
   return (
     <Layout>
+      <SEO title="About RUET IoT Club — IoT Innovation at RUET" description="Learn about RUET IoT Club's mission, vision, and research focus on Internet of Things, embedded systems, and AI at RUET." path="/about" />
       <section className="py-20">
         <div className="container">
           <SectionHeading title="About RUET IoT Club" subtitle="Pioneering IoT innovation since 2020" />
