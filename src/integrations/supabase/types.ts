@@ -850,52 +850,35 @@ export type Database = {
       }
     }
     Views: {
-      public_member_directory: {
-        Row: {
-          avatar_url: string | null
-          batch: string | null
-          created_at: string | null
-          department: string | null
-          full_name: string | null
-          id: string | null
-          membership_id: string | null
-          session: string | null
-          status: string | null
-          student_id: string | null
-          user_id: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          batch?: string | null
-          created_at?: string | null
-          department?: string | null
-          full_name?: string | null
-          id?: string | null
-          membership_id?: string | null
-          session?: string | null
-          status?: string | null
-          student_id?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          batch?: string | null
-          created_at?: string | null
-          department?: string | null
-          full_name?: string | null
-          id?: string | null
-          membership_id?: string | null
-          session?: string | null
-          status?: string | null
-          student_id?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       generate_certificate_number: { Args: never; Returns: string }
       generate_membership_id: { Args: never; Returns: string }
+      get_approved_member_count: { Args: never; Returns: number }
+      get_certificate_holder: {
+        Args: { _user_id: string }
+        Returns: {
+          department: string
+          full_name: string
+        }[]
+      }
+      get_public_members: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          batch: string
+          created_at: string
+          department: string
+          full_name: string
+          id: string
+          membership_id: string
+          session: string
+          status: string
+          student_id: string
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
