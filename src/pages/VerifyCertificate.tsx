@@ -27,12 +27,8 @@ const VerifyCertificate = () => {
       .single();
 
     if (data) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, department")
-        .eq("user_id", data.user_id)
-        .single();
-      setResult({ ...data, profile });
+      const { data: holder } = await supabase.rpc("get_certificate_holder", { _user_id: data.user_id });
+      setResult({ ...data, profile: (holder && holder[0]) || null });
     } else {
       setNotFound(true);
     }
