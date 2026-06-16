@@ -20,13 +20,8 @@ const MembersShowcase = () => {
 
   useEffect(() => {
     const fetchMembers = async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url, student_id, department, batch, session, membership_id")
-        .eq("status", "approved")
-        .order("created_at", { ascending: false })
-        .limit(12);
-      setMembers(data || []);
+      const { data } = await supabase.rpc("get_public_members");
+      setMembers((data || []).slice(0, 12));
       setLoading(false);
     };
     fetchMembers();
