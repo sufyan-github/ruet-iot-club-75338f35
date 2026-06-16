@@ -850,7 +850,48 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_member_directory: {
+        Row: {
+          avatar_url: string | null
+          batch: string | null
+          created_at: string | null
+          department: string | null
+          full_name: string | null
+          id: string | null
+          membership_id: string | null
+          session: string | null
+          status: string | null
+          student_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          batch?: string | null
+          created_at?: string | null
+          department?: string | null
+          full_name?: string | null
+          id?: string | null
+          membership_id?: string | null
+          session?: string | null
+          status?: string | null
+          student_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          batch?: string | null
+          created_at?: string | null
+          department?: string | null
+          full_name?: string | null
+          id?: string | null
+          membership_id?: string | null
+          session?: string | null
+          status?: string | null
+          student_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       generate_certificate_number: { Args: never; Returns: string }
