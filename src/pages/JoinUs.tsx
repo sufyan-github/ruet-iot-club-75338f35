@@ -147,8 +147,7 @@ const JoinUs = () => {
 
       const { error: profileError } = await supabase
         .from("profiles")
-        .update(profileUpdate)
-        .eq("user_id", user.id);
+        .upsert({ user_id: user.id, ...profileUpdate }, { onConflict: "user_id" });
 
       if (profileError) {
         console.error("Profile update error:", profileError);
