@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://ruet-iot-club.lovable.app/sitemap.xml
+Sitemap: https://ruetiotclub.org/sitemap.xml

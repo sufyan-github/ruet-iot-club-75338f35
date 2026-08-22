@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
-import { supabase } from "@/integrations/supabase/client";
+import { cloudflareData } from "@/integrations/cloudflare/client";
 
 const Gallery = () => {
   const [photos, setPhotos] = useState<any[]>([]);
@@ -13,7 +13,7 @@ const Gallery = () => {
 
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase.from("activity_photos").select("*").order("created_at", { ascending: false });
+      const { data } = await cloudflareData.from("activity_photos").select("*").order("created_at", { ascending: false });
       setPhotos(data || []);
       setLoading(false);
     };
@@ -25,7 +25,7 @@ const Gallery = () => {
       <SEO title="Photo Gallery | RUET IoT Club" description="Photos from RUET IoT Club workshops, projects, hackathons, and community events at RUET." path="/gallery" />
       <section className="py-20">
         <div className="container">
-          <SectionHeading title="Gallery" subtitle="Moments from our journey" />
+          <SectionHeading level={1} title="Gallery" subtitle="Moments from our journey" />
 
           {loading ? (
             <p className="text-center text-muted-foreground">Loading gallery...</p>

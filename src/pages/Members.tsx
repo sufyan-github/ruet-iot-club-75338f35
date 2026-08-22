@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
-import { supabase } from "@/integrations/supabase/client";
+import { cloudflareData } from "@/integrations/cloudflare/client";
 import { getOptimizedImageUrl } from "@/lib/imageUtils";
 import { Search, Filter } from "lucide-react";
 
@@ -27,7 +27,7 @@ const Members = () => {
 
   useEffect(() => {
     const fetchMembers = async () => {
-      const { data } = await supabase.rpc("get_public_members");
+      const { data } = await cloudflareData.rpc("get_public_members");
       setMembers(data || []);
       setLoading(false);
     };
@@ -46,14 +46,14 @@ const Members = () => {
     });
   }, [members, search, deptFilter, batchFilter]);
 
-  const selectClass = "px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";
+  const selectClass = "rounded-xl border border-input bg-secondary/60 px-3 py-2 text-sm text-foreground transition focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/[0.15]";
 
   return (
     <Layout>
       <SEO title="Our Members | RUET IoT Club" description="Browse approved members of RUET IoT Club from departments across Rajshahi University of Engineering & Technology." path="/members" />
       <section className="py-24">
         <div className="container max-w-6xl">
-          <SectionHeading title="Our Members" subtitle="Meet the approved members of RUET IoT Club" />
+          <SectionHeading level={1} title="Our Members" subtitle="Meet the approved members of RUET IoT Club" />
 
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-3 max-w-3xl mx-auto mb-10">

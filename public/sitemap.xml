@@ -1,17 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://ruet-iot-club.lovable.app/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://ruet-iot-club.lovable.app/about</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://ruet-iot-club.lovable.app/projects</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://ruet-iot-club.lovable.app/events</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://ruet-iot-club.lovable.app/alumni</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://ruet-iot-club.lovable.app/members</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://ruet-iot-club.lovable.app/team</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://ruet-iot-club.lovable.app/gallery</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://ruet-iot-club.lovable.app/join</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://ruet-iot-club.lovable.app/contact</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://ruet-iot-club.lovable.app/blog</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://ruet-iot-club.lovable.app/research</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://ruet-iot-club.lovable.app/courses</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://ruet-iot-club.lovable.app/verify</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://ruetiotclub.org/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://ruetiotclub.org/about</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://ruetiotclub.org/projects</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://ruetiotclub.org/projects/submit</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://ruetiotclub.org/events</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://ruetiotclub.org/partners</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://ruetiotclub.org/opportunities</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://ruetiotclub.org/alumni</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://ruetiotclub.org/alumni/apply</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://ruetiotclub.org/members</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://ruetiotclub.org/team</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://ruetiotclub.org/gallery</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://ruetiotclub.org/join</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://ruetiotclub.org/contact</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://ruetiotclub.org/collaborate</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://ruetiotclub.org/blog</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://ruetiotclub.org/research</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://ruetiotclub.org/research/submit</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://ruetiotclub.org/courses</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://ruetiotclub.org/verify</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
 </urlset>

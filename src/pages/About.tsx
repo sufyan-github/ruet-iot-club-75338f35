@@ -11,17 +11,26 @@ const values = [
   { icon: Award, title: "Excellence", desc: "Striving for the highest quality in everything" },
 ];
 
+const workAreas = [
+  { title: "Hands-on Projects", desc: "Design connected devices and systems around real needs." },
+  { title: "Research", desc: "Explore IoT, embedded computing, sensing, AI, and communications." },
+  { title: "Workshops & Training", desc: "Share practical skills through guided, peer-led learning." },
+  { title: "Competitions", desc: "Prepare multidisciplinary teams to test ideas beyond the classroom." },
+  { title: "Open Collaboration", desc: "Connect students, researchers, alumni, communities, and industry." },
+  { title: "Career Community", desc: "Build leadership, documentation, teamwork, and professional practice." },
+];
+
 const About = () => {
   return (
     <Layout>
       <SEO title="About RUET IoT Club — IoT Innovation at RUET" description="Learn about RUET IoT Club's mission, vision, and research focus on Internet of Things, embedded systems, and AI at RUET." path="/about" />
       <section className="py-20">
         <div className="container">
-          <SectionHeading title="About RUET IoT Club" subtitle="Pioneering IoT innovation since 2020" />
+          <SectionHeading level={1} title="About RUET IoT Club" subtitle="Pioneering IoT innovation since 2020" />
 
           <div className="max-w-3xl mx-auto space-y-6 text-muted-foreground leading-relaxed mb-16">
             <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
-              RUET IoT Club is a student-driven organization at Rajshahi University of Engineering & Technology dedicated to exploring and advancing the Internet of Things. Founded in 2020, we have grown from a small group of enthusiasts to a vibrant community of 120+ members.
+              RUET IoT Club is a student-driven organization at Rajshahi University of Engineering & Technology dedicated to exploring and advancing the Internet of Things. The community brings together learners from different disciplines to turn technical curiosity into responsible, documented, real-world work.
             </motion.p>
             <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.1 }}>
               Our members work on real-world IoT projects, participate in national and international competitions, and contribute to open-source initiatives. We bridge the gap between academic knowledge and industry applications.
@@ -58,6 +67,9 @@ const About = () => {
               </p>
             </motion.div>
           </div>
+
+          <SectionHeading title="What We Do" subtitle="A practical bridge between academic learning, research, and real-world collaboration" />
+          <div className="mb-20 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{workAreas.map((area) => <article key={area.title} className="rounded-xl glass p-5"><h3 className="font-semibold text-primary">{area.title}</h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{area.desc}</p></article>)}</div>
 
           <SectionHeading title="Our Values" />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">

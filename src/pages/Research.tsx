@@ -3,21 +3,25 @@ import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
-import { supabase } from "@/integrations/supabase/client";
+import { cloudflareData } from "@/integrations/cloudflare/client";
 import { FileText, ExternalLink, Tag, Clock, CheckCircle } from "lucide-react";
+import { Link } from "react-router-dom";
+import { apiRequest } from "@/lib/api";
 
 const Research = () => {
   const [papers, setPapers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "ongoing" | "published">("all");
+  const [filter, setFilter] = useState<"all" | "ongoing" | "completed" | "published">("all");
 
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase
-        .from("research_papers")
-        .select("*")
-        .order("created_at", { ascending: false });
-      setPapers(data || []);
+      try {
+        const result = await apiRequest<{items:any[]}>("/research");
+        setPapers(result.items.map((item)=>({...item,status:String(item.research_status).toLowerCase(),authors:(item.researchers||[]).map((author:any)=>author.name).join(", "),tags:item.keywords||[],pdf_url:(item.documents||[]).find((doc:any)=>doc.type==="PDF"||doc.type==="PAPER")?.url,doi_link:item.external_url||item.doi,slug:item.slug})));
+      } catch {
+        const { data } = await cloudflareData.from("research_papers").select("*").order("created_at", { ascending: false });
+        setPapers(data || []);
+      }
       setLoading(false);
     };
     fetch();
@@ -32,6 +36,7 @@ const Research = () => {
       <section className="py-24">
         <div className="container max-w-5xl">
           <SectionHeading
+            level={1}
             title="Research & Publications"
             subtitle="Exploring innovation through ongoing research and published papers"
           />
@@ -56,9 +61,11 @@ const Research = () => {
             </div>
           </div>
 
+          <section className="mb-10"><h2 className="text-center font-display text-xl font-semibold">Research Areas</h2><div className="mt-4 flex flex-wrap justify-center gap-2">{areas.length > 0 ? areas.map((area) => <span key={String(area)} className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm text-primary">{String(area)}</span>) : <p className="max-w-xl text-center text-sm text-muted-foreground">Research areas will be listed as reviewed publications and ongoing work are added.</p>}</div></section>
+
           {/* Filters */}
           <div className="flex justify-center gap-2 mb-8">
-            {(["all", "ongoing", "published"] as const).map((f) => (
+            {(["all", "ongoing", "completed", "published"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -80,7 +87,7 @@ const Research = () => {
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <p className="text-center text-muted-foreground">No research papers found.</p>
+            <div className="rounded-xl border border-border bg-card/30 p-8 text-center"><h2 className="font-semibold">No research published yet</h2><p className="mt-2 text-sm text-muted-foreground">Published work will appear here after administrator review.</p></div>
           ) : (
             <div className="space-y-4">
               {filtered.map((paper, i) => (
@@ -115,9 +122,7 @@ const Research = () => {
                           </span>
                         )}
                       </div>
-                      <h3 className="font-semibold text-foreground text-lg leading-tight mb-1">
-                        {paper.title}
-                      </h3>
+                      <Link to={`/research/${paper.slug||paper.id}`} className="font-semibold text-foreground text-lg leading-tight mb-1 hover:text-primary">{paper.title}</Link>
                       <p className="text-sm text-muted-foreground mb-2">
                         by {paper.authors}
                       </p>
@@ -168,6 +173,7 @@ const Research = () => {
               ))}
             </div>
           )}
+          <div className="mt-14 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-accent/5 p-8 text-center"><h2 className="font-display text-2xl font-bold">Propose Research With Us</h2><p className="mx-auto mt-3 max-w-2xl text-muted-foreground">Students, researchers, faculty, and external collaborators can submit an IoT, embedded systems, AI, or interdisciplinary research proposal for review.</p><Link to="/research/submit" className="mt-6 inline-flex rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground">Submit Research Proposal</Link></div>
         </div>
       </section>
     </Layout>

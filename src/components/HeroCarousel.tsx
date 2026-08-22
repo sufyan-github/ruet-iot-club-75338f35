@@ -1,92 +1,106 @@
-import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useCallback, useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronLeft, ChevronRight, Cpu } from "lucide-react";
+import { cloudflareData } from "@/integrations/cloudflare/client";
 import { getOptimizedImageUrl } from "@/lib/imageUtils";
-import activity1 from "@/assets/activity-1.jpg";
-import activity2 from "@/assets/activity-2.jpg";
-import activity3 from "@/assets/activity-3.jpg";
-import activity4 from "@/assets/activity-4.jpg";
 
-const fallbackSlides = [
-  { src: activity1, label: "Hands-on IoT Lab" },
-  { src: activity2, label: "Workshop Sessions" },
-  { src: activity3, label: "Hackathon Events" },
-  { src: activity4, label: "Research & Development" },
-];
+interface HeroSlide {
+  id: string;
+  src: string | null;
+  label: string;
+  description: string;
+  alt: string;
+}
+
+const managedMediaUrl = (key: unknown): string | null => typeof key === "string" && key
+  ? `/api/v1/media/files/${key}`
+  : null;
 
 const HeroCarousel = () => {
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(1);
-  const [slides, setSlides] = useState<{ src: string; label: string }[]>(fallbackSlides);
+  const [slides, setSlides] = useState<HeroSlide[]>([]);
+  const [failedImages, setFailedImages] = useState<Set<string>>(() => new Set());
+  const slideCount = Math.max(slides.length, 1);
 
   useEffect(() => {
     const fetchSlides = async () => {
-      const { data } = await supabase
+      const { data } = await cloudflareData
         .from("hero_slides")
         .select("*")
-        .eq("active", true)
         .order("sort_order", { ascending: true });
-      if (data && data.length > 0) {
-        setSlides(data.map((s: any) => ({
-          src: getOptimizedImageUrl(s.image_url, { width: 600, height: 600 }),
-          label: s.tagline || "",
-        })));
-      }
+      const nextSlides = Array.isArray(data) ? data.map((slide: Record<string, unknown>): HeroSlide => {
+        const label = typeof slide.title === "string" ? slide.title : typeof slide.tagline === "string" ? slide.tagline : "";
+        const description = typeof slide.description === "string" ? slide.description : "";
+        const storedUrl = typeof slide.image_url === "string" && slide.image_url ? slide.image_url : managedMediaUrl(slide.image_key);
+        return {
+          id: typeof slide.id === "string" ? slide.id : crypto.randomUUID(),
+          src: storedUrl ? getOptimizedImageUrl(storedUrl, { width: 960, height: 600 }) : null,
+          label,
+          description,
+          alt: typeof slide.image_alt === "string" && slide.image_alt.trim() ? slide.image_alt.trim() : label || "RUET IoT Club innovation activity",
+        };
+      }) : [];
+      setSlides(nextSlides);
+      setFailedImages(new Set());
     };
-    fetchSlides();
+    void fetchSlides();
 
-    // Realtime updates
-    const channel = supabase
+    const channel = cloudflareData
       .channel("hero_slides_realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "hero_slides" }, () => {
-        fetchSlides();
-      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "hero_slides" }, () => void fetchSlides())
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { cloudflareData.removeChannel(channel); };
   }, []);
 
   const next = useCallback(() => {
     setDirection(1);
-    setCurrent((prev) => (prev + 1) % slides.length);
-  }, [slides.length]);
+    setCurrent((previous) => (previous + 1) % slideCount);
+  }, [slideCount]);
 
-  const prev = useCallback(() => {
+  const previous = useCallback(() => {
     setDirection(-1);
-    setCurrent((prev) => (prev - 1 + slides.length) % slides.length);
-  }, [slides.length]);
+    setCurrent((currentIndex) => (currentIndex - 1 + slideCount) % slideCount);
+  }, [slideCount]);
 
   useEffect(() => {
-    const timer = setInterval(next, 4000);
-    return () => clearInterval(timer);
-  }, [next]);
+    if (slides.length < 2) return;
+    const timer = window.setInterval(next, 4_000);
+    return () => window.clearInterval(timer);
+  }, [next, slides.length]);
 
-  // Reset current if slides change
   useEffect(() => {
     setCurrent(0);
   }, [slides.length]);
 
   const variants = {
-    enter: (dir: number) => ({ x: dir > 0 ? 300 : -300, opacity: 0, scale: 0.95 }),
+    enter: (value: number) => ({ x: value > 0 ? 300 : -300, opacity: 0, scale: 0.95 }),
     center: { x: 0, opacity: 1, scale: 1 },
-    exit: (dir: number) => ({ x: dir > 0 ? -300 : 300, opacity: 0, scale: 0.95 }),
+    exit: (value: number) => ({ x: value > 0 ? -300 : 300, opacity: 0, scale: 0.95 }),
   };
 
-  if (slides.length === 0) return null;
-  const safeIndex = current >= slides.length ? 0 : current;
-  const slide = slides[safeIndex];
-  if (!slide) return null;
+  const fallbackSlide: HeroSlide = {
+    id: "managed-hero-fallback",
+    src: null,
+    label: "Build. Connect. Innovate.",
+    description: "RUET IoT Club brings students together around connected systems, embedded engineering, and responsible innovation.",
+    alt: "",
+  };
+  const displaySlides = slides.length > 0 ? slides : [fallbackSlide];
+  const safeIndex = current >= displaySlides.length ? 0 : current;
+  const slide = displaySlides[safeIndex] ?? fallbackSlide;
+  const showImage = Boolean(slide.src) && !failedImages.has(slide.id);
 
   return (
-    <div className="relative w-full max-w-lg mx-auto">
-      <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-primary/20 via-accent/10 to-primary/5 blur-sm" />
-      <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-br from-primary/40 via-transparent to-accent/30" />
-      
-      <div className="relative rounded-2xl overflow-hidden bg-card aspect-square">
+    <div className="relative mx-auto w-full max-w-2xl transition-transform duration-300 hover:-translate-y-1">
+      <div className="absolute -inset-5 rounded-[1.75rem] bg-gradient-to-br from-primary/20 via-technology-blue/10 to-primary/5 blur-2xl" />
+      <div className="absolute -inset-px rounded-[1.35rem] bg-gradient-to-br from-primary/55 via-technology-blue/15 to-accent/35" />
+
+      <div className="relative aspect-[4/3] overflow-hidden rounded-[1.3rem] bg-card shadow-2xl shadow-primary/15 sm:aspect-[16/10]">
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
-            key={safeIndex}
+            key={slide.id}
             custom={direction}
             variants={variants}
             initial="enter"
@@ -95,43 +109,45 @@ const HeroCarousel = () => {
             transition={{ duration: 0.5, ease: "easeInOut" }}
             className="absolute inset-0"
           >
-            <img
-              src={slide.src}
-              alt={slide.label}
-              className="w-full h-full object-cover"
-              width={512}
-              height={512}
-              loading="lazy"
-            />
-            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/90 to-transparent" />
-            <div className="absolute bottom-4 left-4 right-4">
-              <span className="text-sm font-display font-semibold text-foreground tracking-wider">
-                {slide.label}
-              </span>
-            </div>
+            {showImage ? (
+              <img
+                src={slide.src!}
+                alt={slide.alt}
+                className="h-full w-full object-cover"
+                width={960}
+                height={600}
+                loading="lazy"
+                onError={() => setFailedImages((currentFailures) => new Set(currentFailures).add(slide.id))}
+              />
+            ) : (
+              <div className="circuit-pattern flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-card via-background to-technology-blue/[0.12] px-8 text-center">
+                <span className="rounded-2xl border border-primary/20 bg-primary/[0.08] p-4 text-primary shadow-[0_0_45px_-18px_hsl(var(--primary))]"><Cpu size={34} /></span>
+                <p className="mt-5 font-display text-lg font-semibold text-foreground">{slide.label || "RUET IoT Club"}</p>
+                <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{slide.description || "A published Hero image has not been configured yet."}</p>
+              </div>
+            )}
+            {showImage && <>
+              <div className="absolute inset-0 bg-gradient-to-tr from-background/20 via-transparent to-technology-blue/10" />
+              <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-background via-background/65 to-transparent" />
+              <div className="absolute bottom-4 left-4 right-4">
+                {slide.label && <span className="font-display text-sm font-semibold tracking-wide text-foreground">{slide.label}</span>}
+                {slide.description && <p className="mt-1 line-clamp-2 max-w-xl text-xs leading-5 text-muted-foreground">{slide.description}</p>}
+              </div>
+            </>}
           </motion.div>
         </AnimatePresence>
 
-        <button onClick={prev} aria-label="Previous slide"
-          className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-background/60 backdrop-blur-sm text-foreground hover:bg-background/80 transition-colors z-10">
-          <ChevronLeft size={18} />
-        </button>
-        <button onClick={next} aria-label="Next slide"
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-background/60 backdrop-blur-sm text-foreground hover:bg-background/80 transition-colors z-10">
-          <ChevronRight size={18} />
-        </button>
+        {slides.length > 1 && <>
+          <button type="button" onClick={previous} aria-label="Previous slide" className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-background/60 p-1.5 text-foreground backdrop-blur-sm transition-colors hover:bg-background/80 focus:outline-none focus:ring-2 focus:ring-primary/40"><ChevronLeft size={18} /></button>
+          <button type="button" onClick={next} aria-label="Next slide" className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-background/60 p-1.5 text-foreground backdrop-blur-sm transition-colors hover:bg-background/80 focus:outline-none focus:ring-2 focus:ring-primary/40"><ChevronRight size={18} /></button>
+        </>}
       </div>
 
-      <div className="flex justify-center gap-2 mt-4">
-        {slides.map((_, i) => (
-          <button key={i} onClick={() => { setDirection(i > current ? 1 : -1); setCurrent(i); }}
-            aria-label={`Go to slide ${i + 1}: ${slides[i].label}`}
-            className={`w-2 h-2 rounded-full transition-all duration-300 ${
-              i === current ? "bg-primary w-6" : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
-            }`}
-          />
+      {slides.length > 1 && <div className="mt-4 flex justify-center gap-2">
+        {slides.map((item, index) => (
+          <button key={item.id} type="button" onClick={() => { setDirection(index > current ? 1 : -1); setCurrent(index); }} aria-label={`Go to slide ${index + 1}${item.label ? `: ${item.label}` : ""}`} className={`h-2 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary/40 ${index === current ? "w-6 bg-primary" : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"}`} />
         ))}
-      </div>
+      </div>}
     </div>
   );
 };
