@@ -1,154 +1,213 @@
-import { useEffect, useState } from "react";
-import { getOptimizedImageUrl } from "@/lib/imageUtils";
-import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Calendar, Clock3, MapPin, Search, Users } from "lucide-react";
+import { Link } from "react-router-dom";
 import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
-import { Calendar, MapPin, Users, CreditCard, UserCheck, ChevronDown, ChevronUp } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-
-const Events = () => {
-  const [events, setEvents] = useState<any[]>([]);
+import { apiRequest } from "@/lib/api";
+import { formatEventDate } from "@/lib/eventModel";
+import type { PublicEvent } from "@/lib/events";
+function EventCard({ event }: { event: PublicEvent }) {
+  const closed = ["CLOSED", "FULL"].includes(event.registrationStatus);
+  return (
+    <article className="group overflow-hidden rounded-2xl border border-border/60 bg-card/55 shadow-[0_24px_80px_-55px_hsl(var(--primary)/.75)] transition hover:-translate-y-1 hover:border-primary/30">
+      {event.coverImageUrl ? (
+        <img
+          src={event.coverImageUrl}
+          alt={event.heroImage?.altText || event.title}
+          className="aspect-[16/8] w-full object-cover"
+        />
+      ) : (
+        <div className="flex aspect-[16/8] items-center justify-center bg-gradient-to-br from-primary/15 to-accent/10">
+          <Calendar size={44} className="text-primary/70" />
+        </div>
+      )}
+      <div className="p-5">
+        <div className="flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-wide">
+          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-primary">
+            {event.eventType}
+          </span>
+          <span className="rounded-full bg-secondary px-2.5 py-1 text-muted-foreground">
+            {event.locationType}
+          </span>
+          <span className="rounded-full bg-secondary px-2.5 py-1 text-muted-foreground">
+            {event.eventStatus}
+          </span>
+          {event.paymentRequired && (
+            <span className="rounded-full bg-amber-400/10 px-2.5 py-1 text-amber-300">
+              {new Intl.NumberFormat("en-BD", {
+                style: "currency",
+                currency: event.currency,
+              }).format(event.feeMinor / 100)}
+            </span>
+          )}
+        </div>
+        <h3 className="mt-4 text-xl font-semibold transition group-hover:text-primary">
+          {event.title}
+        </h3>
+        <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">
+          {event.shortDescription}
+        </p>
+        <dl className="mt-4 space-y-2 text-xs text-muted-foreground">
+          <div className="flex gap-2">
+            <Clock3 size={15} className="shrink-0 text-primary" />
+            <span>{formatEventDate(event.startsAt, event.timezone)}</span>
+          </div>
+          <div className="flex gap-2">
+            <MapPin size={15} className="shrink-0 text-primary" />
+            <span>
+              {event.locationType === "ONLINE"
+                ? "Online"
+                : event.venue || event.city || "Venue to be announced"}
+            </span>
+          </div>
+          {event.maxParticipants > 0 && (
+            <div className="flex gap-2">
+              <Users size={15} className="shrink-0 text-primary" />
+              <span>{event.maxParticipants} participant capacity</span>
+            </div>
+          )}
+        </dl>
+        <div className="mt-5 flex items-center justify-between">
+          <span
+            className={`text-xs font-semibold ${closed ? "text-muted-foreground" : "text-emerald-300"}`}
+          >
+            {closed
+              ? "Registration closed"
+              : event.registrationStatus.replace(/_/g, " ")}
+          </span>
+          <Link
+            to={`/events/${event.slug}`}
+            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+          >
+            View event
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
+}
+export default function Events() {
+  const [events, setEvents] = useState<PublicEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [registrations, setRegistrations] = useState<Record<string, { name: string | null }[]>>({});
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const navigate = useNavigate();
-
+  const [query, setQuery] = useState("");
+  const [type, setType] = useState("");
   useEffect(() => {
-    const fetchEvents = async () => {
-      // Only show upcoming events (today or future) on the public Events page
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const { data } = await supabase
-        .from("events")
-        .select("*")
-        .gte("date", todayStart.toISOString())
-        .order("date", { ascending: true });
-      const evs = data || [];
-      setEvents(evs);
-
-      // Fetch approved participant names per event (RLS allows public read of approved rows)
-      if (evs.length > 0) {
-        const { data: regs } = await supabase
-          .from("event_registrations")
-          .select("event_id, name")
-          .eq("approval_status", "approved")
-          .in("event_id", evs.map(e => e.id));
-        const grouped: Record<string, { name: string | null }[]> = {};
-        (regs || []).forEach((r: any) => {
-          if (!grouped[r.event_id]) grouped[r.event_id] = [];
-          grouped[r.event_id].push({ name: r.name });
-        });
-        setRegistrations(grouped);
-      }
-      setLoading(false);
-    };
-    fetchEvents();
+    void apiRequest<PublicEvent[]>("/community/events")
+      .then(setEvents)
+      .finally(() => setLoading(false));
   }, []);
-
+  const filtered = useMemo(
+    () =>
+      events.filter(
+        (event) =>
+          (!query ||
+            `${event.title} ${event.shortDescription} ${event.tags.join(" ")}`
+              .toLowerCase()
+              .includes(query.toLowerCase())) &&
+          (!type || event.eventType === type),
+      ),
+    [events, query, type],
+  );
+  const upcoming = filtered
+    .filter((event) => event.eventStatus !== "COMPLETED")
+    .sort(
+      (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+    );
+  const past = filtered
+    .filter((event) => event.eventStatus === "COMPLETED")
+    .sort(
+      (a, b) => new Date(b.endsAt).getTime() - new Date(a.endsAt).getTime(),
+    );
+  const types = Array.from(
+    new Set(events.map((event) => event.eventType)),
+  ).sort();
   return (
     <Layout>
-      <SEO title="Upcoming Events & Workshops | RUET IoT Club" description="Register for IoT workshops, hackathons, seminars, and competitions hosted by RUET IoT Club at RUET, Rajshahi." path="/events" />
+      <SEO
+        title="Events, Workshops & Competitions | RUET IoT Club"
+        description="Discover upcoming and past RUET IoT Club workshops, hackathons, seminars, training programs, and competitions."
+        path="/events"
+      />
       <section className="py-20">
         <div className="container">
-          <SectionHeading title="Events" subtitle="Workshops, hackathons, and more" />
-
-          {loading ? (
-            <p className="text-center text-muted-foreground">Loading events...</p>
-          ) : events.length === 0 ? (
-            <p className="text-center text-muted-foreground">No upcoming events.</p>
-          ) : (
-            <div className="max-w-3xl mx-auto space-y-4">
-              {events.map((event, i) => (
-                <motion.div
-                  key={event.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="rounded-xl glass hover:border-primary/30 transition-colors overflow-hidden"
-                >
-                  {event.image_url && (
-                    <img src={getOptimizedImageUrl(event.image_url, { width: 600, height: 250 })} alt={event.title} className="w-full h-48 object-cover" loading="lazy" />
-                  )}
-                  <div className="p-6">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          {event.type && (
-                            <span className="text-xs font-mono px-2 py-1 rounded bg-primary/10 text-primary">{event.type}</span>
-                          )}
-                          {event.is_paid ? (
-                            <span className="text-xs font-mono px-2 py-1 rounded bg-yellow-500/10 text-yellow-400 flex items-center gap-1">
-                              <CreditCard size={10} /> ৳{event.registration_fee}
-                            </span>
-                          ) : (
-                            <span className="text-xs font-mono px-2 py-1 rounded bg-green-500/10 text-green-400">Free</span>
-                          )}
-                        </div>
-                        <h3 className="font-semibold text-foreground mb-2">{event.title}</h3>
-                        {event.description && (
-                          <p className="text-sm text-muted-foreground mb-3">{event.description}</p>
-                        )}
-                        <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Calendar size={12} className="text-primary" /> {new Date(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                          </span>
-                          {event.venue && (
-                            <span className="flex items-center gap-1">
-                              <MapPin size={12} className="text-primary" /> {event.venue}
-                            </span>
-                          )}
-                          <span className="flex items-center gap-1">
-                            <Users size={12} className="text-primary" />
-                            {(registrations[event.id]?.length || 0)}
-                            {event.max_participants ? ` / ${event.max_participants}` : ""} confirmed
-                          </span>
-                        </div>
-                        {(registrations[event.id]?.length || 0) > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => setExpanded(expanded === event.id ? null : event.id)}
-                            className="mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                          >
-                            <UserCheck size={12} />
-                            {expanded === event.id ? "Hide" : "View"} confirmed participants
-                            {expanded === event.id ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                          </button>
-                        )}
-                        {expanded === event.id && (registrations[event.id]?.length || 0) > 0 && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            className="mt-3 p-3 rounded-lg bg-secondary/40 border border-border/40"
-                          >
-                            <div className="flex flex-wrap gap-1.5">
-                              {registrations[event.id].map((p, idx) => (
-                                <span key={idx} className="inline-block px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
-                                  {p.name || "Anonymous"}
-                                </span>
-                              ))}
-                            </div>
-                          </motion.div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => navigate("/events/register", { state: { event } })}
-                        className="shrink-0 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors glow-border"
-                      >
-                        Register
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
+          <SectionHeading
+            level={1}
+            title="Events"
+            subtitle="Learn, build, connect, and compete with the RUET IoT community"
+          />
+          <div className="mx-auto mb-12 grid max-w-4xl gap-3 rounded-2xl border border-border/60 bg-card/40 p-4 md:grid-cols-[1fr_14rem]">
+            <label className="relative">
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+              <input
+                aria-label="Search events"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search events…"
+                className="w-full rounded-xl border border-border bg-secondary/50 py-3 pl-10 pr-4 text-sm outline-none focus:border-primary/50"
+              />
+            </label>
+            <select
+              aria-label="Event type"
+              value={type}
+              onChange={(event) => setType(event.target.value)}
+              className="rounded-xl border border-border bg-secondary/50 px-4 text-sm"
+            >
+              <option value="">All event types</option>
+              {types.map((item) => (
+                <option key={item}>{item}</option>
               ))}
+            </select>
+          </div>
+          {loading ? (
+            <p className="py-16 text-center text-muted-foreground">
+              Loading events…
+            </p>
+          ) : (
+            <div className="space-y-20">
+              <section>
+                <h2 className="text-2xl font-semibold">Upcoming Events</h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Nearest upcoming events appear first.
+                </p>
+                {upcoming.length ? (
+                  <div className="mt-7 grid gap-6 lg:grid-cols-2">
+                    {upcoming.map((event) => (
+                      <EventCard key={event.id} event={event} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-7 rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
+                    No upcoming events are scheduled right now. Follow our
+                    announcements for the next program.
+                  </div>
+                )}
+              </section>
+              <section>
+                <h2 className="text-2xl font-semibold">Past Events</h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Recent completed events appear first.
+                </p>
+                {past.length ? (
+                  <div className="mt-7 grid gap-6 lg:grid-cols-2">
+                    {past.map((event) => (
+                      <EventCard key={event.id} event={event} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-7 rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
+                    Past event highlights will appear here after events
+                    conclude.
+                  </div>
+                )}
+              </section>
             </div>
           )}
         </div>
       </section>
     </Layout>
   );
-};
-
-export default Events;
+}

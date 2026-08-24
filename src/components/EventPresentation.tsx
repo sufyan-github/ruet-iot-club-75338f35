@@ -1,0 +1,33 @@
+import { CalendarDays, Clock3, ExternalLink, MapPin, Users } from "lucide-react";
+import GoogleMapEmbed from "@/components/GoogleMapEmbed";
+import { formatEventDate } from "@/lib/eventModel";
+import type { PublicEvent } from "@/lib/events";
+
+export default function EventPresentation({ event, onRegister, preview = false }: { event: PublicEvent; onRegister?: () => void; preview?: boolean }) {
+  const closed = ["CLOSED", "FULL"].includes(event.registrationStatus);
+  const address = [event.venue, event.address, event.city, event.country].filter(Boolean).join(", ");
+  return <article data-event-presentation={preview ? "preview" : "public"}>
+    <header className="border-b border-border/50 py-12 md:py-16"><div className="container max-w-5xl"><div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-wide"><span className="rounded-full bg-primary/10 px-3 py-1 text-primary">{event.eventType}</span><span className="rounded-full bg-secondary px-3 py-1 text-muted-foreground">{event.category}</span><span className="rounded-full bg-secondary px-3 py-1 text-muted-foreground">{event.eventStatus}</span></div><h1 className="mt-6 max-w-4xl text-4xl font-bold leading-tight md:text-6xl">{event.title}</h1><p className="mt-5 max-w-3xl text-lg leading-8 text-muted-foreground">{event.shortDescription}</p></div></header>
+    {event.coverImageUrl && <div className="container max-w-6xl py-8"><img src={event.coverImageUrl} alt={event.heroImage?.altText || event.title} className="max-h-[560px] w-full rounded-3xl border border-border/60 object-cover" /></div>}
+    <div className="container grid max-w-6xl gap-10 py-12 lg:grid-cols-[1fr_22rem]">
+      <main className="space-y-10">
+        <section><h2 className="text-2xl font-semibold">About this event</h2><div className="prose prose-invert mt-4 max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: event.fullDescription }} /></section>
+        {event.galleryImages.length > 0 && <section><h2 className="text-xl font-semibold">Gallery</h2><div className="mt-4 grid gap-4 sm:grid-cols-2">{event.galleryImages.map((image, index) => <img key={`${image.key || image.url}-${index}`} src={image.url} alt={image.altText || `${event.title} gallery ${index + 1}`} className="aspect-video w-full rounded-2xl border border-border object-cover" />)}</div></section>}
+        {[event.speakers?.length && ["Speakers", event.speakers], event.trainers?.length && ["Trainers", event.trainers], event.partners?.length && ["Partners", event.partners], event.sponsors?.length && ["Sponsors", event.sponsors]].filter(Boolean).map((entry) => { const [title, items] = entry as [string, string[]]; return <ListSection key={title} title={title} items={items} />; })}
+        {event.targetAudience && <TextSection title="Who should attend" value={event.targetAudience} />}
+        {event.eligibility && <TextSection title="Eligibility" value={event.eligibility} />}
+        {["PHYSICAL", "HYBRID"].includes(event.locationType) && <section><h2 className="text-xl font-semibold">Location</h2><GoogleMapEmbed address={address} embedUrl={event.mapUrl} className="mt-4" heightClassName="h-72" /></section>}
+        {event.certificateAvailable && <section className="rounded-2xl border border-primary/20 bg-primary/[.05] p-5"><h2 className="text-xl font-semibold">Event certificate</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Eligible participants can request a verified RUET IoT Club certificate from their dashboard after meeting the configured registration{event.certificateRequirePayment ? ", payment" : ""}{event.certificateRequireAttendance ? ", and attendance" : ""} requirements.</p></section>}
+      </main>
+      <aside><div className="sticky top-28 rounded-2xl border border-primary/20 bg-card/70 p-6"><h2 className="font-semibold">Event information</h2><dl className="mt-5 space-y-4 text-sm"><Info icon={<CalendarDays />} label="Starts" value={formatEventDate(event.startsAt,event.timezone,"full")} /><Info icon={<Clock3 />} label="Ends" value={formatEventDate(event.endsAt,event.timezone,"full")} /><Info icon={<MapPin />} label="Location" value={event.locationType === "ONLINE" ? event.onlinePlatform || "Online" : event.venue || event.city || "To be announced"} />{event.maxParticipants > 0 && <Info icon={<Users />} label="Capacity" value={event.remainingCapacity === null ? `${event.maxParticipants} participants` : `${event.remainingCapacity} of ${event.maxParticipants} spaces remaining`} />}</dl>
+        {event.paymentRequired && <div className="mt-5 rounded-xl bg-amber-400/10 p-3 text-sm text-amber-100"><p className="font-semibold">{new Intl.NumberFormat("en-BD", { style: "currency", currency: event.currency }).format(event.feeMinor / 100)}</p><p className="mt-1">Pay using {event.paymentMethods.join(" / ")} to <strong>{event.bkashNumber}</strong>, then submit the transaction ID and payer number.</p></div>}
+        {event.registrationRequired ? <button type="button" disabled={closed || preview} onClick={onRegister} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50">{preview ? "Preview only" : closed ? event.registrationStatus === "FULL" ? "Event full" : "Registration closed" : "Register now"}{event.registrationMode === "EXTERNAL" && !preview && <ExternalLink size={16} />}</button> : <p className="mt-5 text-sm text-muted-foreground">Registration is not required.</p>}
+        {event.contactEmail && <a className="mt-4 block text-center text-sm text-primary hover:underline" href={`mailto:${event.contactEmail}`}>Contact organizer</a>}
+      </div></aside>
+    </div>
+  </article>;
+}
+
+function Info({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) { return <div className="flex gap-3"><span className="mt-0.5 text-primary [&>svg]:size-4">{icon}</span><div><dt className="text-xs text-muted-foreground">{label}</dt><dd className="mt-0.5">{value}</dd></div></div>; }
+function ListSection({ title, items }: { title: string; items: string[] }) { return <section><h2 className="text-xl font-semibold">{title}</h2><div className="mt-4 flex flex-wrap gap-2">{items.map((item) => <span key={item} className="rounded-full border border-primary/15 bg-primary/[.06] px-3 py-1.5 text-sm">{item}</span>)}</div></section>; }
+function TextSection({ title, value }: { title: string; value: string }) { return <section><h2 className="text-xl font-semibold">{title}</h2><p className="mt-3 whitespace-pre-wrap leading-7 text-muted-foreground">{value}</p></section>; }

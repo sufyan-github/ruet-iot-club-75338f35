@@ -3,11 +3,13 @@ import { Facebook, Github, Linkedin, Mail, MapPin, Phone, Youtube } from "lucide
 
 const Footer = () => {
   return (
-    <footer className="border-t border-border/50 bg-card/40">
-      <div className="container py-12">
+    <footer className="relative overflow-hidden border-t border-primary/15 bg-gradient-to-b from-card/50 to-background">
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
+      <div aria-hidden="true" className="absolute -right-24 -top-24 size-72 rounded-full bg-technology-blue/[0.06] blur-3xl" />
+      <div className="container relative py-14">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
-            <h3 className="font-display text-sm font-bold tracking-wider text-primary mb-4">
+            <h3 className="mb-4 font-display text-base font-bold tracking-tight text-primary">
               RUET IoT Club
             </h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
@@ -18,7 +20,7 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold text-sm mb-4 text-foreground">Quick Links</h4>
             <div className="flex flex-col gap-2">
-              {["About", "Projects", "Events", "Team", "Gallery"].map((link) => (
+              {["About", "Projects", "Events", "Partners", "Opportunities", "Team", "Gallery"].map((link) => (
                 <Link
                   key={link}
                   to={`/${link.toLowerCase()}`}
@@ -43,15 +45,15 @@ const Footer = () => {
             <h4 className="font-semibold text-sm mb-4 text-foreground">Follow Us</h4>
             <div className="flex gap-3">
               <a href="https://www.facebook.com/ruet.iot.club" target="_blank" rel="noopener noreferrer" aria-label="Facebook"
-                className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
+              className="flex size-10 items-center justify-center rounded-xl border border-border/70 bg-secondary/60 text-muted-foreground transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/10 hover:text-primary">
                 <Facebook size={16} />
               </a>
               <a href="https://www.linkedin.com/company/ruet-iot-club" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"
-                className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
+              className="flex size-10 items-center justify-center rounded-xl border border-border/70 bg-secondary/60 text-muted-foreground transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/10 hover:text-primary">
                 <Linkedin size={16} />
               </a>
               <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub"
-                className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
+              className="flex size-10 items-center justify-center rounded-xl border border-border/70 bg-secondary/60 text-muted-foreground transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/10 hover:text-primary">
                 <Github size={16} />
               </a>
             </div>

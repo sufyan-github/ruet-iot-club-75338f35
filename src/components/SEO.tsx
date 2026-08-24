@@ -1,6 +1,6 @@
 import { Helmet } from "react-helmet-async";
 
-const SITE_URL = "https://ruet-iot-club.lovable.app";
+const SITE_URL = "https://ruetiotclub.org";
 
 interface SEOProps {
   title: string;
@@ -15,7 +15,7 @@ const SEO = ({ title, description, path, type = "website", image, jsonLd }: SEOP
   const url = `${SITE_URL}${path}`;
   const ogImage =
     image ||
-    "https://storage.googleapis.com/gpt-engineer-file-uploads/iGZMfyqIIsWEN1M2lOKSZbZbqUk1/social-images/social-1772976992056-logo.webp";
+    "https://ruetiotclub.org/club-logo.png";
   const schemas = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 
   return (

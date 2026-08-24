@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
-import { supabase } from "@/integrations/supabase/client";
+import SEO from "@/components/SEO";
+import { apiRequest } from "@/lib/api";
 import { toast } from "sonner";
 
 const ForgotPassword = () => {
@@ -13,25 +14,44 @@ const ForgotPassword = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    setLoading(false);
-    if (error) {
-      toast.error(error.message);
-    } else {
+    try {
+      await apiRequest("/auth/forgot-password", {
+        method: "POST",
+        body: { email },
+      });
       setSent(true);
-      toast.success("Password reset email sent. Check your inbox.");
+      toast.success(
+        "If the account is eligible, a reset email will arrive shortly.",
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not request a password reset.",
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <Layout>
+      <SEO
+        title="Reset Password | RUET IoT Club"
+        description="Request a secure RUET IoT Club account password reset link."
+        path="/forgot-password"
+      />
       <section className="py-20">
         <div className="container">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-md mx-auto"
+          >
             <div className="text-center mb-8">
-              <h1 className="font-display text-2xl font-bold text-gradient">Forgot Password</h1>
+              <h1 className="font-display text-2xl font-bold text-gradient">
+                Forgot Password
+              </h1>
               <p className="text-sm text-muted-foreground mt-2">
                 Enter your email and we'll send you a reset link.
               </p>
@@ -39,14 +59,24 @@ const ForgotPassword = () => {
             {sent ? (
               <div className="p-6 rounded-xl glass text-center space-y-4">
                 <p className="text-sm text-foreground">
-                  If an account exists for <strong>{email}</strong>, a reset link has been sent.
+                  If an account exists for <strong>{email}</strong>, a reset
+                  link has been sent.
                 </p>
-                <Link to="/auth" className="text-primary hover:underline text-sm">Back to Sign In</Link>
+                <Link
+                  to="/auth"
+                  className="text-primary hover:underline text-sm"
+                >
+                  Back to Sign In
+                </Link>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="p-6 rounded-xl glass space-y-4">
+              <form
+                onSubmit={handleSubmit}
+                className="p-6 rounded-xl glass space-y-4"
+              >
                 <input
                   type="email"
+                  aria-label="Account email"
                   placeholder="Email"
                   required
                   value={email}
@@ -64,7 +94,9 @@ const ForgotPassword = () => {
             )}
             <p className="text-center text-sm text-muted-foreground mt-4">
               Remember your password?{" "}
-              <Link to="/auth" className="text-primary hover:underline">Sign In</Link>
+              <Link to="/auth" className="text-primary hover:underline">
+                Sign In
+              </Link>
             </p>
           </motion.div>
         </div>

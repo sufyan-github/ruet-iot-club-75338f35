@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
+import { cloudflareData } from "@/integrations/cloudflare/client";
 import { getOptimizedImageUrl } from "@/lib/imageUtils";
 
 interface Member {
@@ -20,7 +20,7 @@ const MembersShowcase = () => {
 
   useEffect(() => {
     const fetchMembers = async () => {
-      const { data } = await supabase.rpc("get_public_members");
+      const { data } = await cloudflareData.rpc("get_public_members");
       setMembers((data || []).slice(0, 12));
       setLoading(false);
     };

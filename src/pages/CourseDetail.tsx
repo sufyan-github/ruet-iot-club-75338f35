@@ -3,12 +3,13 @@ import { getOptimizedImageUrl } from "@/lib/imageUtils";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
-import { supabase } from "@/integrations/supabase/client";
+import { cloudflareData } from "@/integrations/cloudflare/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { BookOpen, Play, FileText, CheckCircle, Lock, ArrowLeft, Award, ExternalLink, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import PaymentSlip from "@/components/PaymentSlip";
+import { apiRequest } from "@/lib/api";
 
 const getYouTubeEmbedUrl = (url: string): string => {
   try {
@@ -30,7 +31,7 @@ const getYouTubeEmbedUrl = (url: string): string => {
 const CourseDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, csrfToken } = useAuth();
   const [course, setCourse] = useState<any>(null);
   const [lessons, setLessons] = useState<any[]>([]);
   const [registration, setRegistration] = useState<any>(null);
@@ -39,37 +40,49 @@ const CourseDetail = () => {
   const [txnId, setTxnId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("bKash");
   const [certificate, setCertificate] = useState<any>(null);
+  const [certificateRequest, setCertificateRequest] = useState<any>(null);
+  const [requestingCertificate, setRequestingCertificate] = useState(false);
   const [activeVideo, setActiveVideo] = useState<string | null>(null);
   const [activePdf, setActivePdf] = useState<string | null>(null);
 
   useEffect(() => {
     const fetch = async () => {
-      const { data: courseData } = await supabase.from("courses").select("*").eq("id", id).single();
-      setCourse(courseData);
-      const { data: lessonData } = await supabase
-        .from("lessons")
-        .select("*")
-        .eq("course_id", id!)
-        .order("sort_order", { ascending: true });
-      setLessons(lessonData || []);
+      try {
+        const courseData=await apiRequest<any>(`/courses/${id}`);
+        setCourse({...courseData,image_url:courseData.thumbnail_url,is_paid:courseData.course_type==="PAID",description:courseData.short_description});
+        setLessons((courseData.modules||[]).flatMap((module:any)=>(module.lessons||[]).map((lesson:any)=>{const video=lesson.contents?.find((item:any)=>item.content_type==="YOUTUBE"||item.content_type==="VIDEO");const pdf=lesson.contents?.find((item:any)=>item.content_type==="PDF");return {...lesson,module_title:module.title,video_url:video?.url,pdf_file:pdf?.url,contents:lesson.contents||[]}})));
+      } catch {
+        const { data: courseData } = await cloudflareData.from("courses").select("*").eq("id", id).single();setCourse(courseData);
+        const { data: lessonData } = await cloudflareData.from("lessons").select("*").eq("course_id", id!).order("sort_order", { ascending: true });setLessons(lessonData || []);
+      }
 
       if (user) {
-        const { data: reg } = await supabase
-          .from("course_registrations")
-          .select("*")
-          .eq("course_id", id!)
-          .eq("user_id", user.id)
-          .maybeSingle();
-        setRegistration(reg);
+        try { const dashboard=await apiRequest<any>("/learning/dashboard");const normalized=dashboard.courses?.find((item:any)=>item.course_id===id);if(normalized)setRegistration({...normalized,normalized:true,payment_status:normalized.payment_status==="VERIFIED"||normalized.payment_status==="NOT_REQUIRED"?"confirmed":["SUBMITTED","PENDING"].includes(normalized.payment_status)?"pending":normalized.payment_status.toLowerCase(),completed:normalized.enrollment_status==="COMPLETED",progress:Object.fromEntries((normalized.completed_lesson_ids||[]).map((lessonId:string)=>[lessonId,true]))}); }
+        catch { const { data: reg } = await cloudflareData.from("course_registrations").select("*").eq("course_id", id!).eq("user_id", user.id).maybeSingle();setRegistration(reg); }
 
         // Check for existing certificate
-        const { data: certData } = await supabase
+        const { data: certData } = await cloudflareData
           .from("certificates")
           .select("*")
           .eq("course_id", id!)
           .eq("user_id", user.id)
           .maybeSingle();
         setCertificate(certData);
+        try {
+          const certificateData = await apiRequest<{ requests: any[]; certificates: any[] }>("/learning/certificates/me");
+          setCertificateRequest(certificateData.requests.find((item) => item.courseId === id) ?? null);
+          const issued = certificateData.certificates.find((item) => item.courseId === id);
+          if (issued) setCertificate({
+            id: issued.id,
+            certificate_number: issued.certificateNumber,
+            course_id: issued.courseId,
+            user_id: issued.userId,
+            issued_at: issued.issuedAt,
+            status: issued.status.toLowerCase(),
+          });
+        } catch {
+          // The compatibility record above remains available during staged migrations.
+        }
       }
       setLoading(false);
     };
@@ -79,26 +92,9 @@ const CourseDetail = () => {
   const handleRegister = async () => {
     if (!user) { navigate("/auth"); return; }
     setRegistering(true);
-    const payload: any = { course_id: id, user_id: user.id };
-    if (course.is_paid) {
-      if (paymentMethod === "Cash") {
-        payload.payment_method = "Cash";
-        payload.transaction_id = "CASH-UNPAID";
-        payload.payment_status = "unpaid";
-      } else {
-        if (!txnId.trim()) { toast.error("Please enter transaction ID"); setRegistering(false); return; }
-        payload.payment_method = paymentMethod;
-        payload.transaction_id = txnId;
-        payload.payment_status = "pending";
-      }
-    } else {
-      payload.payment_status = "confirmed";
-    }
-    const { error } = await supabase.from("course_registrations").insert(payload);
-    if (error) {
-      if (error.code === "23505") toast.error("Already registered!");
-      else toast.error("Registration failed");
-    } else {
+    try {
+      if(course.is_paid&&paymentMethod!=="Cash"&&!txnId.trim()){toast.error("Please enter transaction ID");setRegistering(false);return;}
+      const result=await apiRequest<any>(`/learning/courses/${id}/enroll`,{method:"POST",csrfToken:csrfToken??undefined,body:{paymentMethod:course.is_paid?paymentMethod:"Not Required",transactionReference:course.is_paid&&paymentMethod!=="Cash"?txnId:undefined}});
       toast.success(
         paymentMethod === "Cash"
           ? "Registration submitted! Please pay cash to the admin."
@@ -106,44 +102,43 @@ const CourseDetail = () => {
           ? "Registration submitted! Awaiting payment verification."
           : "Enrolled successfully!"
       );
-      const { data: reg } = await supabase
-        .from("course_registrations")
-        .select("*")
-        .eq("course_id", id!)
-        .eq("user_id", user.id)
-        .maybeSingle();
-      setRegistration(reg);
-    }
+      setRegistration({id:result.id,normalized:true,payment_status:result.paymentStatus==="NOT_REQUIRED"?"confirmed":"pending",completed:false,progress:{}});
+    }catch(error){toast.error(error instanceof Error?error.message:"Registration failed");}
     setRegistering(false);
   };
 
   const toggleLessonComplete = async (lessonId: string) => {
     if (!registration || !user) return;
+    if(registration.normalized){try{const next=await apiRequest<any>(`/learning/enrollments/${registration.id}/progress/${lessonId}`,{method:"POST",csrfToken:csrfToken??undefined,body:{completed:!registration.progress?.[lessonId]}});const progress={...(registration.progress||{}),[lessonId]:!registration.progress?.[lessonId]};setRegistration({...registration,progress,completed:next.status==="COMPLETED"});if(next.status==="COMPLETED")toast.success("Course completed. You can now request your certificate.");}catch(error){toast.error(error instanceof Error?error.message:"Failed to update progress");}return;}
     const progress = { ...(registration.progress || {}) };
     progress[lessonId] = !progress[lessonId];
     const completedCount = Object.values(progress).filter(Boolean).length;
     const allDone = completedCount === lessons.length && lessons.length > 0;
-    const { error } = await supabase
+    const { error } = await cloudflareData
       .from("course_registrations")
       .update({ progress, completed: allDone })
       .eq("id", registration.id);
     if (error) { toast.error("Failed to update progress"); return; }
     setRegistration({ ...registration, progress, completed: allDone });
 
-    // Auto-generate certificate on completion
-    if (allDone && !certificate) {
-      const { data: certNum } = await supabase.rpc("generate_certificate_number");
-      if (certNum) {
-        const { data: newCert, error: certError } = await supabase
-          .from("certificates")
-          .insert({ user_id: user.id, course_id: id, certificate_number: certNum })
-          .select()
-          .single();
-        if (!certError && newCert) {
-          setCertificate(newCert);
-          toast.success("🎉 Congratulations! Certificate generated!", { duration: 5000 });
-        }
-      }
+    if (allDone) toast.success("Course completed. You can now request your certificate.", { duration: 5000 });
+  };
+
+  const requestCertificate = async () => {
+    if (!id) return;
+    setRequestingCertificate(true);
+    try {
+      const next = await apiRequest<{ id: string; status: string }>("/learning/certificates/requests", {
+        method: "POST",
+        body: { courseId: id },
+        csrfToken: csrfToken ?? undefined,
+      });
+      setCertificateRequest({ ...next, courseId: id });
+      toast.success("Certificate request submitted for administrator review.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The certificate request could not be submitted.");
+    } finally {
+      setRequestingCertificate(false);
     }
   };
 
@@ -273,6 +268,22 @@ const CourseDetail = () => {
                   <ExternalLink size={14} />
                 </Link>
               )}
+              {registration.completed && !certificate && !certificateRequest && (
+                <button
+                  type="button"
+                  onClick={() => void requestCertificate()}
+                  disabled={requestingCertificate}
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-primary/80 px-5 py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                >
+                  <Award size={18} /> {requestingCertificate ? "Submitting request…" : "Request Certificate"}
+                </button>
+              )}
+              {registration.completed && !certificate && certificateRequest && (
+                <div className="mt-4 rounded-lg border border-amber-400/20 bg-amber-400/5 px-4 py-3 text-center">
+                  <p className="text-sm font-semibold text-amber-300">Certificate {String(certificateRequest.status).replace(/_/g, " ").toLowerCase()}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">An authorized administrator must approve the request before a certificate is issued.</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -341,6 +352,8 @@ const CourseDetail = () => {
                       <p className={`text-sm font-medium ${isCompleted ? "text-primary line-through" : "text-foreground"}`}>
                         {i + 1}. {lesson.title}
                       </p>
+                      {lesson.module_title && <p className="mt-0.5 text-[11px] text-muted-foreground">{lesson.module_title}</p>}
+                      {canAccess && lesson.contents?.length > 0 && <div className="mt-3 space-y-2">{lesson.contents.map((content:any)=><div key={content.id} className="rounded-lg border border-border/60 bg-secondary/30 p-3 text-xs">{["TEXT","RICH_TEXT"].includes(content.content_type)&&<div className="prose prose-invert prose-sm max-w-none whitespace-pre-wrap text-muted-foreground">{content.body}</div>}{content.content_type==="IMAGE"&&content.url&&<img src={content.url} alt={content.title||"Lesson resource"} className="max-h-72 rounded-lg object-contain"/>}{!["TEXT","RICH_TEXT","IMAGE","YOUTUBE","VIDEO","PDF"].includes(content.content_type)&&content.url&&<a href={content.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-primary"><FileText size={13}/>{content.title||content.content_type}<ExternalLink size={12}/></a>}</div>)}</div>}
                     </div>
                     {canAccess && (
                       <div className="flex gap-2 shrink-0">
