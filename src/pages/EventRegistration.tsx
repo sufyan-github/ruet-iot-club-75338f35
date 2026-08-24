@@ -15,6 +15,9 @@ const EventRegistration = () => {
   const navigate = useNavigate();
   const { user, csrfToken } = useAuth();
   const event = location.state?.event;
+  const paymentMethods = Array.isArray(event?.payment_methods) && event.payment_methods.length
+    ? event.payment_methods.map((method: unknown) => String(method).toUpperCase())
+    : ["BKASH", "NAGAD"];
 
   const [form, setForm] = useState({
     name: "",
@@ -57,14 +60,14 @@ const EventRegistration = () => {
       return;
     }
     if (event.is_paid && (!form.transaction_id || !/^01\d{9}$/.test(form.payer_phone))) {
-      toast.error("Enter the bKash transaction ID and the 11-digit payer number.");
+      toast.error("Enter the mobile-wallet transaction ID and the 11-digit payer number.");
       return;
     }
 
     setSubmitting(true);
 
     try {
-      const data=await apiRequest<any>(`/learning/events/${event.id}/register`,{method:"POST",csrfToken:csrfToken??undefined,body:{name:form.name,email:form.email,phone:form.phone||undefined,department:form.department||undefined,paymentMethod:event.is_paid?"BKASH":undefined,transactionReference:event.is_paid?form.transaction_id:undefined,payerPhone:event.is_paid?form.payer_phone:undefined}});
+      const data=await apiRequest<any>(`/learning/events/${event.id}/register`,{method:"POST",csrfToken:csrfToken??undefined,body:{name:form.name,email:form.email,phone:form.phone||undefined,department:form.department||undefined,paymentMethod:event.is_paid?form.payment_method:undefined,transactionReference:event.is_paid?form.transaction_id:undefined,payerPhone:event.is_paid?form.payer_phone:undefined}});
       setRegistrationResult({...data,registered_at:data.registeredAt});setSuccess(true);toast.success("Registration successful!");
     } catch(error){toast.error(error instanceof Error?error.message:"Registration failed");}
     finally{setSubmitting(false);}
@@ -168,14 +171,14 @@ const EventRegistration = () => {
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Payment Method *</label>
                   <div className="flex flex-wrap gap-2">
-                    {["BKASH"].map((method) => (
+                    {paymentMethods.map((method: string) => (
                       <button key={method} type="button" onClick={() => setForm({ ...form, payment_method: method })}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                           form.payment_method === method
                             ? "bg-primary text-primary-foreground"
                             : "bg-secondary text-muted-foreground hover:text-foreground"
                         }`}>
-                        bKash Send Money
+                        {method === "BKASH" ? "bKash Send Money" : method === "NAGAD" ? "Nagad Send Money" : method}
                       </button>
                     ))}
                   </div>
@@ -183,15 +186,15 @@ const EventRegistration = () => {
 
                 {form.payment_method && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    {form.payment_method === "BKASH" && (
+                    {["BKASH", "NAGAD"].includes(form.payment_method) && (
                       <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm text-muted-foreground mb-3">
                         <p>Send ৳{event.registration_fee} to <strong className="text-foreground">
-                          {event.payment_number || "01580352238"} (bKash Personal)
+                          {event.payment_number || "01580352238"} ({form.payment_method === "NAGAD" ? "Nagad" : "bKash"} Personal)
                         </strong></p>
                         <p className="mt-1 text-xs">Use "Send Money" option and note the Transaction ID.</p>
                       </div>
                     )}
-                    <div className="grid gap-3 sm:grid-cols-2"><input placeholder="bKash Transaction ID *" required value={form.transaction_id}
+                    <div className="grid gap-3 sm:grid-cols-2"><input placeholder={`${form.payment_method} Transaction ID *`} required value={form.transaction_id}
                       onChange={(e) => setForm({ ...form, transaction_id: e.target.value.trim() })} className={inputClass} />
                     <input placeholder="Payer number (01XXXXXXXXX) *" required inputMode="numeric" value={form.payer_phone}
                       onChange={(e) => setForm({ ...form, payer_phone: e.target.value.replace(/\D/gu, "").slice(0, 11) })} className={inputClass} /></div>

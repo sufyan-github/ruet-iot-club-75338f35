@@ -10,6 +10,7 @@ import { parseJson } from "../auth/validation";
 import { createAuditStatement } from "../db/audit";
 import { success } from "../lib/api-envelope";
 import { AppError } from "../lib/app-error";
+import { imageDimensions } from "../lib/image-metadata";
 import {
   requireAnyPermission,
   requirePermission,
@@ -1056,6 +1057,9 @@ contentRoutes.post(
         status: 422,
       });
     }
+    const dimensions = managedImageTypes.has(file.type)
+      ? imageDimensions(new Uint8Array(buffer), file.type)
+      : null;
     const safeName =
       file.name.replace(/[^a-zA-Z0-9._-]+/gu, "-").slice(-100) || "image";
     const key = `website/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}-${safeName}`;
@@ -1067,10 +1071,18 @@ contentRoutes.post(
       customMetadata: { uploadedBy: user.id, originalName: file.name },
     });
     await context.env.DB.prepare(
-      `INSERT INTO website_media_objects (object_key, original_name, content_type, byte_size, uploaded_by)
-       VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO website_media_objects (object_key, original_name, content_type, byte_size, uploaded_by, width, height)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
     )
-      .bind(key, file.name, file.type, file.size, user.id)
+      .bind(
+        key,
+        file.name,
+        file.type,
+        file.size,
+        user.id,
+        dimensions?.width ?? null,
+        dimensions?.height ?? null,
+      )
       .run();
     return context.json(
       success(
@@ -1080,6 +1092,8 @@ contentRoutes.post(
           originalName: file.name,
           contentType: file.type,
           byteSize: file.size,
+          width: dimensions?.width,
+          height: dimensions?.height,
         },
         context.get("requestId"),
       ),
@@ -1105,7 +1119,8 @@ contentRoutes.get(
     const [items, total] = await Promise.all([
       context.env.DB.prepare(
         `SELECT m.object_key AS objectKey, m.original_name AS originalName, m.content_type AS contentType,
-                m.byte_size AS byteSize, m.created_at AS createdAt, u.display_name AS uploadedBy
+                m.byte_size AS byteSize, m.width, m.height, m.alt_text AS altText,
+                m.created_at AS createdAt, u.display_name AS uploadedBy
          FROM website_media_objects m JOIN users u ON u.id = m.uploaded_by
          WHERE m.archived_at IS NULL AND m.original_name LIKE ?
          ORDER BY m.created_at DESC LIMIT 24 OFFSET ?`,

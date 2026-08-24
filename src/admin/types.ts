@@ -36,4 +36,4 @@ export interface Assignment { id: string; primary_email: string; display_name: s
 export interface AuditEvent { id: string; actor_type: string; actor_id: string | null; action: string; entity_type: string; entity_id: string | null; reason: string | null; request_id: string; created_at: string; }
 export interface EmailLog { id: string; template: string; recipientEmail: string; status: string; attempts: number; nextAttemptAt: string; lastError: string | null; providerMessageId: string | null; sentAt: string | null; createdAt: string; }
 export interface UserNotification { id: string; type: string; title: string; message: string; actionUrl: string | null; readAt: string | null; createdAt: string; }
-export interface MediaObject { objectKey: string; originalName: string; contentType: string; byteSize: number; createdAt: string; uploadedBy: string; }
+export interface MediaObject { objectKey: string; originalName: string; contentType: string; byteSize: number; width?: number; height?: number; altText?: string; createdAt: string; uploadedBy: string; }

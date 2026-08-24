@@ -5,83 +5,16 @@ import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
 import { apiRequest } from "@/lib/api";
-
-export interface PublicEvent {
-  id: string;
-  slug: string;
-  title: string;
-  shortDescription: string;
-  fullDescription: string;
-  eventType: string;
-  category: string;
-  eventStatus: string;
-  featured: boolean;
-  startsAt: string;
-  endsAt: string;
-  timezone: string;
-  locationType: string;
-  venue: string | null;
-  address: string | null;
-  city: string | null;
-  country: string;
-  latitude: number | null;
-  longitude: number | null;
-  onlineUrl: string | null;
-  onlinePlatform: string | null;
-  meetingInstructions: string | null;
-  mapUrl: string | null;
-  coverImageUrl: string | null;
-  thumbnailUrl: string | null;
-  gallery: string[];
-  posterUrl: string | null;
-  videoUrl: string | null;
-  registrationRequired: boolean;
-  registrationMode: string;
-  registrationUrl: string | null;
-  registrationDeadline: string | null;
-  maxParticipants: number;
-  remainingCapacity: number | null;
-  feeMinor: number;
-  currency: string;
-  paymentRequired: boolean;
-  paymentMethods: string[];
-  bkashNumber: string;
-  registrationStatus: string;
-  organizer: string;
-  tags: string[];
-  coOrganizers: string[];
-  speakers: string[];
-  trainers: string[];
-  partners: string[];
-  sponsors: string[];
-  targetAudience: string | null;
-  eligibility: string | null;
-  certificateAvailable: boolean;
-  certificateRequireRegistration: boolean;
-  certificateRequirePayment: boolean;
-  certificateRequireAttendance: boolean;
-  contactEmail: string | null;
-  contactPhone: string | null;
-  seoTitle: string | null;
-  metaDescription: string | null;
-  ogImageUrl: string | null;
-}
-const formatDate = (value: string) =>
-  new Intl.DateTimeFormat("en-BD", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Dhaka",
-  }).format(new Date(value));
+import { formatEventDate } from "@/lib/eventModel";
+import type { PublicEvent } from "@/lib/events";
 function EventCard({ event }: { event: PublicEvent }) {
-  const closed =
-    ["CLOSED", "FULL"].includes(event.registrationStatus) ||
-    new Date(event.endsAt) < new Date();
+  const closed = ["CLOSED", "FULL"].includes(event.registrationStatus);
   return (
     <article className="group overflow-hidden rounded-2xl border border-border/60 bg-card/55 shadow-[0_24px_80px_-55px_hsl(var(--primary)/.75)] transition hover:-translate-y-1 hover:border-primary/30">
       {event.coverImageUrl ? (
         <img
           src={event.coverImageUrl}
-          alt=""
+          alt={event.heroImage?.altText || event.title}
           className="aspect-[16/8] w-full object-cover"
         />
       ) : (
@@ -96,6 +29,9 @@ function EventCard({ event }: { event: PublicEvent }) {
           </span>
           <span className="rounded-full bg-secondary px-2.5 py-1 text-muted-foreground">
             {event.locationType}
+          </span>
+          <span className="rounded-full bg-secondary px-2.5 py-1 text-muted-foreground">
+            {event.eventStatus}
           </span>
           {event.paymentRequired && (
             <span className="rounded-full bg-amber-400/10 px-2.5 py-1 text-amber-300">
@@ -115,7 +51,7 @@ function EventCard({ event }: { event: PublicEvent }) {
         <dl className="mt-4 space-y-2 text-xs text-muted-foreground">
           <div className="flex gap-2">
             <Clock3 size={15} className="shrink-0 text-primary" />
-            <span>{formatDate(event.startsAt)}</span>
+            <span>{formatEventDate(event.startsAt, event.timezone)}</span>
           </div>
           <div className="flex gap-2">
             <MapPin size={15} className="shrink-0 text-primary" />
@@ -161,7 +97,6 @@ export default function Events() {
       .then(setEvents)
       .finally(() => setLoading(false));
   }, []);
-  const now = Date.now();
   const filtered = useMemo(
     () =>
       events.filter(
@@ -175,12 +110,12 @@ export default function Events() {
     [events, query, type],
   );
   const upcoming = filtered
-    .filter((event) => new Date(event.endsAt).getTime() >= now)
+    .filter((event) => event.eventStatus !== "COMPLETED")
     .sort(
       (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
     );
   const past = filtered
-    .filter((event) => new Date(event.endsAt).getTime() < now)
+    .filter((event) => event.eventStatus === "COMPLETED")
     .sort(
       (a, b) => new Date(b.endsAt).getTime() - new Date(a.endsAt).getTime(),
     );

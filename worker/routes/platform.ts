@@ -7,6 +7,7 @@ import {
 } from "../auth/session";
 import { parseJson } from "../auth/validation";
 import { createAuditStatement } from "../db/audit";
+import { deriveRegistrationStatus } from "../../src/lib/eventModel";
 import { success } from "../lib/api-envelope";
 import { AppError } from "../lib/app-error";
 import {
@@ -1363,7 +1364,29 @@ platformRoutes.post(
     if (Number(event.registration_required) !== 1 || event.registration_mode !== "INTERNAL")
       throw new AppError({ code: "INTERNAL_REGISTRATION_UNAVAILABLE", message: "This event does not accept internal registrations.", status: 409 });
     const nowTime = Date.now();
-    if (event.registration_status === "CLOSED" || (event.registration_deadline && new Date(String(event.registration_deadline)).getTime() < nowTime) || new Date(String(event.ends_at)).getTime() < nowTime)
+    const capacity = Math.max(0, Number(event.max_participants || 0));
+    const reserved = (await context.env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM event_registrations WHERE event_id=? AND registration_status IN ('PENDING','APPROVED')",
+    ).bind(eventId).first<number>("count")) ?? 0;
+    const effectiveRegistrationStatus = deriveRegistrationStatus({
+      startsAt: String(event.starts_at),
+      endsAt: String(event.ends_at),
+      eventStatus: String(event.event_status) as never,
+      eventStatusOverride: (event.event_status_override || null) as never,
+      registrationRequired: Number(event.registration_required) === 1,
+      registrationMode: String(event.registration_mode) as "INTERNAL" | "EXTERNAL" | "CLOSED",
+      registrationOpensAt: event.registration_opens_at ? String(event.registration_opens_at) : null,
+      registrationDeadline: event.registration_deadline ? String(event.registration_deadline) : null,
+      registrationStatusOverride: (event.registration_status_override || null) as never,
+      maxParticipants: capacity,
+      reservedCount: reserved,
+      registrationCapacityOverride: Number(event.registration_capacity_override) === 1,
+    }, nowTime);
+    if (effectiveRegistrationStatus === "UPCOMING")
+      throw new AppError({ code: "REGISTRATION_UPCOMING", message: "Registration has not opened yet.", status: 409 });
+    if (effectiveRegistrationStatus === "FULL")
+      throw new AppError({ code: "EVENT_FULL", message: "Registration is closed because this event is full.", status: 409 });
+    if (effectiveRegistrationStatus !== "OPEN")
       throw new AppError({ code: "REGISTRATION_CLOSED", message: "Registration is closed for this event.", status: 409 });
     const paid = Number(event.payment_required) === 1;
     const fee = Number(event.fee_minor || 0);
@@ -1373,9 +1396,15 @@ platformRoutes.post(
     )
       throw new AppError({
         code: "PAYMENT_REFERENCE_REQUIRED",
-        message: "Paid event registration requires the bKash transaction ID and payer number.",
+        message: "Paid event registration requires the mobile-wallet transaction ID and payer number.",
         status: 422,
       });
+    if (paid) {
+      let methods: string[] = [];
+      try { methods = JSON.parse(String(event.payment_methods_json || "[]")); } catch { methods = []; }
+      if (!input.paymentMethod || !methods.includes(input.paymentMethod.toUpperCase()))
+        throw new AppError({ code: "PAYMENT_METHOD_UNAVAILABLE", message: "Choose one of the payment methods configured for this event.", status: 422 });
+    }
     const duplicate = await context.env.DB.prepare(
       "SELECT id FROM event_registrations WHERE event_id=? AND user_id=?",
     )
@@ -1392,21 +1421,6 @@ platformRoutes.post(
         "SELECT id FROM learning_payments WHERE payment_method=? AND transaction_reference=?",
       ).bind(input.paymentMethod, input.transactionReference).first("id");
       if (duplicatePayment) throw new AppError({ code: "DUPLICATE_TRANSACTION", message: "This transaction ID has already been submitted.", status: 409 });
-    }
-    const capacity = Math.max(0, Number(event.max_participants || 0));
-    if (capacity > 0 && Number(event.registration_capacity_override) !== 1) {
-      const reserved =
-        (await context.env.DB.prepare(
-          "SELECT COUNT(*) AS count FROM event_registrations WHERE event_id=? AND registration_status IN ('PENDING','APPROVED')",
-        )
-          .bind(eventId)
-          .first<number>("count")) ?? 0;
-      if (reserved >= capacity)
-        throw new AppError({
-          code: "EVENT_FULL",
-          message: "Registration is closed because this event is full.",
-          status: 409,
-        });
     }
     const id = crypto.randomUUID(),
       legacyId = crypto.randomUUID(),
