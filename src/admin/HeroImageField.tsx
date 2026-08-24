@@ -336,15 +336,6 @@ export function HeroImageField({
                 <button
                   type="button"
                   disabled={disabled || uploading}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={adminSecondaryButton}
-                >
-                  <Upload size={16} />
-                  Change image
-                </button>
-                <button
-                  type="button"
-                  disabled={disabled || uploading}
                   onClick={() => onChange(null)}
                   className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-red-500/25 px-4 py-2 text-sm font-medium text-red-300 transition hover:bg-red-500/10 focus:outline-none focus:ring-2 focus:ring-red-400/30 disabled:opacity-50"
                 >

@@ -303,7 +303,6 @@ describe("canonical event management", () => {
         registrationMode: "EXTERNAL",
         registrationUrl: "",
       }),
-      eventBody({ slug: "missing-hero", heroImage: null, coverImageUrl: "" }),
       eventBody({ slug: "invalid-paid", paymentRequired: true, feeMinor: 0 }),
     ];
     for (const input of invalidPublished) {
@@ -314,6 +313,34 @@ describe("canonical event management", () => {
       });
       expect(result.response.status).toBe(422);
     }
+
+    const optionalFeaturesDisabled = eventBody({
+      slug: "optional-features-disabled",
+      heroImage: null,
+      coverImageUrl: "",
+      galleryImages: [],
+      ogImage: null,
+      videoUrl: "",
+      registrationRequired: false,
+      registrationMode: "CLOSED",
+      paymentRequired: false,
+      feeMinor: 0,
+      certificateAvailable: false,
+      contactEmail: "",
+      contactPhone: "",
+      seoTitle: "",
+      metaDescription: "",
+      canonicalUrl: "",
+    });
+    expect(
+      (
+        await api(`/admin/events/${crypto.randomUUID()}`, {
+          method: "PUT",
+          auth: true,
+          body: optionalFeaturesDisabled,
+        })
+      ).response.status,
+    ).toBe(201);
   });
 
   it("rejects stale or forged R2 media references", async () => {

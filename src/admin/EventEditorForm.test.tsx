@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { useState } from "react";
 import EventEditorForm from "./EventEditorForm";
 
@@ -13,8 +13,8 @@ const baseDraft: Record<string, unknown> = {
   endsAt: "2026-09-01T08:00:00.000Z",
   timezone: "Asia/Dhaka",
   locationType: "PHYSICAL",
-  registrationRequired: true,
-  registrationMode: "INTERNAL",
+  registrationRequired: false,
+  registrationMode: "CLOSED",
   paymentRequired: false,
   maxParticipants: 50,
   paymentMethods: ["BKASH", "NAGAD"],
@@ -37,15 +37,55 @@ function StatefulEditor() {
 }
 
 describe("EventEditorForm", () => {
+  it("shows exact API validation messages, highlights fields, and opens advanced errors", () => {
+    render(
+      <EventEditorForm
+        value={baseDraft}
+        fieldErrors={{
+          title: ["Event title must contain at least 3 characters."],
+          canonicalUrl: ["Use an HTTPS URL."],
+        }}
+        onChange={() => undefined}
+      />,
+    );
+    expect(
+      screen.getAllByText("Event title must contain at least 3 characters."),
+    ).toHaveLength(2);
+    expect(screen.getByLabelText(/Event title/)).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(
+      screen.getByText("Advanced options").closest("details"),
+    ).toHaveAttribute("open");
+    const canonicalLabel = screen.getByText("Canonical URL").closest("label");
+    expect(canonicalLabel?.querySelector("input")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+
   it("renders exactly one Hero Image control and keeps gallery and Open Graph media separate", () => {
     render(<StatefulEditor />);
-    expect(screen.getAllByRole("heading", { name: "Hero Image" })).toHaveLength(
-      1,
-    );
+    const heroHeading = screen.getByRole("heading", { name: "Hero Image" });
+    expect(heroHeading.closest("details")).toBeNull();
+    const primaryMediaControl = heroHeading.closest("section");
+    expect(primaryMediaControl).not.toBeNull();
+    if (primaryMediaControl)
+      expect(
+        within(primaryMediaControl).getByRole("button", {
+          name: "Upload image",
+        }),
+      ).toBeInTheDocument();
+    expect(document.querySelectorAll("details[open]")).toHaveLength(0);
+    expect(screen.queryByLabelText("Slug")).not.toBeInTheDocument();
+
+    const advanced = screen.getByText("Advanced options").closest("details");
+    expect(advanced).not.toBeNull();
+    if (advanced) advanced.open = true;
     expect(screen.getByText("Gallery Images")).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Open Graph Image" }),
-    ).toBeInTheDocument();
+    if (advanced)
+      expect(within(advanced).getByText("Slug")).toBeInTheDocument();
   });
 
   it("switches physical and online conditional fields without exposing contradictory inputs", () => {
@@ -63,11 +103,11 @@ describe("EventEditorForm", () => {
 
   it("reveals payment fields only when registration and payment are enabled", () => {
     render(<StatefulEditor />);
-    expect(
-      screen.queryByLabelText(/Fee in minor units/),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Payment required")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Registration required"));
+    expect(screen.queryByLabelText(/Registration fee/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("Payment required"));
-    expect(screen.getByLabelText(/Fee in minor units/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Registration fee/)).toBeInTheDocument();
     expect(
       screen.getByRole("group", { name: "Payment methods" }),
     ).toBeInTheDocument();

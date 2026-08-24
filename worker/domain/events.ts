@@ -101,7 +101,7 @@ export const eventSchema = z
     gallery: z.array(mediaUrl).max(30).default([]),
     posterUrl: optionalUrl,
     videoUrl: optionalUrl,
-    registrationRequired: z.boolean().default(true),
+    registrationRequired: z.boolean().default(false),
     registrationMode: z
       .enum(["INTERNAL", "EXTERNAL", "CLOSED"])
       .default("INTERNAL"),
@@ -128,13 +128,15 @@ export const eventSchema = z
     paymentRequired: z.boolean().default(false),
     paymentMethods: z
       .array(z.enum(["BKASH", "NAGAD", "CASH"]))
-      .min(1)
       .max(3)
       .default(["BKASH", "NAGAD"]),
     bkashNumber: z
       .string()
       .trim()
-      .regex(/^01\d{9}$/u)
+      .refine(
+        (value) => value === "" || /^01\d{9}$/u.test(value),
+        "Use a valid Bangladeshi mobile number.",
+      )
       .default("01580352238"),
     registrationStatus: z
       .enum(["UPCOMING", "OPEN", "CLOSED", "FULL"])
@@ -160,15 +162,15 @@ export const eventSchema = z
     targetAudience: optionalText(3000),
     eligibility: optionalText(10000),
     certificateAvailable: z.boolean().default(false),
-    certificateRequireRegistration: z.boolean().default(true),
-    certificateRequirePayment: z.boolean().default(true),
-    certificateRequireAttendance: z.boolean().default(true),
+    certificateRequireRegistration: z.boolean().default(false),
+    certificateRequirePayment: z.boolean().default(false),
+    certificateRequireAttendance: z.boolean().default(false),
     certificateMinAttendancePercent: z
       .number()
       .int()
       .min(0)
       .max(100)
-      .default(100),
+      .default(0),
     contactEmail: z.preprocess(
       (value) => value ?? "",
       z.string().trim().email().max(254).or(z.literal("")),
@@ -227,6 +229,24 @@ export const eventSchema = z
         path: ["feeMinor"],
         message: "Paid events require a positive fee.",
       });
+    if (event.paymentRequired && event.paymentMethods.length === 0)
+      context.addIssue({
+        code: "custom",
+        path: ["paymentMethods"],
+        message: "Paid events require at least one payment method.",
+      });
+    if (
+      event.paymentRequired &&
+      event.paymentMethods.some((method) =>
+        ["BKASH", "NAGAD"].includes(method),
+      ) &&
+      !/^01\d{9}$/u.test(event.bkashNumber)
+    )
+      context.addIssue({
+        code: "custom",
+        path: ["bkashNumber"],
+        message: "Mobile payments require a valid receiver number.",
+      });
     if (!event.paymentRequired && event.feeMinor !== 0)
       context.addIssue({
         code: "custom",
@@ -274,12 +294,6 @@ export const eventSchema = z
         code: "custom",
         path: ["registrationUrl"],
         message: "External registration requires a URL.",
-      });
-    if (!event.heroImage && !event.coverImageUrl)
-      context.addIssue({
-        code: "custom",
-        path: ["heroImage"],
-        message: "Select a Hero image before publishing.",
       });
   });
 

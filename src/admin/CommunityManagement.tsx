@@ -10,7 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { apiRequest } from "@/lib/api";
+import { ApiError, apiRequest } from "@/lib/api";
 import { eventPreviewFromDraft } from "@/lib/events";
 import EventPresentation from "@/components/EventPresentation";
 import {
@@ -160,8 +160,8 @@ const eventDefaults = () => {
     gallery: [],
     posterUrl: "",
     videoUrl: "",
-    registrationRequired: true,
-    registrationMode: "INTERNAL",
+    registrationRequired: false,
+    registrationMode: "CLOSED",
     registrationUrl: "",
     registrationOpensAt: "",
     registrationDeadline: "",
@@ -172,7 +172,7 @@ const eventDefaults = () => {
     paymentRequired: false,
     paymentMethods: ["BKASH", "NAGAD"],
     bkashNumber: "01580352238",
-    registrationStatus: "OPEN",
+    registrationStatus: "CLOSED",
     registrationStatusOverride: null,
     organizer: "RUET IoT Club",
     organizerPersonId: null,
@@ -190,11 +190,11 @@ const eventDefaults = () => {
     targetAudience: "",
     eligibility: "",
     certificateAvailable: false,
-    certificateRequireRegistration: true,
-    certificateRequirePayment: true,
-    certificateRequireAttendance: true,
-    certificateMinAttendancePercent: 100,
-    contactEmail: "ruetiotclub@gmail.com",
+    certificateRequireRegistration: false,
+    certificateRequirePayment: false,
+    certificateRequireAttendance: false,
+    certificateMinAttendancePercent: 0,
+    contactEmail: "",
     contactPhone: "",
     seoTitle: "",
     metaDescription: "",
@@ -932,6 +932,7 @@ export default function CommunityManagement({
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [editor, setEditor] = useState<Record<string, unknown> | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const canManage =
     permissions.includes(
       `${kind === "events" ? "event" : kind === "people" ? "people" : kind === "partners" ? "partner" : "opportunity"}.manage`,
@@ -964,18 +965,42 @@ export default function CommunityManagement({
       }),
     [items, search, status],
   );
-  const openNew = () =>
+  const openNew = () => {
+    setFieldErrors({});
     setEditor({ id: crypto.randomUUID(), ...definition.defaults });
-  const update = (key: string, value: unknown) =>
+  };
+  const update = (key: string, value: unknown) => {
+    setFieldErrors((current) => {
+      if (!current[key]) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
     setEditor((current) => (current ? { ...current, [key]: value } : current));
+  };
   const save = async () => {
     if (!editor || !csrfToken) return;
     const name = String(editor[definition.nameKey] || "").trim();
-    if (!name) return toast.error(`${definition.singular} name is required.`);
+    if (!name) {
+      const message = `${definition.singular[0].toUpperCase() + definition.singular.slice(1)} name is required.`;
+      setFieldErrors({ [definition.nameKey]: [message] });
+      toast.error(message);
+      return;
+    }
     const payload = { ...editor };
     delete payload.id;
     if (!payload.slug) payload.slug = slugify(name);
     if (kind === "events") {
+      payload.timezone ||= "Asia/Dhaka";
+      payload.country ||= "Bangladesh";
+      payload.organizer ||= "RUET IoT Club";
+      payload.currency ||= "BDT";
+      payload.bkashNumber ||= "01580352238";
+      if (
+        !Array.isArray(payload.paymentMethods) ||
+        payload.paymentMethods.length === 0
+      )
+        payload.paymentMethods = ["BKASH", "NAGAD"];
       if (!payload.paymentRequired) payload.feeMinor = 0;
       const originalSlug = String(payload._originalSlug || "");
       delete payload._originalSlug;
@@ -1003,9 +1028,18 @@ export default function CommunityManagement({
       toast.success(
         `${definition.singular[0].toUpperCase() + definition.singular.slice(1)} saved.`,
       );
+      setFieldErrors({});
       setEditor(null);
       await load();
     } catch (error) {
+      if (error instanceof ApiError && error.details) {
+        setFieldErrors(error.details);
+        const messages = Object.values(error.details).flat();
+        toast.error(
+          `${messages.length} field issue${messages.length === 1 ? "" : "s"}: ${messages.slice(0, 2).join(" ")}`,
+        );
+        return;
+      }
       toast.error(
         error instanceof Error ? error.message : "Unable to save this record.",
       );
@@ -1170,9 +1204,10 @@ export default function CommunityManagement({
                     <button
                       type="button"
                       aria-label="Edit"
-                      onClick={() =>
-                        setEditor({ ...item, _originalSlug: item.slug })
-                      }
+                      onClick={() => {
+                        setFieldErrors({});
+                        setEditor({ ...item, _originalSlug: item.slug });
+                      }}
                       className={adminSecondaryButton}
                     >
                       <Pencil size={15} />
@@ -1230,37 +1265,43 @@ export default function CommunityManagement({
                 <EventEditorForm
                   value={editor}
                   csrfToken={csrfToken}
+                  fieldErrors={fieldErrors}
                   onChange={(key, value) => {
                     update(key, value);
                     if (key === "title" && !editor.slug)
                       update("slug", slugify(String(value)));
                   }}
                 />
-              ) : definition.groups.map((group) => (
-                <AdminCard key={group.title} className="p-5">
-                  <h3 className="font-semibold">{group.title}</h3>
-                  {group.description && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {group.description}
-                    </p>
-                  )}
-                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                    {group.fields.map((field) => (
-                      <FieldControl
-                        key={field.key}
-                        field={field}
-                        value={editor[field.key]}
-                        csrfToken={csrfToken}
-                        onChange={(value) => {
-                          update(field.key, value);
-                          if (field.key === definition.nameKey && !editor.slug)
-                            update("slug", slugify(String(value)));
-                        }}
-                      />
-                    ))}
-                  </div>
-                </AdminCard>
-              ))}
+              ) : (
+                definition.groups.map((group) => (
+                  <AdminCard key={group.title} className="p-5">
+                    <h3 className="font-semibold">{group.title}</h3>
+                    {group.description && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {group.description}
+                      </p>
+                    )}
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                      {group.fields.map((field) => (
+                        <FieldControl
+                          key={field.key}
+                          field={field}
+                          value={editor[field.key]}
+                          csrfToken={csrfToken}
+                          onChange={(value) => {
+                            update(field.key, value);
+                            if (
+                              field.key === definition.nameKey &&
+                              !editor.slug
+                            )
+                              update("slug", slugify(String(value)));
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </AdminCard>
+                ))
+              )}
               {kind === "events" && (
                 <AdminCard className="overflow-hidden">
                   <p className="border-b border-[hsl(var(--admin-border))] px-5 py-3 text-xs font-semibold uppercase tracking-wide text-primary">
