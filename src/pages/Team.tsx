@@ -4,14 +4,24 @@ import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
-import { supabase } from "@/integrations/supabase/client";
+import { cloudflareData } from "@/integrations/cloudflare/client";
 import { Search, Linkedin, Github, Mail, Filter, Phone } from "lucide-react";
+import { Link } from "react-router-dom";
+import { apiRequest } from "@/lib/api";
 
 const CATEGORY_ORDER = ["Executive Board", "Advisory Board", "Core Team"];
 const CATEGORY_SUBTITLES: Record<string, string> = {
   "Executive Board": "Leading the vision and operations of RUET IoT Club",
   "Advisory Board": "Faculty advisors and mentors guiding our journey",
   "Core Team": "The working teams powering our initiatives",
+};
+const categoryLabel = (type: string) => {
+  if (type === "EXECUTIVE") return "Executive Board";
+  if (["ADVISORY_BOARD", "FACULTY_ADVISOR", "MENTOR"].includes(type)) return "Advisory Board";
+  if (["COORDINATOR", "VOLUNTEER", "RESEARCHER"].includes(type)) return "Core Team";
+  if (type === "FORMER_EXECUTIVE") return "Former Executives";
+  if (type === "ALUMNI") return "Alumni";
+  return "General Members";
 };
 
 const Team = () => {
@@ -29,11 +39,31 @@ const Team = () => {
 
   useEffect(() => {
     const fetchAll = async () => {
-      const [teamRes, membersRes] = await Promise.all([
-        supabase.from("team_members").select("*").order("sort_order", { ascending: true }),
-        supabase.rpc("get_public_members"),
+      const [people, membersRes] = await Promise.all([
+        apiRequest<any[]>("/community/people"),
+        cloudflareData.rpc("get_public_members"),
       ]);
-      setTeam(teamRes.data || []);
+      setTeam(people.map((person) => ({
+        id: person.id,
+        slug: person.slug,
+        name: person.fullName,
+        image_url: person.profilePhotoUrl,
+        bio: person.shortBio,
+        biography: person.biography,
+        email: person.publicEmail,
+        phone: person.publicPhone,
+        batch: person.series,
+        department: person.department,
+        university: person.university,
+        category: categoryLabel(person.personType),
+        position: person.position,
+        term: person.term,
+        session: person.committeeSession,
+        linkedin: person.linkedinUrl,
+        github: person.githubUrl,
+        facebook: person.facebookUrl,
+        website: person.websiteUrl,
+      })));
       setMembers(membersRes.data || []);
       setLoading(false);
     };
@@ -92,14 +122,28 @@ const Team = () => {
     });
   }, [members, search, deptFilter, batchFilter]);
 
-  const selectClass = "px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";
+  const selectClass = "rounded-xl border border-input bg-secondary/60 px-3 py-2 text-sm text-foreground transition focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/[0.15]";
 
   return (
     <Layout>
       <SEO title="Executive Board & Team | RUET IoT Club" description="Meet the executive board, advisors, and core team members leading RUET IoT Club's research and community initiatives." path="/team" />
       <section className="py-24">
         <div className="container max-w-6xl">
-          <SectionHeading title="Our People" subtitle="Meet the team and members driving RUET IoT Club" />
+          <SectionHeading level={1} title="Our People" subtitle="Meet the team and members driving RUET IoT Club" />
+
+          <div className="mx-auto mb-10 grid max-w-4xl grid-cols-2 gap-3 md:grid-cols-4">
+            {[
+              ["Executive Board", team.filter((person) => person.category === "Executive Board").length],
+              ["Advisors & Mentors", team.filter((person) => person.category === "Advisory Board").length],
+              ["Core Team", team.filter((person) => person.category === "Core Team").length],
+              ["Approved Members", members.length],
+            ].map(([label, count]) => (
+              <div key={String(label)} className="rounded-xl border border-border/60 bg-card/45 p-4 text-center">
+                <p className="text-2xl font-bold text-primary">{count}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+              </div>
+            ))}
+          </div>
 
           {/* Tab Switcher */}
           <div className="flex justify-center gap-2 mb-10">
@@ -217,6 +261,11 @@ const Team = () => {
                           </div>
                           {member.phone && (
                             <p className="text-[11px] text-muted-foreground mt-2 font-mono">{member.phone}</p>
+                          )}
+                          {member.slug && (
+                            <Link to={`/people/${member.slug}`} className="mt-3 inline-block text-xs font-semibold text-primary hover:underline">
+                              View profile
+                            </Link>
                           )}
                         </motion.div>
                       ))}

@@ -1,0 +1,52 @@
+{
+  "captured_date": "2026-10-10",
+  "site": "https://ruetiotclub.org",
+  "worker": "ruet-iot-club-platform-production",
+  "version_prefix": "b1981c43",
+  "deployment_message": "Add dedicated R2-backed Gallery administration",
+  "deployment_source": "Wrangler",
+  "traffic_percent": 100,
+  "git_integration": false,
+  "compatibility_date": "2026-08-20",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "bindings": {
+    "ASSETS": "Static assets",
+    "DB": {
+      "type": "D1",
+      "name": "ruet-iot-club-production",
+      "id": "2a3a1234-60ba-4bed-974a-c2a0c08beb68"
+    },
+    "STORAGE": {
+      "type": "R2",
+      "name": "ruet-iot-club-production"
+    },
+    "EMAIL": "Email Service"
+  },
+  "secret_names": [
+    "BOOTSTRAP_ADMIN_SECRET",
+    "SESSION_SECRET",
+    "TURNSTILE_SECRET"
+  ],
+  "cron": "*/5 * * * *",
+  "observability": {
+    "logs": true,
+    "log_sampling": 1,
+    "traces": true,
+    "trace_sampling": 0.1
+  },
+  "variables": {
+    "ENVIRONMENT": "production",
+    "SITE_URL": "https://ruetiotclub.org",
+    "FRONTEND_ORIGIN": "https://ruetiotclub.org",
+    "EMAIL_FROM": "no-reply@ruetiotclub.org",
+    "CONTACT_AUTHORITY_EMAIL": "ruetiotclub@gmail.com",
+    "COLLABORATION_EMAIL": "ruetiotclub@gmail.com",
+    "MEMBERSHIP_EMAIL": "ruetiotclub@gmail.com",
+    "PROJECT_EMAIL": "ruetiotclub@gmail.com",
+    "RESEARCH_EMAIL": "ruetiotclub@gmail.com",
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAEXg7pRaP0uW2NHA"
+  },
+  "worker_sha256": "596d0149123882bd4007b88001d05969c8f308d9bda292b970f53ce4d869c3a9"
+}

@@ -1,130 +1,79 @@
 import { useEffect, useState } from "react";
-import { getOptimizedImageUrl } from "@/lib/imageUtils";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { ArrowRight, Layers3, RefreshCw } from "lucide-react";
+import { Link } from "react-router-dom";
 import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
-import { ExternalLink, Github, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { apiRequest } from "@/lib/api";
+import type { ProjectLifecycleStatus, ProjectRecord } from "@/lib/projects";
+import { projectStatusLabel } from "@/lib/projects";
+
+type Filter = "ALL" | ProjectLifecycleStatus;
+
+const statusStyle: Record<ProjectLifecycleStatus, string> = {
+  PLANNED: "border-blue-400/20 bg-blue-400/10 text-blue-300",
+  ONGOING: "border-amber-400/20 bg-amber-400/10 text-amber-300",
+  COMPLETED: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+};
 
 const Projects = () => {
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("All");
-  const categories = ["All", "Ongoing", "Completed", "Planned"];
-  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [error, setError] = useState("");
+  const [filter, setFilter] = useState<Filter>("ALL");
 
-  useEffect(() => {
-    const fetchProjects = async () => {
-      const { data } = await supabase.from("projects").select("*").order("created_at", { ascending: false });
-      setProjects(data || []);
+  const load = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const result = await apiRequest<{ items: ProjectRecord[]; count: number }>("/projects");
+      setProjects(result.items);
+    } catch {
+      setError("Projects could not be loaded right now. Please try again.");
+    } finally {
       setLoading(false);
-    };
-    fetchProjects();
-  }, []);
+    }
+  };
 
-  const filtered = filter === "All" ? projects : projects.filter((p) => p.status?.toLowerCase() === filter.toLowerCase());
+  useEffect(() => { void load(); }, []);
+  const filtered = filter === "ALL" ? projects : projects.filter((project) => project.projectStatus === filter);
 
-  return (
-    <Layout>
-      <SEO title="IoT Projects | RUET IoT Club" description="Explore student-built Internet of Things, embedded systems, and AI projects developed by members of RUET IoT Club." path="/projects" />
-      <section className="py-20">
-        <div className="container">
-          <SectionHeading title="Projects" subtitle="Explore our innovations and ongoing research" />
-
-          <div className="flex flex-wrap justify-center gap-2 mb-10">
-            {categories.map((cat) => (
-              <button key={cat} onClick={() => setFilter(cat)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  filter === cat ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
-                }`}>
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          {loading ? (
-            <p className="text-center text-muted-foreground">Loading projects...</p>
-          ) : filtered.length === 0 ? (
-            <p className="text-center text-muted-foreground">No projects found.</p>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {filtered.map((project, i) => (
-                <motion.div key={project.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="rounded-xl glass hover:border-primary/30 transition-colors group overflow-hidden flex flex-col h-[360px]">
-                  <div className="h-40 bg-muted flex-shrink-0">
-                    {project.image_url ? (
-                      <img src={getOptimizedImageUrl(project.image_url, { width: 400, height: 200 })} alt={project.title} className="w-full h-full object-cover" loading="lazy" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">No Image</div>
-                    )}
-                  </div>
-                  <div className="p-6 flex flex-col flex-1">
-                    <div className="flex items-center gap-2 mb-3">
-                      {project.category && <span className="text-xs font-mono px-2 py-1 rounded bg-primary/10 text-primary">{project.category}</span>}
-                      <span className={`text-xs font-mono px-2 py-1 rounded ${
-                        project.status === "completed" || project.status === "published" ? "bg-green-500/10 text-green-400" :
-                        project.status === "ongoing" ? "bg-yellow-500/10 text-yellow-400" :
-                        "bg-blue-500/10 text-blue-400"
-                      }`}>{project.status}</span>
-                    </div>
-                    <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors line-clamp-1">{project.title}</h3>
-                    {project.description && <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{project.description}</p>}
-                    <div className="flex gap-3 mt-auto">
-                      {project.github_link && (
-                        <a href={project.github_link} target="_blank" rel="noopener noreferrer"
-                          className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
-                          <Github size={12} /> Code
-                        </a>
-                      )}
-                      <button onClick={() => setSelectedProject(project)}
-                        className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
-                        <ExternalLink size={12} /> Details
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
+  return <Layout>
+    <SEO title="IoT Projects | RUET IoT Club" description="Explore verified Internet of Things, embedded systems, and AI projects developed by RUET IoT Club." path="/projects" />
+    <section className="py-20 sm:py-24">
+      <div className="container">
+        <SectionHeading level={1} title="Projects" subtitle="Student-led ideas engineered into practical IoT solutions" />
+        <div className="mb-10 flex flex-wrap justify-center gap-2" aria-label="Filter projects by status">
+          {(["ALL", "ONGOING", "COMPLETED", "PLANNED"] as const).map((value) => <button key={value} type="button" onClick={() => setFilter(value)} aria-pressed={filter === value} className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${filter === value ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}>{value === "ALL" ? "All" : projectStatusLabel(value)}</button>)}
         </div>
-      </section>
 
-      <Dialog open={!!selectedProject} onOpenChange={(open) => !open && setSelectedProject(null)}>
-        <DialogContent className="max-w-lg">
-          {selectedProject && (
-            <>
-              {selectedProject.image_url && (
-                <img src={getOptimizedImageUrl(selectedProject.image_url, { width: 600, height: 300 })} alt={selectedProject.title} className="w-full h-48 object-cover rounded-md mb-4" />
-              )}
-              <DialogHeader>
-                <DialogTitle>{selectedProject.title}</DialogTitle>
-                <div className="flex items-center gap-2 pt-2">
-                  {selectedProject.category && <span className="text-xs font-mono px-2 py-1 rounded bg-primary/10 text-primary">{selectedProject.category}</span>}
-                  <span className={`text-xs font-mono px-2 py-1 rounded ${
-                    selectedProject.status === "completed" || selectedProject.status === "published" ? "bg-green-500/10 text-green-400" :
-                    selectedProject.status === "ongoing" ? "bg-yellow-500/10 text-yellow-400" :
-                    "bg-blue-500/10 text-blue-400"
-                  }`}>{selectedProject.status}</span>
-                </div>
-                <DialogDescription className="pt-3 whitespace-pre-wrap">
-                  {selectedProject.description || "No description available."}
-                </DialogDescription>
-              </DialogHeader>
-              {selectedProject.github_link && (
-                <a href={selectedProject.github_link} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-sm text-primary hover:underline mt-2">
-                  <Github size={14} /> View on GitHub
-                </a>
-              )}
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-    </Layout>
-  );
+        {loading ? <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-2 lg:grid-cols-3" aria-label="Loading projects">{[1, 2, 3].map((value) => <div key={value} className="overflow-hidden rounded-2xl border border-border bg-card/30"><div className="aspect-[16/9] animate-pulse bg-secondary/60" /><div className="space-y-3 p-6"><div className="h-4 w-24 animate-pulse rounded bg-secondary/60" /><div className="h-6 w-4/5 animate-pulse rounded bg-secondary/60" /><div className="h-4 animate-pulse rounded bg-secondary/60" /><div className="h-4 w-2/3 animate-pulse rounded bg-secondary/60" /></div></div>)}</div>
+        : error ? <div role="alert" className="mx-auto max-w-xl rounded-2xl border border-red-400/20 bg-red-400/[0.04] p-8 text-center"><h2 className="font-semibold">Unable to load projects</h2><p className="mt-2 text-sm text-muted-foreground">{error}</p><button type="button" onClick={() => void load()} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"><RefreshCw size={15} />Try Again</button></div>
+        : filtered.length === 0 ? <div className="mx-auto max-w-xl rounded-2xl border border-border bg-card/30 p-8 text-center"><Layers3 className="mx-auto text-primary" size={30} /><h2 className="mt-4 font-semibold">{projects.length ? `No ${filter.toLowerCase()} projects yet` : "Project portfolio is being updated"}</h2><p className="mt-2 text-sm text-muted-foreground">Only reviewed and published RUET IoT Club projects appear here. You can submit a project idea for review today.</p></div>
+        : <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-2 lg:grid-cols-3">{filtered.map((project, index) => <motion.article key={project.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.04 }} className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card/45 transition duration-300 hover:-translate-y-1 hover:border-primary/35 hover:shadow-[0_16px_50px_-28px_hsl(var(--primary)/0.65)]">
+          <Link to={`/projects/${encodeURIComponent(project.slug)}`} className="block overflow-hidden" aria-label={`View ${project.title}`}>
+            <ProjectCardImage project={project} />
+          </Link>
+          <div className="flex flex-1 flex-col p-6">
+            <div className="mb-3 flex flex-wrap items-center gap-2"><span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${statusStyle[project.projectStatus]}`}>{projectStatusLabel(project.projectStatus)}</span>{project.category && <span className="rounded-full border border-primary/15 bg-primary/[0.06] px-2.5 py-1 text-[11px] font-medium text-primary">{project.category}</span>}</div>
+            <h2 className="font-display text-xl font-semibold leading-tight transition-colors group-hover:text-primary"><Link to={`/projects/${encodeURIComponent(project.slug)}`}>{project.title}</Link></h2>
+            <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-foreground">{project.shortDescription}</p>
+            {project.technologies.length > 0 && <div className="mt-4 flex flex-wrap gap-1.5">{project.technologies.slice(0, 3).map((technology) => <span key={technology} className="rounded bg-secondary px-2 py-1 text-[10px] text-muted-foreground">{technology}</span>)}</div>}
+            <Link to={`/projects/${encodeURIComponent(project.slug)}`} className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary">View Project <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" /></Link>
+          </div>
+        </motion.article>)}</div>}
+
+        <div className="mx-auto mt-14 max-w-3xl rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-accent/5 p-8 text-center"><h2 className="font-display text-2xl font-bold">Have a Project Idea?</h2><p className="mx-auto mt-3 max-w-xl text-muted-foreground">Share your idea with RUET IoT Club. Students, researchers, innovators, and external collaborators are welcome.</p><Link to="/projects/submit" className="mt-6 inline-flex rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground">Submit Project Idea</Link></div>
+      </div>
+    </section>
+  </Layout>;
 };
 
 export default Projects;
+
+function ProjectCardImage({ project }: { project: ProjectRecord }) {
+  const [failed, setFailed] = useState(false);
+  if (project.coverImage && !failed) return <img src={project.coverImage.url} alt={project.coverImage.alt?.trim() || project.title} loading="lazy" onError={() => setFailed(true)} className="aspect-[16/9] w-full object-cover transition duration-500 group-hover:scale-[1.025]" />;
+  return <div className="circuit-pattern flex aspect-[16/9] items-center justify-center border-b border-primary/10 bg-gradient-to-br from-primary/[0.08] via-card to-background" aria-label={failed ? "Project image unavailable" : "No project image provided"}><span className="flex size-16 items-center justify-center rounded-full border border-primary/20 bg-background/60 text-primary"><Layers3 size={28} /></span></div>;
+}

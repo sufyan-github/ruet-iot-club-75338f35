@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Send } from "lucide-react";
 import Layout from "@/components/Layout";
 import SectionHeading from "@/components/SectionHeading";
-import { supabase } from "@/integrations/supabase/client";
+import { cloudflareData } from "@/integrations/cloudflare/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -34,7 +34,7 @@ const BlogWrite = () => {
 
   useEffect(() => {
     if (user) {
-      supabase
+      cloudflareData
         .from("blog_posts")
         .select("*")
         .eq("author_id", user.id)
@@ -49,7 +49,7 @@ const BlogWrite = () => {
     if (!title.trim() || !content.trim()) { toast.error("Title and content are required"); return; }
     setSubmitting(true);
 
-    const { error } = await supabase.from("blog_posts").insert({
+    const { error } = await cloudflareData.from("blog_posts").insert({
       title: title.trim(),
       content: content.trim(),
       author_id: user.id,
@@ -65,7 +65,7 @@ const BlogWrite = () => {
       setContent("");
       setCategory("");
       // Refresh my posts
-      const { data } = await supabase.from("blog_posts").select("*").eq("author_id", user.id).order("created_at", { ascending: false });
+      const { data } = await cloudflareData.from("blog_posts").select("*").eq("author_id", user.id).order("created_at", { ascending: false });
       setMyPosts(data || []);
     }
     setSubmitting(false);
@@ -77,7 +77,7 @@ const BlogWrite = () => {
     <Layout>
       <section className="py-20">
         <div className="container max-w-3xl">
-          <SectionHeading title="Write a Blog Post" subtitle="Share your knowledge with the community. Posts will be reviewed by an admin before publishing." />
+          <SectionHeading level={1} title="Write a Blog Post" subtitle="Share your knowledge with the community. Posts will be reviewed by an admin before publishing." />
 
           <motion.form
             initial={{ opacity: 0, y: 20 }}

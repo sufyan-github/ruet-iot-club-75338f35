@@ -3,17 +3,39 @@ import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import SectionHeading from "@/components/SectionHeading";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { cloudflareData } from "@/integrations/cloudflare/client";
+import { apiRequest } from "@/lib/api";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Pencil, Save, X, Award, ExternalLink } from "lucide-react";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/cloudflare/types";
+
+interface UserSubmission {
+  id: string;
+  referenceCode: string;
+  type: string;
+  title: string;
+  status: string;
+  updatedAt: string;
+}
+
+interface UserNotification {
+  id: string;
+  title: string;
+  message: string;
+  actionUrl: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
 
 const Dashboard = () => {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, csrfToken } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Tables<"profiles"> | null>(null);
   const [certificates, setCertificates] = useState<any[]>([]);
+  const [submissions, setSubmissions] = useState<UserSubmission[]>([]);
+  const [notifications, setNotifications] = useState<UserNotification[]>([]);
+  const [learning, setLearning] = useState<{courses:any[];events:any[]}>({courses:[],events:[]});
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     full_name: "",
@@ -34,7 +56,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (user) {
-      supabase
+      cloudflareData
         .from("profiles")
         .select("*")
         .eq("user_id", user.id)
@@ -57,7 +79,7 @@ const Dashboard = () => {
           }
         });
 
-      supabase
+      cloudflareData
         .from("certificates")
         .select("*, courses(title, instructor)")
         .eq("user_id", user.id)
@@ -65,12 +87,18 @@ const Dashboard = () => {
         .then(({ data }) => {
           setCertificates(data || []);
         });
+
+      void Promise.all([
+        apiRequest<UserSubmission[]>("/submissions/mine").then(setSubmissions),
+        apiRequest<UserNotification[]>("/notifications").then(setNotifications),
+        apiRequest<any>("/learning/dashboard").then((data)=>{setLearning({courses:data.courses||[],events:data.events||[]});if(data.certificates?.length)setCertificates(data.certificates.map((cert:any)=>({id:cert.id,certificate_number:cert.certificate_number,issued_at:cert.issued_at,status:cert.status,courses:{title:cert.course_title}})));}),
+      ]).catch(() => toast.error("Some dashboard activity could not be loaded."));
     }
   }, [user]);
 
   const handleSave = async () => {
     if (!user) return;
-    const { error } = await supabase
+    const { error } = await cloudflareData
       .from("profiles")
       .update({
         full_name: form.full_name,
@@ -91,7 +119,7 @@ const Dashboard = () => {
       toast.success("Profile updated!");
       setEditing(false);
       // Refresh profile
-      const { data } = await supabase.from("profiles").select("*").eq("user_id", user.id).single();
+      const { data } = await cloudflareData.from("profiles").select("*").eq("user_id", user.id).single();
       setProfile(data);
     }
   };
@@ -101,24 +129,37 @@ const Dashboard = () => {
     toast.success("Signed out");
     navigate("/");
   };
+  const requestEventCertificate = async (eventId: string) => {
+    if (!csrfToken) return toast.error("Your session is not ready. Refresh and try again.");
+    try {
+      await apiRequest(`/learning/events/${eventId}/certificate-request`, { method: "POST", csrfToken, body: {} });
+      toast.success("Certificate request submitted for review.");
+      const data = await apiRequest<any>("/learning/dashboard");
+      setLearning({ courses: data.courses || [], events: data.events || [] });
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Certificate request failed."); }
+  };
 
   if (loading || !user) return null;
 
   const inputClass =
-    "w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";
+    "w-full rounded-xl border border-input bg-secondary/60 px-3.5 py-2.5 text-sm text-foreground shadow-inner shadow-black/10 transition placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/[0.15]";
 
   return (
     <Layout>
       <section className="py-20">
         <div className="container max-w-4xl">
           <div className="flex items-center justify-between mb-8">
-            <SectionHeading title="Dashboard" align="left" />
-            <button
-              onClick={handleSignOut}
-              className="px-4 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm hover:bg-secondary/80 transition-colors"
-            >
-              Sign Out
-            </button>
+            <SectionHeading level={1} title="Dashboard" align="left" />
+            <div className="flex flex-wrap justify-end gap-2">
+              <Link to="/account/security" className="px-4 py-2 rounded-lg border border-border text-sm hover:border-primary/40 transition-colors">Account & password</Link>
+              {user.permissions.includes("admin.access") && <Link to="/admin" className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm">Administration</Link>}
+              <button
+                onClick={handleSignOut}
+                className="px-4 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm hover:bg-secondary/80 transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
@@ -230,20 +271,6 @@ const Dashboard = () => {
                   <ProfileRow label="Skills" value={profile?.skills} />
                   <ProfileRow label="LinkedIn" value={profile?.linkedin} />
                   <ProfileRow label="GitHub" value={profile?.github} />
-                  <div>
-                    <span className="text-muted-foreground">Status:</span>{" "}
-                    <span
-                      className={`font-mono text-xs px-2 py-0.5 rounded ${
-                        profile?.status === "approved"
-                          ? "bg-green-500/10 text-green-400"
-                          : profile?.status === "rejected"
-                          ? "bg-destructive/10 text-destructive"
-                          : "bg-yellow-500/10 text-yellow-400"
-                      }`}
-                    >
-                      {profile?.status || "pending"}
-                    </span>
-                  </div>
                 </div>
               )}
             </motion.div>
@@ -255,7 +282,7 @@ const Dashboard = () => {
               transition={{ delay: 0.1 }}
               className="p-6 rounded-xl glass border-primary/20"
             >
-              <h3 className="font-display text-sm font-bold tracking-wider text-primary mb-4">Member ID Card</h3>
+              <h3 className="font-display text-sm font-bold tracking-wider text-primary mb-4">Membership & volunteering</h3>
               <div className="p-5 rounded-xl bg-gradient-to-br from-primary/10 via-accent/5 to-primary/10 border border-primary/20 text-center">
                 <div className="w-16 h-16 rounded-full bg-primary/20 mx-auto mb-3 flex items-center justify-center">
                   <span className="font-display text-xl font-bold text-primary">
@@ -267,19 +294,29 @@ const Dashboard = () => {
                 </div>
                 <h4 className="font-semibold text-foreground">{profile?.full_name}</h4>
                 <p className="text-xs text-muted-foreground">{profile?.department || "—"}</p>
-                {(profile as any)?.membership_id ? (
-                  <p className="text-sm font-mono font-bold text-primary mt-3 px-3 py-1.5 rounded-lg bg-primary/10 inline-block">
-                    {(profile as any).membership_id}
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground mt-3 italic">
-                    {profile?.status === "approved" ? "ID being assigned..." : "Membership ID will be assigned upon approval"}
-                  </p>
-                )}
-                <p className="text-xs text-muted-foreground mt-2">RUET IoT Club</p>
+                <p className="text-xs text-muted-foreground mt-3">Authoritative applications, membership IDs, volunteer IDs, renewals, and closure history are stored separately from this compatibility profile.</p>
+                <Link to="/dashboard/membership" className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Open membership workspace</Link>
               </div>
             </motion.div>
           </div>
+
+          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mt-6 p-6 rounded-xl glass">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div><h3 className="font-display text-sm font-bold tracking-wider text-primary">My submissions</h3><p className="mt-1 text-sm text-muted-foreground">Track proposals and requests stored securely in Cloudflare D1.</p></div>
+              <div className="flex gap-2"><Link to="/projects/submit" className="rounded-lg border border-border px-3 py-2 text-xs hover:border-primary/40">Submit project</Link><Link to="/research/submit" className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground">Submit research</Link></div>
+            </div>
+            <div className="mt-4 space-y-2">
+              {submissions.length === 0 ? <p className="text-sm text-muted-foreground">No proposals submitted from this account yet.</p> : submissions.map((submission) => <article key={submission.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 p-4 text-sm"><div><strong>{submission.title}</strong><p className="mt-1 text-xs text-muted-foreground">{submission.type} · {submission.referenceCode} · updated {new Date(submission.updatedAt).toLocaleString()}</p></div><span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{submission.status.replace(/_/g, " ")}</span></article>)}
+            </div>
+          </motion.section>
+
+          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="mt-6 p-6 rounded-xl glass">
+            <h3 className="font-display text-sm font-bold tracking-wider text-primary">Notifications</h3>
+            <div className="mt-4 space-y-2">{notifications.length === 0 ? <p className="text-sm text-muted-foreground">No notifications yet.</p> : notifications.slice(0, 8).map((notification) => <article key={notification.id} className={`rounded-lg border p-3 text-sm ${notification.readAt ? "border-border/50" : "border-primary/30 bg-primary/5"}`}><div className="flex flex-wrap justify-between gap-2"><strong>{notification.title}</strong><time className="text-xs text-muted-foreground">{new Date(notification.createdAt).toLocaleString()}</time></div><p className="mt-1 text-muted-foreground">{notification.message}</p>{notification.actionUrl && <Link className="mt-2 inline-block text-xs text-primary hover:underline" to={notification.actionUrl}>Open</Link>}</article>)}</div>
+          </motion.section>
+
+          <motion.section initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} className="mt-6 rounded-xl glass p-6"><h3 className="font-display text-sm font-bold tracking-wider text-primary">My Courses</h3>{learning.courses.length===0?<p className="mt-4 text-sm text-muted-foreground">No course enrollments yet.</p>:<div className="mt-4 grid gap-3 md:grid-cols-2">{learning.courses.map(course=><Link key={course.id} to={`/courses/${course.course_id}`} className="rounded-xl border border-border p-4 hover:border-primary/40"><div className="flex justify-between gap-2"><strong>{course.title}</strong><span className="text-xs text-primary">{course.progress}%</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary" style={{width:`${course.progress}%`}}/></div><p className="mt-2 text-xs text-muted-foreground">{String(course.enrollment_status).replace(/_/g," ")} · {course.completed_lessons}/{course.total_lessons} lessons</p></Link>)}</div>}</motion.section>
+          <motion.section initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} className="mt-6 rounded-xl glass p-6"><h3 className="font-display text-sm font-bold tracking-wider text-primary">My Events</h3>{learning.events.length===0?<p className="mt-4 text-sm text-muted-foreground">No event registrations yet.</p>:<div className="mt-4 space-y-2">{learning.events.map(event=><div key={event.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-4"><div><Link to={`/events/${event.slug}`}><strong className="hover:text-primary">{event.title}</strong></Link><p className="mt-1 text-xs text-muted-foreground">{event.registration_status} · Payment {event.payment_status} · Attendance {event.attendance_status}</p>{event.location_type!=="PHYSICAL"&&event.registration_status==="APPROVED"&&event.online_url&&<a href={event.online_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs text-primary hover:underline">Open {event.online_platform||"online event"}</a>}</div><div className="flex items-center gap-2">{Boolean(event.certificate_eligible)&&!event.certificate_status&&<button onClick={()=>void requestEventCertificate(event.event_id)} className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground">Request certificate</button>}{event.certificate_status&&<span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Certificate {event.certificate_status}</span>}</div></div>)}</div>}</motion.section>
 
           {/* My Certificates */}
           <motion.div
@@ -293,7 +330,7 @@ const Dashboard = () => {
             </h3>
             {certificates.length === 0 ? (
               <p className="text-sm text-muted-foreground italic">
-                No certificates yet. Complete a course to earn one!
+                No certificates yet. Complete a course and submit a certificate request.
               </p>
             ) : (
               <div className="space-y-3">

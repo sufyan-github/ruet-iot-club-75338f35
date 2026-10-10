@@ -1,43 +1,90 @@
-import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
+import { cloudflareData } from "@/integrations/cloudflare/client";
 import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
-import { Award, Search, CheckCircle, XCircle, Calendar, BookOpen, User } from "lucide-react";
-import { Link } from "react-router-dom";
+import {
+  Award,
+  Search,
+  CheckCircle,
+  XCircle,
+  Calendar,
+  BookOpen,
+  User,
+} from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { apiRequest } from "@/lib/api";
 
 const VerifyCertificate = () => {
-  const [query, setQuery] = useState("");
+  const { certificateId } = useParams();
+  const [query, setQuery] = useState(certificateId || "");
   const [result, setResult] = useState<any>(null);
   const [notFound, setNotFound] = useState(false);
   const [searching, setSearching] = useState(false);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = query.trim();
+  const verify = async (value: string) => {
+    const trimmed = value.trim();
     if (!trimmed) return;
 
     setSearching(true);
     setResult(null);
     setNotFound(false);
 
-    const { data } = await supabase
-      .from("certificates")
-      .select("*, courses(title, instructor)")
-      .eq("certificate_number", trimmed)
-      .single();
-
-    if (data) {
-      const { data: holder } = await supabase.rpc("get_certificate_holder", { _user_id: data.user_id });
-      setResult({ ...data, profile: (holder && holder[0]) || null });
-    } else {
-      setNotFound(true);
+    try {
+      const data = await apiRequest<any>(
+        `/certificates/${encodeURIComponent(trimmed)}`,
+      );
+      setResult({
+        id: data.id,
+        certificate_number: data.certificateNumber,
+        issued_at: data.issuedAt,
+        status: data.status,
+        profile: { full_name: data.student },
+        courses: { title: data.course },
+        issuing_organization: data.issuingOrganization,
+      });
+    } catch {
+      const { data } = await cloudflareData
+        .from("certificates")
+        .select("*")
+        .eq("certificate_number", trimmed)
+        .single();
+      if (data) {
+        const [{ data: holder }, { data: course }] = await Promise.all([
+          cloudflareData.rpc("get_certificate_holder", {
+            _user_id: data.user_id,
+          }),
+          cloudflareData
+            .from("courses")
+            .select("*")
+            .eq("id", data.course_id)
+            .single(),
+        ]);
+        setResult({
+          ...data,
+          profile: (holder && holder[0]) || null,
+          courses: course,
+        });
+      } else setNotFound(true);
     }
     setSearching(false);
   };
 
+  useEffect(() => {
+    if (certificateId) void verify(certificateId);
+  }, [certificateId]);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await verify(query);
+  };
+
   return (
     <Layout>
-      <SEO title="Verify Certificate | RUET IoT Club" description="Verify the authenticity of certificates issued by RUET IoT Club for completed courses and events." path="/verify" />
+      <SEO
+        title="Verify Certificate | RUET IoT Club"
+        description="Verify the authenticity of certificates issued by RUET IoT Club for completed courses and events."
+        path="/verify"
+      />
       <section className="py-20">
         <div className="container max-w-2xl">
           <div className="text-center mb-10">
@@ -54,9 +101,10 @@ const VerifyCertificate = () => {
           <form onSubmit={handleSearch} className="flex gap-2 mb-8">
             <input
               type="text"
+              aria-label="Certificate number"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="e.g. CERT-2026-00001"
+              placeholder="e.g. RIOT-2026-000001"
               maxLength={50}
               className="flex-1 px-4 py-3 rounded-lg border border-border bg-secondary text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono"
             />
@@ -75,24 +123,43 @@ const VerifyCertificate = () => {
             <div className="p-6 rounded-xl glass border border-green-500/20">
               <div className="flex items-center gap-2 mb-4">
                 <CheckCircle className="text-green-500" size={20} />
-                <span className="text-sm font-semibold text-green-500">Certificate Verified</span>
+                <span
+                  className={`text-sm font-semibold ${result.status === "REVOKED" ? "text-destructive" : "text-green-500"}`}
+                >
+                  {result.status === "REVOKED"
+                    ? "Certificate Revoked"
+                    : "Certificate Verified"}
+                </span>
               </div>
               <div className="space-y-3 text-sm">
                 <div className="flex items-center gap-2">
                   <User size={14} className="text-muted-foreground" />
                   <span className="text-muted-foreground">Recipient:</span>
-                  <span className="text-foreground font-medium">{result.profile?.full_name || "—"}</span>
+                  <span className="text-foreground font-medium">
+                    {result.profile?.full_name || "—"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle size={14} className="text-muted-foreground" />
+                  <span className="text-muted-foreground">Issued by:</span>
+                  <span className="text-foreground font-medium">
+                    {result.issuing_organization || "RUET IoT Club"}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <BookOpen size={14} className="text-muted-foreground" />
                   <span className="text-muted-foreground">Course:</span>
-                  <span className="text-foreground font-medium">{result.courses?.title || "—"}</span>
+                  <span className="text-foreground font-medium">
+                    {result.courses?.title || "—"}
+                  </span>
                 </div>
                 {result.courses?.instructor && (
                   <div className="flex items-center gap-2">
                     <User size={14} className="text-muted-foreground" />
                     <span className="text-muted-foreground">Instructor:</span>
-                    <span className="text-foreground font-medium">{result.courses.instructor}</span>
+                    <span className="text-foreground font-medium">
+                      {result.courses.instructor}
+                    </span>
                   </div>
                 )}
                 <div className="flex items-center gap-2">
@@ -109,7 +176,9 @@ const VerifyCertificate = () => {
                 <div className="flex items-center gap-2">
                   <Award size={14} className="text-muted-foreground" />
                   <span className="text-muted-foreground">Certificate #:</span>
-                  <span className="text-foreground font-mono font-medium">{result.certificate_number}</span>
+                  <span className="text-foreground font-mono font-medium">
+                    {result.certificate_number}
+                  </span>
                 </div>
               </div>
               <Link
@@ -124,7 +193,9 @@ const VerifyCertificate = () => {
           {notFound && (
             <div className="p-6 rounded-xl glass border border-destructive/20 text-center">
               <XCircle className="mx-auto text-destructive mb-2" size={28} />
-              <p className="text-sm font-semibold text-destructive">Certificate Not Found</p>
+              <p className="text-sm font-semibold text-destructive">
+                Certificate Not Found
+              </p>
               <p className="text-xs text-muted-foreground mt-1">
                 Please check the certificate number and try again.
               </p>

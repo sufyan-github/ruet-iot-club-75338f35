@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { cloudflareData } from "@/integrations/cloudflare/client";
 import { toast } from "sonner";
 import { Upload, X, Image } from "lucide-react";
 
@@ -31,14 +31,14 @@ const ImageUpload = ({ currentUrl, onUpload, folder }: ImageUploadProps) => {
     const ext = file.name.split(".").pop();
     const path = `${folder}/${Date.now()}.${ext}`;
 
-    const { error } = await supabase.storage.from("club-images").upload(path, file);
+    const { error } = await cloudflareData.storage.from("club-images").upload(path, file);
     if (error) {
       toast.error("Upload failed: " + error.message);
       setUploading(false);
       return;
     }
 
-    const { data: urlData } = supabase.storage.from("club-images").getPublicUrl(path);
+    const { data: urlData } = cloudflareData.storage.from("club-images").getPublicUrl(path);
     setPreview(urlData.publicUrl);
     onUpload(urlData.publicUrl);
     setUploading(false);

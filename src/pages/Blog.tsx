@@ -1,216 +1,304 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  BookOpen,
+  Calendar,
+  PenLine,
+  Search,
+  Tag,
+  UserRound,
+} from "lucide-react";
 import { Link } from "react-router-dom";
-import { Calendar, ArrowRight, PenLine, BookOpen, Tag } from "lucide-react";
 import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiRequest } from "@/lib/api";
 
-const CATEGORIES = [
-  "All",
-  "IoT",
-  "Embedded Systems",
-  "Machine Learning",
-  "Web Development",
-  "Robotics",
-  "Tutorial",
-  "Project Showcase",
-  "General",
-];
+interface BlogSummary {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  featuredImageUrl: string | null;
+  featuredImageAlt: string;
+  authorName: string;
+  category: string;
+  tags: string[];
+  publicationDate: string;
+  views: number;
+}
+interface BlogPage {
+  items: BlogSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+  categories: string[];
+}
 
-const Blog = () => {
+export default function Blog() {
   const { user } = useAuth();
-  const [posts, setPosts] = useState<any[]>([]);
+  const [data, setData] = useState<BlogPage | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState("All");
-
-  useEffect(() => {
-    const fetchPosts = async () => {
-      const { data } = await supabase
-        .from("blog_posts")
-        .select("*")
-        .eq("published", true)
-        .order("created_at", { ascending: false });
-      setPosts(data || []);
+  const [error, setError] = useState("");
+  const [category, setCategory] = useState("");
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    const params = new URLSearchParams({
+      q: query,
+      category,
+      page: String(page),
+      pageSize: "10",
+    });
+    try {
+      setData(await apiRequest<BlogPage>(`/blogs?${params}`));
+    } catch (next) {
+      setError(
+        next instanceof Error
+          ? next.message
+          : "The blog is temporarily unavailable.",
+      );
+    } finally {
       setLoading(false);
-    };
-    fetchPosts();
-  }, []);
-
-  const filtered = activeCategory === "All"
-    ? posts
-    : posts.filter((p) => p.category === activeCategory);
-
-  const featured = filtered[0];
-  const rest = filtered.slice(1);
+    }
+  }, [category, page, query]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 220);
+    return () => window.clearTimeout(timer);
+  }, [load]);
+  const featured = data?.items[0];
+  const rest = data?.items.slice(1) ?? [];
+  const pages = Math.max(1, Math.ceil((data?.total ?? 0) / 10));
 
   return (
     <Layout>
-      <SEO title="Blog — Articles & Tutorials | RUET IoT Club" description="Read articles, tutorials, and project showcases on IoT, embedded systems, robotics, and machine learning by RUET IoT Club members." path="/blog" />
-      <section className="py-24">
+      <SEO
+        title="Blog — Articles & Tutorials | RUET IoT Club"
+        description="Read articles, tutorials, and project showcases on IoT, embedded systems, robotics, and machine learning by RUET IoT Club."
+        path="/blog"
+      />
+      <section className="py-20 md:py-24">
         <div className="container max-w-6xl">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 mb-10">
+          <div className="mb-10 flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-end">
             <div>
               <motion.h1
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-4xl md:text-5xl font-display font-bold tracking-tight text-foreground mb-3"
+                className="font-display text-4xl font-bold tracking-tight md:text-5xl"
               >
                 Blog
               </motion.h1>
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="text-muted-foreground text-lg max-w-md"
-              >
-                Insights, tutorials, and updates from our members
-              </motion.p>
+              <p className="mt-3 max-w-xl text-lg text-muted-foreground">
+                Ideas, practical guides, project stories, and club updates from
+                the RUET IoT community.
+              </p>
             </div>
             {user && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-                <Link
-                  to="/blog/write"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-all glow-border"
-                >
-                  <PenLine size={16} /> Write a Post
-                </Link>
-              </motion.div>
+              <Link
+                to="/blog/write"
+                className="glow-border inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
+              >
+                <PenLine size={16} />
+                Write a Post
+              </Link>
             )}
           </div>
-
-          {/* Category Filter */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="flex flex-wrap gap-2 mb-10"
-          >
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all border ${
-                  activeCategory === cat
-                    ? "bg-primary/15 text-primary border-primary/30"
-                    : "bg-secondary/50 text-muted-foreground border-border hover:text-foreground hover:border-primary/20"
-                }`}
+          <div className="mb-8 grid gap-4 rounded-2xl border border-border bg-card/55 p-4 md:grid-cols-[minmax(0,1fr)_auto]">
+            <label className="relative">
+              <span className="sr-only">Search blog posts</span>
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                size={17}
+              />
+              <input
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search articles…"
+                className="w-full rounded-xl border border-border bg-background/70 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+              />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <FilterButton
+                active={!category}
+                onClick={() => {
+                  setCategory("");
+                  setPage(1);
+                }}
               >
-                {cat}
-              </button>
-            ))}
-          </motion.div>
-
+                All
+              </FilterButton>
+              {(data?.categories ?? []).map((item) => (
+                <FilterButton
+                  key={item}
+                  active={category === item}
+                  onClick={() => {
+                    setCategory(item);
+                    setPage(1);
+                  }}
+                >
+                  {item}
+                </FilterButton>
+              ))}
+            </div>
+          </div>
           {loading ? (
             <div className="space-y-6">
-              <div className="h-72 rounded-2xl bg-secondary/50 animate-pulse" />
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-56 rounded-2xl bg-secondary/50 animate-pulse" />
+              <div className="h-80 animate-pulse rounded-2xl bg-secondary/50" />
+              <div className="grid gap-6 md:grid-cols-3">
+                {[1, 2, 3].map((item) => (
+                  <div
+                    key={item}
+                    className="h-72 animate-pulse rounded-2xl bg-secondary/50"
+                  />
                 ))}
               </div>
             </div>
-          ) : filtered.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="text-center py-28 rounded-2xl glass"
+          ) : error ? (
+            <div
+              role="alert"
+              className="rounded-2xl border border-red-400/20 bg-red-500/5 p-10 text-center"
             >
-              <BookOpen size={48} className="mx-auto text-muted-foreground/40 mb-4" />
-              <p className="text-muted-foreground text-lg mb-2">
-                {activeCategory === "All"
-                  ? "No blog posts yet."
-                  : `No posts in "${activeCategory}" yet.`}
+              <p className="text-red-200">{error}</p>
+              <button
+                type="button"
+                onClick={() => void load()}
+                className="mt-4 text-sm font-semibold text-primary"
+              >
+                Try again
+              </button>
+            </div>
+          ) : !featured ? (
+            <div className="rounded-2xl border border-border bg-card/55 py-24 text-center">
+              <BookOpen
+                className="mx-auto text-muted-foreground/40"
+                size={48}
+              />
+              <p className="mt-4 text-lg text-muted-foreground">
+                No published articles match these filters.
               </p>
-              {user && activeCategory === "All" && (
-                <Link to="/blog/write" className="text-primary hover:underline text-sm inline-block">
-                  Be the first to write one →
-                </Link>
-              )}
-            </motion.div>
+            </div>
           ) : (
             <div className="space-y-10">
-              {/* Featured Post */}
-              {featured && (
-                <motion.article
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="group relative rounded-2xl glass overflow-hidden hover:border-primary/40 transition-all duration-300"
-                >
-                  <Link to={`/blog/${featured.id}`} className="block p-8 md:p-10">
-                    <div className="flex items-center gap-3 mb-4 flex-wrap">
-                      <span className="px-3 py-1 text-xs font-semibold rounded-full bg-primary/15 text-primary border border-primary/20">
-                        Latest
-                      </span>
-                      {featured.category && (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-accent/15 text-accent border border-accent/20">
-                          <Tag size={10} /> {featured.category}
-                        </span>
-                      )}
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Calendar size={12} />
-                        {new Date(featured.created_at).toLocaleDateString("en-US", {
-                          year: "numeric", month: "long", day: "numeric",
-                        })}
-                      </span>
-                    </div>
-                    <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground group-hover:text-primary transition-colors mb-4 leading-tight">
+              <motion.article
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`group overflow-hidden rounded-2xl border border-border bg-card/70 transition hover:border-primary/30 ${featured.featuredImageUrl ? "md:grid md:grid-cols-[1.05fr_1fr]" : ""}`}
+              >
+                {featured.featuredImageUrl && (
+                  <Link
+                    to={`/blog/${featured.slug}`}
+                    className="block min-h-72 overflow-hidden bg-secondary"
+                  >
+                    <img
+                      src={featured.featuredImageUrl}
+                      alt={featured.featuredImageAlt || ""}
+                      className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                    />
+                  </Link>
+                )}
+                <div className="flex flex-col justify-center p-7 md:p-10">
+                  <div className="flex flex-wrap items-center gap-3 text-xs">
+                    <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 font-semibold text-primary">
+                      Latest
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-muted-foreground">
+                      <Tag size={12} />
+                      {featured.category}
+                    </span>
+                  </div>
+                  <Link to={`/blog/${featured.slug}`}>
+                    <h2 className="mt-4 font-display text-2xl font-bold leading-tight transition group-hover:text-primary md:text-3xl">
                       {featured.title}
                     </h2>
-                    <p className="text-muted-foreground leading-relaxed line-clamp-3 max-w-3xl mb-6">
-                      {featured.content?.substring(0, 400)}
-                      {(featured.content?.length || 0) > 400 && "..."}
-                    </p>
-                    <span className="inline-flex items-center gap-2 text-primary text-sm font-semibold group-hover:gap-3 transition-all">
-                      Read article <ArrowRight size={14} />
-                    </span>
                   </Link>
-                  <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
-                </motion.article>
-              )}
-
-              {/* Post Grid */}
+                  <p className="mt-4 line-clamp-3 leading-7 text-muted-foreground">
+                    {featured.excerpt}
+                  </p>
+                  <BlogMeta post={featured} />
+                  <Link
+                    to={`/blog/${featured.slug}`}
+                    className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary"
+                  >
+                    Read article <ArrowRight size={15} />
+                  </Link>
+                </div>
+              </motion.article>
               {rest.length > 0 && (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {rest.map((post, i) => (
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {rest.map((post, index) => (
                     <motion.article
                       key={post.id}
-                      initial={{ opacity: 0, y: 20 }}
+                      initial={{ opacity: 0, y: 18 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 + i * 0.05 }}
-                      className="group flex flex-col rounded-2xl glass hover:border-primary/30 transition-all duration-300 overflow-hidden"
+                      transition={{ delay: index * 0.04 }}
+                      className="group flex overflow-hidden rounded-2xl border border-border bg-card/60 transition hover:-translate-y-1 hover:border-primary/30"
                     >
-                      <Link to={`/blog/${post.id}`} className="flex flex-col flex-1 p-6">
-                        <div className="flex items-center gap-2 mb-3 flex-wrap">
-                          {post.category && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-medium rounded-full bg-accent/10 text-accent border border-accent/15">
-                              <Tag size={9} /> {post.category}
-                            </span>
-                          )}
-                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Calendar size={12} />
-                            {new Date(post.created_at).toLocaleDateString("en-US", {
-                              year: "numeric", month: "short", day: "numeric",
-                            })}
+                      <Link
+                        to={`/blog/${post.slug}`}
+                        className="flex w-full flex-col"
+                      >
+                        {post.featuredImageUrl && (
+                          <div className="aspect-[16/9] overflow-hidden bg-secondary">
+                            <img
+                              src={post.featuredImageUrl}
+                              alt={post.featuredImageAlt || ""}
+                              loading="lazy"
+                              className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                            />
+                          </div>
+                        )}
+                        <div className="flex flex-1 flex-col p-6">
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
+                            <Tag size={11} />
+                            {post.category}
+                          </span>
+                          <h2 className="mt-3 line-clamp-2 font-display text-xl font-semibold leading-snug transition group-hover:text-primary">
+                            {post.title}
+                          </h2>
+                          <p className="mt-3 line-clamp-3 flex-1 text-sm leading-6 text-muted-foreground">
+                            {post.excerpt}
+                          </p>
+                          <BlogMeta post={post} />
+                          <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary">
+                            Read more <ArrowRight size={14} />
                           </span>
                         </div>
-                        <h3 className="text-lg font-display font-semibold text-foreground group-hover:text-primary transition-colors mb-3 leading-snug line-clamp-2">
-                          {post.title}
-                        </h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 flex-1 mb-4">
-                          {post.content?.substring(0, 200)}
-                          {(post.content?.length || 0) > 200 && "..."}
-                        </p>
-                        <span className="inline-flex items-center gap-1.5 text-primary text-sm font-medium group-hover:gap-2.5 transition-all mt-auto">
-                          Read more <ArrowRight size={13} />
-                        </span>
                       </Link>
                     </motion.article>
                   ))}
                 </div>
+              )}
+              {pages > 1 && (
+                <nav
+                  aria-label="Blog pagination"
+                  className="flex items-center justify-between border-t border-border pt-6"
+                >
+                  <button
+                    type="button"
+                    disabled={page <= 1}
+                    onClick={() => setPage((value) => value - 1)}
+                    className="rounded-lg border border-border px-4 py-2 text-sm disabled:opacity-40"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-muted-foreground">
+                    Page {page} of {pages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={page >= pages}
+                    onClick={() => setPage((value) => value + 1)}
+                    className="rounded-lg border border-border px-4 py-2 text-sm disabled:opacity-40"
+                  >
+                    Next
+                  </button>
+                </nav>
               )}
             </div>
           )}
@@ -218,6 +306,42 @@ const Blog = () => {
       </section>
     </Layout>
   );
-};
+}
 
-export default Blog;
+function FilterButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${active ? "border-primary/35 bg-primary/15 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}
+    >
+      {children}
+    </button>
+  );
+}
+function BlogMeta({ post }: { post: BlogSummary }) {
+  return (
+    <div className="mt-5 flex flex-wrap gap-4 text-xs text-muted-foreground">
+      <span className="inline-flex items-center gap-1.5">
+        <UserRound size={12} />
+        {post.authorName}
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <Calendar size={12} />
+        {new Date(post.publicationDate).toLocaleDateString("en-BD", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        })}
+      </span>
+    </div>
+  );
+}

@@ -7,16 +7,20 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: "2rem",
+      padding: {
+        DEFAULT: "1rem",
+        sm: "1.5rem",
+        lg: "2rem",
+      },
       screens: {
         "2xl": "1400px",
       },
     },
     extend: {
       fontFamily: {
-        display: ["Orbitron", "sans-serif"],
-        body: ["Outfit", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"],
+        display: ["Inter Variable", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        body: ["Inter Variable", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -54,6 +58,8 @@ export default {
         },
         glow: "hsl(var(--glow))",
         "glow-secondary": "hsl(var(--glow-secondary))",
+        "technology-blue": "hsl(var(--technology-blue))",
+        "technology-green": "hsl(var(--technology-green))",
         surface: "hsl(var(--surface))",
         "surface-hover": "hsl(var(--surface-hover))",
         sidebar: {
@@ -71,6 +77,10 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      boxShadow: {
+        tech: "0 24px 60px -38px hsl(var(--primary) / 0.72)",
+        panel: "0 18px 50px -32px hsl(210 100% 2% / 0.92)",
       },
       keyframes: {
         "accordion-down": {

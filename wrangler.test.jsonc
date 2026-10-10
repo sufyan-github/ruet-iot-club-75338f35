@@ -1,0 +1,37 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "ruet-iot-club-platform-test",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-08-20",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "ENVIRONMENT": "test",
+    "SITE_URL": "https://test.invalid",
+    "FRONTEND_ORIGIN": "https://test.invalid",
+    "TURNSTILE_SITE_KEY": "1x00000000000000000000AA",
+    "TURNSTILE_TEST_BYPASS_TOKEN": "test-turnstile-pass",
+    "TURNSTILE_SECRET": "test-turnstile-secret-not-for-production",
+    "SESSION_SECRET": "test-session-secret-with-more-than-32-bytes",
+    "BOOTSTRAP_ADMIN_SECRET": "test-bootstrap-secret-with-more-than-32-bytes",
+    "EMAIL_FROM": "no-reply@test.invalid",
+    "CONTACT_AUTHORITY_EMAIL": "authority@test.invalid",
+    "SUPER_ADMIN_EMAIL": "superadmin@test.invalid",
+    "MEMBERSHIP_EMAIL": "membership@test.invalid",
+    "RESEARCH_EMAIL": "research@test.invalid",
+    "PROJECT_EMAIL": "projects@test.invalid",
+    "COLLABORATION_EMAIL": "collaboration@test.invalid"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ruet-iot-club-test",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "STORAGE",
+      "bucket_name": "ruet-iot-club-test"
+    }
+  ]
+}

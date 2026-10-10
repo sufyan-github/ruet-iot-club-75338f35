@@ -5,8 +5,9 @@ import { Link } from "react-router-dom";
 import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
 import SectionHeading from "@/components/SectionHeading";
-import { supabase } from "@/integrations/supabase/client";
+import { cloudflareData } from "@/integrations/cloudflare/client";
 import { BookOpen, Clock, Users, DollarSign } from "lucide-react";
+import { apiRequest } from "@/lib/api";
 
 const Courses = () => {
   const [courses, setCourses] = useState<any[]>([]);
@@ -15,12 +16,13 @@ const Courses = () => {
 
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase
-        .from("courses")
-        .select("*")
-        .eq("status", "published")
-        .order("created_at", { ascending: false });
-      setCourses(data || []);
+      try {
+        const data=await apiRequest<any[]>("/courses");
+        setCourses(data.map(course=>({...course,image_url:course.thumbnail_url,is_paid:course.course_type==="PAID",price:course.price,status:String(course.status).toLowerCase()})));
+      } catch {
+        const { data } = await cloudflareData.from("courses").select("*").eq("status", "published").order("created_at", { ascending: false });
+        setCourses(data || []);
+      }
       setLoading(false);
     };
     fetch();
@@ -39,6 +41,7 @@ const Courses = () => {
       <section className="py-24">
         <div className="container max-w-6xl">
           <SectionHeading
+            level={1}
             title="Learning Management"
             subtitle="Enhance your skills with structured courses and resources"
           />
