@@ -95,17 +95,17 @@ const getTierIcon = (tierId: string) => {
     case "president":
       return <Crown size={18} className="text-[#2de2c9]" />;
     case "vice_president":
-      return <Shield size={18} className="text-[#00d2ff]" />;
+      return <Shield size={18} className="text-[#c084fc]" />;
     case "general_secretary":
       return <Award size={18} className="text-[#2de2c9]" />;
     case "assistant_general_secretary":
-      return <Award size={18} className="text-[#38bdf8]" />;
+      return <Award size={18} className="text-[#2dd4bf]" />;
     case "secretary":
-      return <Briefcase size={18} className="text-[#c084fc]" />;
+      return <Briefcase size={18} className="text-[#fb7185]" />;
     case "assistant_secretary":
-      return <UserCheck size={18} className="text-[#818cf8]" />;
+      return <UserCheck size={18} className="text-[#34d399]" />;
     case "executive_member":
-      return <Sparkles size={18} className="text-[#34d399]" />;
+      return <Sparkles size={18} className="text-[#2dd4bf]" />;
     default:
       return <Users size={18} className="text-[#94a3b8]" />;
   }
@@ -136,18 +136,18 @@ const MemberCard = ({
       transition={{ duration: 0.3, delay: Math.min(index * 0.03, 0.35) }}
       className={`relative text-center transition-all duration-300 group select-none flex flex-col justify-between overflow-hidden ${
         isLeader
-          ? "p-4 sm:p-7 bg-[#071322]/95 hover:bg-[#0b1c30] border-2 border-[#2de2c9]/70 hover:border-[#00d2ff] shadow-[0_4px_24px_rgba(0,0,0,0.7),0_0_24px_rgba(45,226,201,0.28)] hover:shadow-[0_4px_32px_rgba(0,0,0,0.85),0_0_36px_rgba(45,226,201,0.45)]"
+          ? "p-5 sm:p-7 bg-[#071322]/95 hover:bg-[#0b1c30] border-2 border-[#2de2c9]/70 hover:border-[#2de2c9] shadow-[0_4px_24px_rgba(0,0,0,0.7),0_0_24px_rgba(45,226,201,0.28)] hover:shadow-[0_4px_32px_rgba(0,0,0,0.85),0_0_36px_rgba(45,226,201,0.45)]"
           : tierId === "vice_president"
-          ? "p-3 sm:p-6 bg-[#071322]/90 hover:bg-[#0b1c30] border border-[#00d2ff]/50 hover:border-[#00d2ff] shadow-[0_4px_20px_rgba(0,0,0,0.6),0_0_18px_rgba(0,210,255,0.2)] hover:shadow-[0_4px_28px_rgba(0,0,0,0.8),0_0_24px_rgba(0,210,255,0.35)]"
+          ? "p-5 sm:p-6 bg-[#071322]/90 hover:bg-[#0b1c30] border border-[#a855f7]/50 hover:border-[#c084fc] shadow-[0_4px_20px_rgba(0,0,0,0.6),0_0_18px_rgba(168,85,247,0.22)] hover:shadow-[0_4px_28px_rgba(0,0,0,0.8),0_0_24px_rgba(168,85,247,0.35)]"
           : tierId === "assistant_general_secretary"
-          ? "p-3 sm:p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#38bdf8]/45 hover:border-[#38bdf8] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(56,189,248,0.18)]"
+          ? "p-4 sm:p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#2dd4bf]/45 hover:border-[#2dd4bf] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(45,212,191,0.18)]"
           : tierId === "secretary"
-          ? "p-3 sm:p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#a855f7]/45 hover:border-[#c084fc] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(168,85,247,0.18)]"
+          ? "p-4 sm:p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#f43f5e]/45 hover:border-[#fb7185] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(244,63,94,0.2)]"
           : tierId === "assistant_secretary"
-          ? "p-3 sm:p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#6366f1]/45 hover:border-[#818cf8] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(99,102,241,0.18)]"
+          ? "p-4 sm:p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#10b981]/45 hover:border-[#34d399] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(16,185,129,0.2)]"
           : tierId === "executive_member"
-          ? "p-3 sm:p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#10b981]/45 hover:border-[#34d399] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(16,185,129,0.18)]"
-          : "p-3 sm:p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#2de2c9]/35 hover:border-[#2de2c9] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(45,226,201,0.15)]"
+          ? "p-4 sm:p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#14b8a6]/45 hover:border-[#2dd4bf] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(20,184,166,0.18)]"
+          : "p-4 sm:p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#94a3b8]/35 hover:border-[#cbd5e1] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(148,163,184,0.15)]"
       }`}
       style={{
         clipPath: isLeader
@@ -155,7 +155,7 @@ const MemberCard = ({
           : "polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px)",
       }}
     >
-      {/* Micro-Circuit Bus Grid inside Package (Explore Projects Button DNA) */}
+      {/* Micro-Circuit Bus Grid inside Package */}
       <div
         className="absolute inset-0 opacity-15 group-hover:opacity-35 pointer-events-none transition-opacity"
         style={{
@@ -166,28 +166,32 @@ const MemberCard = ({
       />
 
       {/* IC Package Corner Tech Brackets */}
-      <span className="absolute top-0 right-0 w-2 h-2 sm:w-3 sm:h-3 border-t-2 border-r-2 border-[#2de2c9]/60 group-hover:border-[#00d2ff] pointer-events-none transition-colors" />
-      <span className="absolute bottom-0 left-0 w-2 h-2 sm:w-3 sm:h-3 border-b-2 border-l-2 border-[#2de2c9]/60 group-hover:border-[#00d2ff] pointer-events-none transition-colors" />
+      <span className="absolute top-0 right-0 w-2 h-2 sm:w-3 sm:h-3 border-t-2 border-r-2 border-[#2de2c9]/60 group-hover:border-[#2de2c9] pointer-events-none transition-colors" />
+      <span className="absolute bottom-0 left-0 w-2 h-2 sm:w-3 sm:h-3 border-b-2 border-l-2 border-[#2de2c9]/60 group-hover:border-[#2de2c9] pointer-events-none transition-colors" />
 
-      {/* IC Pin Socket Notch (No text) */}
-      <span className="chip-pin-1 absolute top-2 left-2 sm:top-3 sm:left-3 z-20 pointer-events-none" />
+      {/* IC Pin Socket Notch */}
+      <span className="chip-pin-1 absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-20 pointer-events-none" />
 
       {/* Sort Order / IC Model Number */}
       {typeof member.sort_order === "number" && member.sort_order > 0 && (
-        <span className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 z-20 text-[9px] sm:text-[10px] font-mono font-bold px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded bg-[#031526]/90 text-[#2de2c9] border border-[#2de2c9]/40 group-hover:border-[#00d2ff] transition-colors shadow-sm">
+        <span className="absolute top-2.5 right-2.5 sm:top-2.5 sm:right-2.5 z-20 text-[9px] sm:text-[10px] font-mono font-bold px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded bg-[#031526]/90 text-[#2de2c9] border border-[#2de2c9]/40 group-hover:border-[#2de2c9] transition-colors shadow-sm">
           #{String(member.sort_order).padStart(2, "0")}
         </span>
       )}
 
       <div className="relative z-10 pt-2 sm:pt-4">
         {/* Avatar with Glowing Concentric Cyber Ring */}
-        <div className="relative mx-auto mb-2 sm:mb-3.5 inline-block">
+        <div className="relative mx-auto mb-2.5 sm:mb-3.5 inline-block">
           <div
             className={`absolute -inset-1 rounded-full opacity-60 group-hover:opacity-100 transition-all blur-sm ${
               isLeader
-                ? "bg-gradient-to-r from-[#2de2c9] via-[#00d2ff] to-[#38bdf8]"
+                ? "bg-gradient-to-r from-[#2de2c9] via-[#14b8a6] to-[#10b981]"
                 : tierId === "vice_president"
-                ? "bg-[#00d2ff]"
+                ? "bg-[#a855f7]"
+                : tierId === "secretary"
+                ? "bg-[#f43f5e]"
+                : tierId === "assistant_secretary"
+                ? "bg-[#10b981]"
                 : "bg-[#2de2c9]/50"
             }`}
           />
@@ -200,10 +204,14 @@ const MemberCard = ({
               alt={member.name}
               className={`relative rounded-full object-cover border-2 transition-all ${
                 isLeader
-                  ? "w-16 h-16 sm:w-28 sm:h-28 border-[#2de2c9] shadow-[0_0_18px_rgba(45,226,201,0.4)]"
+                  ? "w-20 h-20 sm:w-28 sm:h-28 border-[#2de2c9] shadow-[0_0_18px_rgba(45,226,201,0.4)]"
                   : tierId === "vice_president"
-                  ? "w-14 h-14 sm:w-20 sm:h-20 border-[#00d2ff] shadow-[0_0_14px_rgba(0,210,255,0.3)]"
-                  : "w-12 h-12 sm:w-20 sm:h-20 border-[#2de2c9]/60 group-hover:border-[#2de2c9]"
+                  ? "w-18 h-18 sm:w-20 sm:h-20 border-[#c084fc] shadow-[0_0_14px_rgba(168,85,247,0.3)]"
+                  : tierId === "secretary"
+                  ? "w-16 h-16 sm:w-20 sm:h-20 border-[#fb7185]/80 shadow-[0_0_14px_rgba(244,63,94,0.3)]"
+                  : tierId === "assistant_secretary"
+                  ? "w-16 h-16 sm:w-20 sm:h-20 border-[#34d399]/80 shadow-[0_0_14px_rgba(16,185,129,0.3)]"
+                  : "w-16 h-16 sm:w-20 sm:h-20 border-[#2de2c9]/60 group-hover:border-[#2de2c9]"
               }`}
               loading="lazy"
             />
@@ -211,16 +219,26 @@ const MemberCard = ({
             <div
               className={`relative rounded-full bg-[#05111e] flex items-center justify-center border-2 transition-all ${
                 isLeader
-                  ? "w-16 h-16 sm:w-28 sm:h-28 border-[#2de2c9] shadow-[0_0_18px_rgba(45,226,201,0.35)]"
+                  ? "w-20 h-20 sm:w-28 sm:h-28 border-[#2de2c9] shadow-[0_0_18px_rgba(45,226,201,0.35)]"
                   : tierId === "vice_president"
-                  ? "w-14 h-14 sm:w-20 sm:h-20 border-[#00d2ff] shadow-[0_0_14px_rgba(0,210,255,0.25)]"
-                  : "w-12 h-12 sm:w-20 sm:h-20 border-[#2de2c9]/60 group-hover:border-[#2de2c9]"
+                  ? "w-18 h-18 sm:w-20 sm:h-20 border-[#c084fc] shadow-[0_0_14px_rgba(168,85,247,0.25)]"
+                  : tierId === "secretary"
+                  ? "w-16 h-16 sm:w-20 sm:h-20 border-[#fb7185]/80 shadow-[0_0_14px_rgba(244,63,94,0.25)]"
+                  : tierId === "assistant_secretary"
+                  ? "w-16 h-16 sm:w-20 sm:h-20 border-[#34d399]/80 shadow-[0_0_14px_rgba(16,185,129,0.25)]"
+                  : "w-16 h-16 sm:w-20 sm:h-20 border-[#2de2c9]/60 group-hover:border-[#2de2c9]"
               }`}
             >
               <span
-                className={`font-display font-bold text-[#2de2c9] ${
-                  isLeader ? "text-lg sm:text-2xl" : "text-sm sm:text-xl"
-                }`}
+                className={`font-display font-bold ${
+                  tierId === "vice_president"
+                    ? "text-[#c084fc]"
+                    : tierId === "secretary"
+                    ? "text-[#fb7185]"
+                    : tierId === "assistant_secretary"
+                    ? "text-[#34d399]"
+                    : "text-[#2de2c9]"
+                } ${isLeader ? "text-xl sm:text-2xl" : "text-base sm:text-xl"}`}
               >
                 {member.name
                   ? member.name
@@ -238,41 +256,42 @@ const MemberCard = ({
         <h3
           className={`font-semibold text-foreground transition-colors ${
             isLeader
-              ? "text-sm sm:text-lg font-bold group-hover:text-[#2de2c9]"
-              : "text-xs sm:text-base font-semibold group-hover:text-primary leading-tight"
+              ? "text-base sm:text-lg font-bold group-hover:text-[#2de2c9]"
+              : "text-sm sm:text-base font-semibold group-hover:text-primary leading-snug"
           }`}
         >
           {member.name}
         </h3>
 
-        {/* Designation / Position with IC Chip-Shape Cut */}
-        <div className="mt-1.5 sm:mt-2.5 mb-1 sm:mb-1.5 flex justify-center">
+        {/* Designation / Position with IC Chip-Shape Cut (No text truncated, readable) */}
+        <div className="mt-2 sm:mt-2.5 mb-1.5 flex justify-center px-1">
           <span
-            className={`chip-shape inline-flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-mono font-bold px-2 py-0.5 sm:px-3 sm:py-1 tracking-tight sm:tracking-wide max-w-full truncate ${
+            className={`chip-shape inline-flex items-center justify-center gap-1.5 text-xs font-mono font-bold px-3 py-1 text-center leading-normal max-w-full ${
               isLeader
                 ? "bg-[#2de2c9]/20 text-[#2de2c9] border border-[#2de2c9]/50 shadow-[0_0_12px_rgba(45,226,201,0.25)]"
                 : tierId === "vice_president"
-                ? "bg-[#00d2ff]/20 text-[#00d2ff] border border-[#00d2ff]/40 shadow-[0_0_10px_rgba(0,210,255,0.2)]"
+                ? "bg-[#a855f7]/20 text-[#c084fc] border border-[#c084fc]/40 shadow-[0_0_10px_rgba(168,85,247,0.2)]"
                 : tierId === "assistant_general_secretary"
-                ? "bg-[#38bdf8]/15 text-[#38bdf8] border border-[#38bdf8]/35"
+                ? "bg-[#14b8a6]/20 text-[#2dd4bf] border border-[#14b8a6]/35"
                 : tierId === "secretary"
-                ? "bg-[#a855f7]/15 text-[#c084fc] border border-[#a855f7]/35"
+                ? "bg-[#f43f5e]/20 text-[#fb7185] border border-[#f43f5e]/35"
                 : tierId === "assistant_secretary"
-                ? "bg-[#6366f1]/15 text-[#818cf8] border border-[#6366f1]/35"
+                ? "bg-[#10b981]/20 text-[#34d399] border border-[#10b981]/35"
                 : tierId === "executive_member"
-                ? "bg-[#10b981]/15 text-[#34d399] border border-[#10b981]/35"
+                ? "bg-[#14b8a6]/20 text-[#2dd4bf] border border-[#14b8a6]/35"
                 : "bg-[#2de2c9]/10 text-[#2de2c9] border border-[#2de2c9]/30"
             }`}
           >
-            {tierId === "president" && <Crown size={11} className="text-[#2de2c9]" />}
-            {tierId === "general_secretary" && <Award size={11} className="text-[#2de2c9]" />}
-            {member.position}
+            {tierId === "president" && <Crown size={12} className="text-[#2de2c9] shrink-0" />}
+            {tierId === "vice_president" && <Shield size={12} className="text-[#c084fc] shrink-0" />}
+            {tierId === "general_secretary" && <Award size={12} className="text-[#2de2c9] shrink-0" />}
+            <span>{member.position}</span>
           </span>
         </div>
 
         {/* Department & Batch / Series */}
         {(member.department || member.batch) && (
-          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 sm:mt-1.5 line-clamp-1">
+          <p className="text-xs text-muted-foreground mt-1 sm:mt-1.5">
             {member.department && <span className="font-medium text-foreground/85">{member.department}</span>}
             {member.department && member.batch && " · "}
             {member.batch && <span>Series {member.batch}</span>}
@@ -281,24 +300,24 @@ const MemberCard = ({
 
         {/* Bio / Quote (if any) */}
         {member.bio && (
-          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 sm:mt-2 leading-tight sm:leading-relaxed line-clamp-2 sm:line-clamp-3">
+          <p className="text-xs text-muted-foreground mt-1.5 sm:mt-2 leading-relaxed line-clamp-3">
             {member.bio}
           </p>
         )}
       </div>
 
       {/* Bottom I/O Bus Terminal: Social & Contact */}
-      <div className={`relative z-10 mt-2.5 sm:mt-4 pt-2 sm:pt-3 border-t border-[#2de2c9]/20 bg-[#040d18]/60 ${isLeader ? "-mx-4 -mb-4 sm:-mx-7 sm:-mb-7" : "-mx-3 -mb-3 sm:-mx-5 sm:-mb-5"} px-2 py-1.5 sm:px-4 sm:py-3`}>
-        <div className="flex justify-center items-center gap-2 sm:gap-3">
+      <div className={`relative z-10 mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-[#2de2c9]/20 bg-[#040d18]/60 ${isLeader ? "-mx-5 -mb-5 sm:-mx-7 sm:-mb-7" : "-mx-4 -mb-4 sm:-mx-6 sm:-mb-6"} px-4 py-2.5 sm:px-4 sm:py-3`}>
+        <div className="flex justify-center items-center gap-3">
           {member.linkedin && (
             <a
               href={member.linkedin}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-[#2de2c9] transition-colors p-0.5 sm:p-1"
+              className="text-muted-foreground hover:text-[#2de2c9] transition-colors p-1"
               title="LinkedIn"
             >
-              <Linkedin size={13} className="sm:w-[15px] sm:h-[15px]" />
+              <Linkedin size={15} />
             </a>
           )}
           {member.github && (
@@ -306,34 +325,34 @@ const MemberCard = ({
               href={member.github}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-[#2de2c9] transition-colors p-0.5 sm:p-1"
+              className="text-muted-foreground hover:text-[#2de2c9] transition-colors p-1"
               title="GitHub"
             >
-              <Github size={13} className="sm:w-[15px] sm:h-[15px]" />
+              <Github size={15} />
             </a>
           )}
           {member.email && (
             <a
               href={`mailto:${member.email}`}
-              className="text-muted-foreground hover:text-[#2de2c9] transition-colors p-0.5 sm:p-1"
+              className="text-muted-foreground hover:text-[#2de2c9] transition-colors p-1"
               title="Email"
             >
-              <Mail size={13} className="sm:w-[15px] sm:h-[15px]" />
+              <Mail size={15} />
             </a>
           )}
           {member.phone && (
             <a
               href={`tel:${member.phone}`}
-              className="text-muted-foreground hover:text-[#2de2c9] transition-colors p-0.5 sm:p-1"
+              className="text-muted-foreground hover:text-[#2de2c9] transition-colors p-1"
               title="Call"
             >
-              <Phone size={13} className="sm:w-[15px] sm:h-[15px]" />
+              <Phone size={15} />
             </a>
           )}
         </div>
 
         {member.phone && (
-          <p className="text-[9px] sm:text-[11px] text-muted-foreground mt-1 sm:mt-1.5 font-mono">{member.phone}</p>
+          <p className="text-[11px] text-muted-foreground mt-1 sm:mt-1.5 font-mono">{member.phone}</p>
         )}
       </div>
     </motion.div>
@@ -493,7 +512,7 @@ const Team = () => {
               onClick={handleSelectExecutive}
               className={`h-11 px-6 chip-shape text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
                 activeBoard === "executive"
-                  ? "bg-gradient-to-r from-[#2de2c9] to-[#00d2ff] text-[#050b14] font-bold shadow-[0_2px_16px_rgba(45,226,201,0.45)]"
+                  ? "bg-gradient-to-r from-[#2de2c9] to-[#14b8a6] text-[#050b14] font-bold shadow-[0_2px_16px_rgba(45,226,201,0.45)]"
                   : "bg-[#071322]/85 text-muted-foreground border border-[#2de2c9]/30 hover:text-foreground hover:border-[#2de2c9]/70"
               }`}
             >
@@ -507,7 +526,7 @@ const Team = () => {
               onClick={handleSelectAdvisory}
               className={`h-11 px-6 chip-shape text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
                 activeBoard === "advisory"
-                  ? "bg-gradient-to-r from-[#2de2c9] to-[#00d2ff] text-[#050b14] font-bold shadow-[0_2px_16px_rgba(45,226,201,0.45)]"
+                  ? "bg-gradient-to-r from-[#2de2c9] to-[#14b8a6] text-[#050b14] font-bold shadow-[0_2px_16px_rgba(45,226,201,0.45)]"
                   : "bg-[#071322]/85 text-muted-foreground border border-[#2de2c9]/30 hover:text-foreground hover:border-[#2de2c9]/70"
               }`}
             >
@@ -539,7 +558,7 @@ const Team = () => {
                   onClick={() => setActiveBoard("members")}
                   className={`h-11 px-4 chip-shape text-xs font-mono font-semibold transition-all duration-200 flex items-center gap-1.5 ${
                     activeBoard === "members"
-                      ? "bg-gradient-to-r from-[#2de2c9] to-[#00d2ff] text-[#050b14] font-bold shadow-[0_2px_14px_rgba(45,226,201,0.45)]"
+                      ? "bg-gradient-to-r from-[#2de2c9] to-[#14b8a6] text-[#050b14] font-bold shadow-[0_2px_14px_rgba(45,226,201,0.45)]"
                       : "bg-[#071322]/70 text-muted-foreground border border-[#2de2c9]/20 hover:text-foreground hover:border-[#2de2c9]/50"
                   }`}
                 >
@@ -676,7 +695,7 @@ const Team = () => {
                     onClick={() => {
                       setSelectedSessionId("current");
                     }}
-                    className="px-5 py-2 rounded-lg bg-gradient-to-r from-[#2de2c9] to-[#00d2ff] text-[#050b14] font-semibold text-xs inline-flex items-center gap-1.5 shadow-[0_0_16px_rgba(45,226,201,0.35)]"
+                    className="px-5 py-2 rounded-lg bg-gradient-to-r from-[#2de2c9] to-[#14b8a6] text-[#050b14] font-semibold text-xs inline-flex items-center gap-1.5 shadow-[0_0_16px_rgba(45,226,201,0.35)]"
                   >
                     View Current {activeBoard === "executive" ? "Executive Board" : "Advisory Board"} <ArrowRight size={14} />
                   </button>
@@ -760,18 +779,18 @@ const Team = () => {
                             </div>
                           </div>
 
-                          {/* Member cards grid (Compact on mobile) */}
+                          {/* Member cards grid (1-col on mobile, responsive multi-col on larger screens) */}
                           <div
-                            className={`grid gap-3 sm:gap-5 ${
+                            className={`grid gap-4 sm:gap-5 ${
                               group.tier.id === "president"
-                                ? "grid-cols-1 max-w-xs sm:max-w-md mx-auto"
+                                ? "grid-cols-1 max-w-sm sm:max-w-md mx-auto"
                                 : group.tier.id === "general_secretary"
-                                ? "grid-cols-1 max-w-xs sm:max-w-md mx-auto"
+                                ? "grid-cols-1 max-w-sm sm:max-w-md mx-auto"
                                 : group.tier.id === "vice_president"
-                                ? "grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto"
+                                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-sm sm:max-w-5xl mx-auto"
                                 : group.tier.id === "assistant_general_secretary"
-                                ? "grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 max-w-6xl mx-auto"
-                                : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 max-w-6xl mx-auto"
+                                ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 max-w-sm sm:max-w-6xl mx-auto"
+                                : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 max-w-sm sm:max-w-6xl mx-auto"
                             }`}
                           >
                             {group.members.map((member, i) => (
@@ -799,12 +818,12 @@ const Team = () => {
                       </div>
 
                       <div
-                        className={`grid gap-5 max-w-5xl mx-auto ${
+                        className={`grid gap-4 sm:gap-5 max-w-5xl mx-auto ${
                           boardMembers.length <= 2
-                            ? "grid-cols-1 sm:grid-cols-2 max-w-2xl"
+                            ? "grid-cols-1 sm:grid-cols-2 max-w-sm sm:max-w-2xl mx-auto"
                             : boardMembers.length === 3
-                            ? "grid-cols-1 sm:grid-cols-3 max-w-3xl"
-                            : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                            ? "grid-cols-1 sm:grid-cols-3 max-w-sm sm:max-w-3xl mx-auto"
+                            : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 max-w-sm sm:max-w-5xl mx-auto"
                         }`}
                       >
                         {boardMembers.map((member, i) => (
