@@ -92,10 +92,10 @@ const Blog = () => {
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all border ${
+                className={`px-4 py-1.5 chip-shape text-sm font-medium transition-all ${
                   activeCategory === cat
-                    ? "bg-primary/15 text-primary border-primary/30"
-                    : "bg-secondary/50 text-muted-foreground border-border hover:text-foreground hover:border-primary/20"
+                    ? "bg-gradient-to-r from-[#2de2c9] to-[#00d2ff] text-[#050b14] font-bold shadow-[0_2px_12px_rgba(45,226,201,0.4)]"
+                    : "bg-[#071322]/80 text-muted-foreground border border-[#2de2c9]/20 hover:text-foreground hover:border-[#2de2c9]/50"
                 }`}
               >
                 {cat}
@@ -105,10 +105,10 @@ const Blog = () => {
 
           {loading ? (
             <div className="space-y-6">
-              <div className="h-72 rounded-2xl bg-secondary/50 animate-pulse" />
+              <div className="h-72 chip-shape bg-secondary/30 border border-border/20 animate-pulse" />
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-56 rounded-2xl bg-secondary/50 animate-pulse" />
+                  <div key={i} className="h-56 chip-shape bg-secondary/30 border border-border/20 animate-pulse" />
                 ))}
               </div>
             </div>
@@ -116,7 +116,7 @@ const Blog = () => {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="text-center py-28 rounded-2xl glass"
+              className="text-center py-28 chip-card border border-[#2de2c9]/25"
             >
               <BookOpen size={48} className="mx-auto text-muted-foreground/40 mb-4" />
               <p className="text-muted-foreground text-lg mb-2">
@@ -138,15 +138,18 @@ const Blog = () => {
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5 }}
-                  className="group relative rounded-2xl glass overflow-hidden hover:border-primary/40 transition-all duration-300"
+                  className="group relative chip-card border border-[#2de2c9]/30 hover:border-[#2de2c9]/70 overflow-hidden transition-all duration-300"
                 >
+                  {/* Pin-1 Dot */}
+                  <span className="absolute top-3 left-3 w-2 h-2 rounded-full bg-[#2de2c9] shadow-[0_0_8px_#2de2c9] z-20" />
+
                   <Link to={`/blog/${featured.id}`} className="block p-8 md:p-10">
                     <div className="flex items-center gap-3 mb-4 flex-wrap">
-                      <span className="px-3 py-1 text-xs font-semibold rounded-full bg-primary/15 text-primary border border-primary/20">
+                      <span className="px-3 py-1 text-xs font-semibold chip-shape bg-primary/15 text-primary border border-primary/20">
                         Latest
                       </span>
                       {featured.category && (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-accent/15 text-accent border border-accent/20">
+                        <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium chip-shape bg-accent/15 text-accent border border-accent/20">
                           <Tag size={10} /> {featured.category}
                         </span>
                       )}
@@ -181,12 +184,15 @@ const Blog = () => {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.1 + i * 0.05 }}
-                      className="group flex flex-col rounded-2xl glass hover:border-primary/30 transition-all duration-300 overflow-hidden"
+                      className="group relative flex flex-col chip-card border border-[#2de2c9]/25 hover:border-[#2de2c9]/70 transition-all duration-300 overflow-hidden"
                     >
+                      {/* Pin-1 Dot */}
+                      <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#2de2c9]/70" />
+
                       <Link to={`/blog/${post.id}`} className="flex flex-col flex-1 p-6">
                         <div className="flex items-center gap-2 mb-3 flex-wrap">
                           {post.category && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-medium rounded-full bg-accent/10 text-accent border border-accent/15">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-medium chip-shape bg-accent/10 text-accent border border-accent/15">
                               <Tag size={9} /> {post.category}
                             </span>
                           )}

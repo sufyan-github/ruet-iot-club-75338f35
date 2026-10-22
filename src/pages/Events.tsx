@@ -67,27 +67,35 @@ const Events = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1 }}
-                  className="rounded-xl glass hover:border-primary/30 transition-colors overflow-hidden"
+                  className="relative chip-card border border-[#2de2c9]/25 hover:border-[#2de2c9]/70 overflow-hidden transition-all duration-300"
                 >
+                  {/* Pin-1 Index Notch Socket */}
+                  <span className="chip-pin-1 absolute top-2.5 left-2.5 z-20" />
+                  <span className="absolute top-0 right-0 w-2.5 h-2.5 border-t-2 border-r-2 border-[#2de2c9]/60 group-hover:border-[#00d2ff] pointer-events-none transition-colors" />
+                  <span className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b-2 border-l-2 border-[#2de2c9]/60 group-hover:border-[#00d2ff] pointer-events-none transition-colors" />
+
                   {event.image_url && (
-                    <img src={getOptimizedImageUrl(event.image_url, { width: 600, height: 250 })} alt={event.title} className="w-full h-48 object-cover" loading="lazy" />
+                    <div className="relative overflow-hidden">
+                      <img src={getOptimizedImageUrl(event.image_url, { width: 600, height: 250 })} alt={event.title} className="w-full h-48 object-cover" loading="lazy" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#071322] via-transparent to-transparent opacity-80" />
+                    </div>
                   )}
                   <div className="p-6">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           {event.type && (
-                            <span className="text-xs font-mono px-2 py-1 rounded bg-primary/10 text-primary">{event.type}</span>
+                            <span className="text-xs font-mono px-2 py-0.5 chip-shape bg-[#2de2c9]/15 text-[#2de2c9] border border-[#2de2c9]/30">{event.type}</span>
                           )}
                           {event.is_paid ? (
-                            <span className="text-xs font-mono px-2 py-1 rounded bg-yellow-500/10 text-yellow-400 flex items-center gap-1">
+                            <span className="text-xs font-mono px-2 py-0.5 chip-shape bg-yellow-500/15 text-yellow-400 border border-yellow-500/30 flex items-center gap-1">
                               <CreditCard size={10} /> ৳{event.registration_fee}
                             </span>
                           ) : (
-                            <span className="text-xs font-mono px-2 py-1 rounded bg-green-500/10 text-green-400">Free</span>
+                            <span className="text-xs font-mono px-2 py-0.5 chip-shape bg-green-500/15 text-green-400 border border-green-500/30">Free</span>
                           )}
                         </div>
-                        <h3 className="font-semibold text-foreground mb-2">{event.title}</h3>
+                        <h3 className="font-semibold text-foreground mb-2 group-hover:text-[#2de2c9] transition-colors">{event.title}</h3>
                         {event.description && (
                           <p className="text-sm text-muted-foreground mb-3">{event.description}</p>
                         )}
@@ -121,11 +129,11 @@ const Events = () => {
                           <motion.div
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: "auto" }}
-                            className="mt-3 p-3 rounded-lg bg-secondary/40 border border-border/40"
+                            className="mt-3 p-3 chip-shape bg-[#050b14]/60 border border-[#2de2c9]/30"
                           >
                             <div className="flex flex-wrap gap-1.5">
                               {registrations[event.id].map((p, idx) => (
-                                <span key={idx} className="inline-block px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
+                                <span key={idx} className="inline-block px-2 py-0.5 chip-shape bg-primary/10 text-primary text-[11px] font-medium border border-primary/20">
                                   {p.name || "Anonymous"}
                                 </span>
                               ))}
@@ -135,7 +143,7 @@ const Events = () => {
                       </div>
                       <button
                         onClick={() => navigate("/events/register", { state: { event } })}
-                        className="shrink-0 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors glow-border"
+                        className="shrink-0 px-5 py-2 chip-shape bg-gradient-to-r from-[#2de2c9] to-[#00d2ff] text-[#050b14] text-sm font-bold shadow-[0_2px_12px_rgba(45,226,201,0.35)] hover:brightness-110 transition-all"
                       >
                         Register
                       </button>

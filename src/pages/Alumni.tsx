@@ -44,15 +44,20 @@ const Alumni = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.05 }}
-                  className="p-5 rounded-xl glass text-center hover:border-primary/30 transition-colors group"
+                  className="relative p-5 chip-card border border-[#2de2c9]/25 hover:border-[#2de2c9]/70 text-center transition-all duration-300 group overflow-hidden select-none"
                 >
+                  {/* Pin-1 Index Notch Socket */}
+                  <span className="chip-pin-1 absolute top-2.5 left-2.5 z-20" />
+                  <span className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#2de2c9]/60 group-hover:border-[#00d2ff] pointer-events-none transition-colors" />
+                  <span className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[#2de2c9]/60 group-hover:border-[#00d2ff] pointer-events-none transition-colors" />
+
                   <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 mx-auto mb-3 flex items-center justify-center">
                     <span className="font-display text-lg font-bold text-primary">
                       {a.name.split(" ").map(n => n[0]).join("")}
                     </span>
                   </div>
                   <h3 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{a.name}</h3>
-                  {a.batch && <p className="text-xs font-mono text-primary mt-1">Batch {a.batch}</p>}
+                  {a.batch && <p className="text-xs font-mono text-primary mt-1">Series {a.batch}</p>}
                   {a.department && <p className="text-xs text-muted-foreground mt-1">{a.department}</p>}
                   {a.company && <p className="text-xs text-muted-foreground mt-1">{a.company}</p>}
                   {a.linkedin && (

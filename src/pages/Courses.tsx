@@ -49,10 +49,10 @@ const Courses = () => {
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize ${
+                className={`px-4 py-2 chip-shape text-sm font-medium transition-all capitalize ${
                   filter === f
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                    ? "bg-gradient-to-r from-[#2de2c9] to-[#00d2ff] text-[#050b14] font-bold shadow-[0_2px_12px_rgba(45,226,201,0.4)]"
+                    : "bg-[#071322]/80 text-muted-foreground border border-[#2de2c9]/25 hover:text-foreground hover:border-[#2de2c9]/60"
                 }`}
               >
                 {f === "all" ? "All Courses" : f}
@@ -63,7 +63,7 @@ const Courses = () => {
           {loading ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-64 rounded-xl bg-secondary/50 animate-pulse" />
+                <div key={i} className="h-64 chip-shape bg-secondary/30 border border-border/20 animate-pulse" />
               ))}
             </div>
           ) : filtered.length === 0 ? (
@@ -80,15 +80,23 @@ const Courses = () => {
                 >
                   <Link
                     to={`/courses/${course.id}`}
-                    className="block rounded-xl glass overflow-hidden hover:border-primary/30 transition-all duration-300 group h-full"
+                    className="relative block chip-card border border-[#2de2c9]/25 hover:border-[#2de2c9]/70 overflow-hidden transition-all duration-300 group h-full"
                   >
+                    {/* Pin-1 Index Notch Socket */}
+                    <span className="chip-pin-1 absolute top-2.5 left-2.5 z-20" />
+                    <span className="absolute top-0 right-0 w-2.5 h-2.5 border-t-2 border-r-2 border-[#2de2c9]/60 group-hover:border-[#00d2ff] pointer-events-none transition-colors" />
+                    <span className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b-2 border-l-2 border-[#2de2c9]/60 group-hover:border-[#00d2ff] pointer-events-none transition-colors" />
+
                     {course.image_url ? (
-                      <img
-                        src={getOptimizedImageUrl(course.image_url, { width: 400, height: 200 })}
-                        alt={course.title}
-                        className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                      />
+                      <div className="relative overflow-hidden">
+                        <img
+                          src={getOptimizedImageUrl(course.image_url, { width: 400, height: 200 })}
+                          alt={course.title}
+                          className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#071322] via-transparent to-transparent opacity-80" />
+                      </div>
                     ) : (
                       <div className="w-full h-40 bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center">
                         <BookOpen size={40} className="text-primary/30" />
@@ -97,15 +105,15 @@ const Courses = () => {
                     <div className="p-5">
                       <div className="flex items-center gap-2 mb-2">
                         {course.category && (
-                          <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary">
+                          <span className="text-[11px] font-mono px-2 py-0.5 chip-shape bg-[#2de2c9]/15 text-[#2de2c9] border border-[#2de2c9]/30">
                             {course.category}
                           </span>
                         )}
                         <span
-                          className={`text-xs font-mono px-2 py-0.5 rounded ${
+                          className={`text-[11px] font-mono px-2 py-0.5 chip-shape ${
                             course.is_paid
-                              ? "bg-yellow-500/10 text-yellow-400"
-                              : "bg-green-500/10 text-green-400"
+                              ? "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30"
+                              : "bg-green-500/15 text-green-400 border border-green-500/30"
                           }`}
                         >
                           {course.is_paid ? `৳${course.price}` : "Free"}

@@ -4,10 +4,30 @@ import Layout from "@/components/Layout";
 import SectionHeading from "@/components/SectionHeading";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Check, X, Users, FolderOpen, Calendar, Eye, GraduationCap, Pencil, Trash2, Plus, UserCog, Image, FileText, Download, ChevronDown, ChevronUp, BookOpen, Mail, FlaskConical, Video, Award, BarChart3, Shield, Megaphone, MessageSquare, Send, Reply, UserCheck, Clock } from "lucide-react";
+import { Check, X, Users, FolderOpen, Calendar, Eye, GraduationCap, Pencil, Trash2, Plus, UserCog, Image, FileText, Download, ChevronDown, ChevronUp, BookOpen, Mail, FlaskConical, Video, Award, BarChart3, Shield, Megaphone, MessageSquare, Send, Reply, UserCheck, Clock, Sparkles, Radio, ArrowRight, ExternalLink, Handshake } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
+import {
+  fetchHeroBannerConfig,
+  saveHeroBannerConfig,
+  getCachedHeroBanner,
+  DEFAULT_HERO_BANNER,
+  type HeroBannerConfig,
+} from "@/lib/heroBannerService";
+import {
+  fetchPartners,
+  savePartners,
+  getCachedPartners,
+  DEFAULT_PARTNERS,
+  type PartnerData,
+} from "@/lib/partnersService";
+import {
+  EXECUTIVE_DESIGNATION_PRESETS,
+  OFFICIAL_2026_EXECUTIVE_PANEL,
+  getExecutiveTier,
+  EXECUTIVE_TIERS,
+} from "@/lib/teamHierarchy";
 
 const downloadCSV = (rows: Record<string, string>[], filename: string) => {
   if (rows.length === 0) return;
@@ -25,13 +45,39 @@ const downloadCSV = (rows: Record<string, string>[], filename: string) => {
   URL.revokeObjectURL(url);
 };
 
-type TabType = "overview" | "applications" | "members" | "payments" | "team" | "projects" | "events" | "participants" | "alumni" | "photos" | "blog" | "research" | "courses" | "hero" | "announcements" | "messages" | "reports";
+type TabType = "overview" | "applications" | "members" | "payments" | "team" | "projects" | "events" | "participants" | "alumni" | "photos" | "blog" | "research" | "courses" | "hero" | "banner" | "partners" | "announcements" | "messages" | "reports";
+
+const emptyPartnerForm: Partial<PartnerData> = {
+  name: "",
+  subtitle: "",
+  description: "",
+  website: "",
+  logoUrl: "",
+  presetLogoId: "custom",
+  accentGlow: "rgba(45, 226, 201, 0.35)",
+  active: true,
+};
 
 const emptyAlumniForm = { name: "", batch: "", department: "", company: "", linkedin: "" };
 const emptyProjectForm = { title: "", description: "", category: "", status: "idea", github_link: "", image_url: "" };
 const emptyEventForm = { title: "", date: "", venue: "", description: "", type: "", max_participants: "", image_url: "", is_paid: false, registration_fee: "", payment_methods: [] as string[], payment_number: "01580352238", bank_account: "4170331020181850" };
-const TEAM_CATEGORIES = ["Executive Board", "Advisory Board", "Core Team", "General Members"];
-const emptyTeamForm = { name: "", position: "", department: "", bio: "", image_url: "", linkedin: "", github: "", email: "", sort_order: "0", category: "Executive Board" };
+const TEAM_CATEGORIES = [
+  "Executive Board",
+  "7th Executive (2024-2025)",
+  "6th Executive (2023-2024)",
+  "5th Executive (2022-2023)",
+  "4th Executive (2021-2022)",
+  "3rd Executive (2020-2021)",
+  "2nd Executive (2019-2020)",
+  "1st Executive (2018-2019)",
+  "Advisory Board",
+  "Advisory Board (2023-2024)",
+  "Founding Advisory Board (2018-2020)",
+  "Core Team",
+  "General Members",
+  "Custom...",
+];
+const emptyTeamForm = { name: "", position: "", department: "", batch: "", bio: "", image_url: "", linkedin: "", github: "", email: "", sort_order: "0", category: "Executive Board", custom_category: "" };
 const emptyPhotoForm = { title: "", image_url: "", description: "" };
 const emptyResearchForm = { title: "", authors: "", abstract: "", pdf_url: "", doi_link: "", status: "ongoing", research_area: "", tags: "" };
 const emptyCourseForm = { title: "", description: "", instructor: "", image_url: "", is_paid: false, price: "", category: "", duration: "", max_students: "", status: "draft" };
@@ -40,9 +86,27 @@ const emptyHeroForm = { image_url: "", tagline: "", sort_order: "0", active: tru
 const emptyAnnouncementForm = { title: "", message: "" };
 
 const AdminDashboard = () => {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, isModerator } = useAuth();
+  const canAccess = isAdmin || isModerator;
   const navigate = useNavigate();
-  const [tab, setTab] = useState<TabType>("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryTab = searchParams.get("tab") as TabType | null;
+  const [tab, setTabState] = useState<TabType>(queryTab || "overview");
+
+  const setTab = (newTab: TabType) => {
+    setTabState(newTab);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", newTab);
+      return next;
+    }, { replace: true });
+  };
+
+  useEffect(() => {
+    if (queryTab && queryTab !== tab) {
+      setTabState(queryTab);
+    }
+  }, [queryTab]);
   const [overviewStats, setOverviewStats] = useState<any>({});
   const [editingMemberProfile, setEditingMemberProfile] = useState<any>(null);
   const [memberProfileForm, setMemberProfileForm] = useState<any>({});
@@ -69,6 +133,8 @@ const AdminDashboard = () => {
   const [heroForm, setHeroForm] = useState(emptyHeroForm);
   const [editingHeroId, setEditingHeroId] = useState<string | null>(null);
   const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [heroBannerForm, setHeroBannerForm] = useState<HeroBannerConfig>(getCachedHeroBanner);
+  const [savingHeroBanner, setSavingHeroBanner] = useState(false);
   const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState(emptyAnnouncementForm);
   const [editingAnnouncementId, setEditingAnnouncementId] = useState<string | null>(null);
@@ -80,6 +146,14 @@ const AdminDashboard = () => {
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [participantFilter, setParticipantFilter] = useState<string>("all");
   const [participantStatusFilter, setParticipantStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [teamAdminFilter, setTeamAdminFilter] = useState<string>("all");
+
+  // ─── Partners state ───
+  const [partnersList, setPartnersList] = useState<PartnerData[]>(getCachedPartners);
+  const [savingPartners, setSavingPartners] = useState(false);
+  const [showPartnerForm, setShowPartnerForm] = useState(false);
+  const [editingPartnerId, setEditingPartnerId] = useState<string | null>(null);
+  const [partnerForm, setPartnerForm] = useState<Partial<PartnerData>>(emptyPartnerForm);
 
   // ─── Reports state ───
   const today = new Date();
@@ -123,15 +197,15 @@ const AdminDashboard = () => {
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
+    if (!loading && (!user || !canAccess)) {
       navigate("/");
-      if (!isAdmin && user) toast.error("Admin access required");
+      if (!canAccess && user) toast.error("Admin or Moderator access required");
     }
-  }, [user, loading, isAdmin, navigate]);
+  }, [user, loading, canAccess, navigate]);
 
   useEffect(() => {
-    if (isAdmin) fetchData();
-  }, [isAdmin, tab]);
+    if (canAccess) fetchData();
+  }, [canAccess, tab]);
 
   const logActivity = async (action: string, entity_type?: string, entity_id?: string, details?: any) => {
     if (!user) return;
@@ -273,8 +347,13 @@ const AdminDashboard = () => {
         setHeroSlides(data || []);
         break;
       }
+      case "banner": {
+        const cfg = await fetchHeroBannerConfig();
+        setHeroBannerForm(cfg);
+        break;
+      }
       case "announcements": {
-        const { data } = await supabase.from("announcements").select("*").order("created_at", { ascending: false });
+        const { data } = await supabase.from("announcements").select("*").neq("title", "HERO_BANNER_CONFIG").order("created_at", { ascending: false });
         setAnnouncements(data || []);
         break;
       }
@@ -302,6 +381,11 @@ const AdminDashboard = () => {
           eventMap: Object.fromEntries((eventsRes.data || []).map((e: any) => [e.id, e])),
           courseMap: Object.fromEntries((coursesRes.data || []).map((c: any) => [c.id, c])),
         });
+        break;
+      }
+      case "partners": {
+        const data = await fetchPartners();
+        setPartnersList(data);
         break;
       }
     }
@@ -484,18 +568,110 @@ const AdminDashboard = () => {
   // ─── Team CRUD ───
   const handleTeamSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = { name: teamForm.name, position: teamForm.position, department: teamForm.department || null, bio: teamForm.bio || null, image_url: teamForm.image_url || null, linkedin: teamForm.linkedin || null, github: teamForm.github || null, email: teamForm.email || null, sort_order: parseInt(teamForm.sort_order) || 0, category: teamForm.category || "Executive Board" } as any;
+    const finalCategory =
+      teamForm.category === "Custom..."
+        ? teamForm.custom_category?.trim() || "Executive Board"
+        : teamForm.category || "Executive Board";
+
+    const payload = {
+      name: teamForm.name,
+      position: teamForm.position,
+      department: teamForm.department || null,
+      batch: teamForm.batch || null,
+      bio: teamForm.bio || null,
+      image_url: teamForm.image_url || null,
+      linkedin: teamForm.linkedin || null,
+      github: teamForm.github || null,
+      email: teamForm.email || null,
+      sort_order: parseInt(teamForm.sort_order) || 0,
+      category: finalCategory,
+    } as any;
+
     if (editingTeamId) {
       const { error } = await supabase.from("team_members").update(payload).eq("id", editingTeamId);
-      if (error) toast.error("Failed"); else { toast.success("Team member updated!"); resetTeamForm(); fetchData(); }
+      if (error) toast.error("Failed to update team member");
+      else { toast.success("Team member updated!"); resetTeamForm(); fetchData(); }
     } else {
       const { error } = await supabase.from("team_members").insert(payload);
-      if (error) toast.error("Failed"); else { toast.success("Team member added!"); resetTeamForm(); fetchData(); }
+      if (error) toast.error("Failed to add team member");
+      else { toast.success("Team member added!"); resetTeamForm(); fetchData(); }
     }
   };
-  const editTeam = (t: any) => { setTeamForm({ name: t.name, position: t.position, department: t.department || "", bio: t.bio || "", image_url: t.image_url || "", linkedin: t.linkedin || "", github: t.github || "", email: t.email || "", sort_order: t.sort_order?.toString() || "0", category: t.category || "Executive Board" }); setEditingTeamId(t.id); setShowTeamForm(true); };
+
+  const editTeam = (t: any) => {
+    const isCustom = !TEAM_CATEGORIES.includes(t.category) && t.category;
+    setTeamForm({
+      name: t.name,
+      position: t.position,
+      department: t.department || "",
+      batch: t.batch || "",
+      bio: t.bio || "",
+      image_url: t.image_url || "",
+      linkedin: t.linkedin || "",
+      github: t.github || "",
+      email: t.email || "",
+      sort_order: t.sort_order?.toString() || "0",
+      category: isCustom ? "Custom..." : (t.category || "Executive Board"),
+      custom_category: isCustom ? t.category : "",
+    });
+    setEditingTeamId(t.id);
+    setShowTeamForm(true);
+  };
   const deleteTeam = async (id: string) => { const { error } = await supabase.from("team_members").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Team member removed"); fetchData(); } };
   const resetTeamForm = () => { setTeamForm(emptyTeamForm); setEditingTeamId(null); setShowTeamForm(false); };
+
+  const [syncing2026Panel, setSyncing2026Panel] = useState(false);
+  const [teamTierFilter, setTeamTierFilter] = useState<string>("all");
+
+  const handleSyncOfficial2026Panel = async () => {
+    const confirmed = window.confirm(
+      "Sync Official 2026 Executive Panel (46 Members)?\n\nThis will load and update the 46 members from the official 2026 Committee document (President, GS, VPs, AGS, Secretaries, AS, Executive Members) with their exact positions and sort order. Existing records will be updated safely without deleting custom data."
+    );
+    if (!confirmed) return;
+
+    setSyncing2026Panel(true);
+    try {
+      let created = 0;
+      let updated = 0;
+
+      for (const m of OFFICIAL_2026_EXECUTIVE_PANEL) {
+        // Look up by name
+        const { data: existing } = await supabase
+          .from("team_members")
+          .select("id, image_url, bio, linkedin, github, email, phone")
+          .ilike("name", m.name.trim())
+          .limit(1);
+
+        const payload: any = {
+          name: m.name,
+          position: m.position,
+          category: "Executive Board",
+          department: m.department || "RUET",
+          batch: m.batch || null,
+          sort_order: m.sort_order,
+        };
+
+        if (existing && existing.length > 0) {
+          const current = existing[0];
+          if (!current.bio && m.bio) payload.bio = m.bio;
+          const { error } = await supabase.from("team_members").update(payload).eq("id", current.id);
+          if (!error) updated++;
+        } else {
+          payload.bio = m.bio || null;
+          const { error } = await supabase.from("team_members").insert(payload);
+          if (!error) created++;
+        }
+      }
+
+      toast.success(`Executive Panel Synced: ${created} added, ${updated} updated!`);
+      logActivity("sync_2026_executive_panel", "team_members", undefined, { created, updated });
+      fetchData();
+    } catch (err: any) {
+      toast.error(`Sync failed: ${err?.message || "Unknown error"}`);
+    } finally {
+      setSyncing2026Panel(false);
+    }
+  };
 
   // ─── Photo CRUD ───
   const handlePhotoSubmit = async (e: React.FormEvent) => {
@@ -590,7 +766,100 @@ const AdminDashboard = () => {
   const resetHeroForm = () => { setHeroForm(emptyHeroForm); setEditingHeroId(null); setShowHeroForm(false); };
   const toggleHeroActive = async (id: string, active: boolean) => { await supabase.from("hero_slides").update({ active: !active }).eq("id", id); fetchData(); };
 
-  if (loading || !isAdmin) return null;
+  // ─── Partners CRUD ───
+  const handlePartnerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!partnerForm.name?.trim()) {
+      toast.error("Partner name is required");
+      return;
+    }
+    setSavingPartners(true);
+    try {
+      let updated: PartnerData[];
+      if (editingPartnerId) {
+        updated = partnersList.map((p) =>
+          p.id === editingPartnerId ? ({ ...p, ...partnerForm, id: p.id } as PartnerData) : p
+        );
+      } else {
+        const newPartner: PartnerData = {
+          id: `partner_${Date.now()}`,
+          name: partnerForm.name.trim(),
+          subtitle: partnerForm.subtitle?.trim() || "",
+          description: partnerForm.description?.trim() || "",
+          website: partnerForm.website?.trim() || "",
+          logoUrl: partnerForm.logoUrl?.trim() || "",
+          presetLogoId: (partnerForm.presetLogoId as any) || "custom",
+          accentGlow: partnerForm.accentGlow || "rgba(45, 226, 201, 0.35)",
+          active: partnerForm.active !== false,
+          sortOrder: partnersList.length + 1,
+        };
+        updated = [...partnersList, newPartner];
+      }
+
+      const res = await savePartners(updated, user?.id);
+      if (res.success) {
+        setPartnersList(updated);
+        toast.success(editingPartnerId ? "Partner updated & saved to Database!" : "New Partner added & saved to Database!");
+        logActivity(editingPartnerId ? "partner_updated" : "partner_created", "partner", editingPartnerId || "new", { name: partnerForm.name });
+        resetPartnerForm();
+      } else {
+        toast.error("Failed to save to database. Cached locally.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save partner");
+    } finally {
+      setSavingPartners(false);
+    }
+  };
+
+  const editPartner = (p: PartnerData) => {
+    setPartnerForm({ ...p });
+    setEditingPartnerId(p.id);
+    setShowPartnerForm(true);
+  };
+
+  const deletePartner = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this partner?")) return;
+    const updated = partnersList.filter((p) => p.id !== id);
+    setPartnersList(updated);
+    const res = await savePartners(updated, user?.id);
+    if (res.success) {
+      toast.success("Partner removed and database updated!");
+      logActivity("partner_deleted", "partner", id);
+    } else {
+      toast.error("Failed to update database.");
+    }
+  };
+
+  const togglePartnerActive = async (id: string) => {
+    const updated = partnersList.map((p) =>
+      p.id === id ? { ...p, active: !p.active } : p
+    );
+    setPartnersList(updated);
+    const res = await savePartners(updated, user?.id);
+    if (res.success) {
+      const p = updated.find((x) => x.id === id);
+      toast.success(`Partner ${p?.active ? "activated" : "hidden"} on homepage!`);
+      logActivity("partner_status_toggle", "partner", id, { active: p?.active });
+    }
+  };
+
+  const resetPartnerForm = () => {
+    setPartnerForm(emptyPartnerForm);
+    setEditingPartnerId(null);
+    setShowPartnerForm(false);
+  };
+
+  const handleResetDefaultPartners = async () => {
+    if (!confirm("Reset partners to initial default organizations (IID, The Earth Society, Youth For CARE)?")) return;
+    setPartnersList(DEFAULT_PARTNERS);
+    const res = await savePartners(DEFAULT_PARTNERS, user?.id);
+    if (res.success) {
+      toast.success("Partners reset to verified defaults!");
+    }
+  };
+
+  if (loading || !canAccess) return null;
 
   const tabsList: { key: TabType; label: string; icon: typeof Users }[] = [
     { key: "overview", label: "Overview", icon: BarChart3 },
@@ -607,6 +876,8 @@ const AdminDashboard = () => {
     { key: "photos", label: "Photos", icon: Image },
     { key: "blog", label: "Blog", icon: BookOpen },
     { key: "hero", label: "Hero Slides", icon: Image },
+    { key: "banner", label: "Hero Banner & CTA", icon: Sparkles },
+    { key: "partners", label: "Partners & Collaborators", icon: Handshake },
     { key: "announcements", label: "Announcements", icon: Megaphone },
     { key: "messages", label: "Messages", icon: MessageSquare },
     { key: "reports", label: "Reports", icon: BarChart3 },
@@ -631,8 +902,14 @@ const AdminDashboard = () => {
             ))}
           </div>
 
-          {/* ════════ Overview Tab ════════ */}
-          {tab === "overview" && (
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.24, ease: "easeOut" }}
+          >
+            {/* ════════ Overview Tab ════════ */}
+            {tab === "overview" && (
             <div className="max-w-5xl mx-auto">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                 {[
@@ -739,7 +1016,7 @@ const AdminDashboard = () => {
                             <InfoRow label="Email" value={m.email} />
                             <InfoRow label="Phone" value={m.phone} />
                             <InfoRow label="Department" value={m.department} />
-                            <InfoRow label="Batch" value={m.batch || m.session} />
+                            <InfoRow label="Series" value={m.batch || m.session} />
                             <InfoRow label="Experience Level" value={m.experience_level} />
                             <InfoRow label="Time Commitment" value={m.time_commitment} />
                           </div>
@@ -809,7 +1086,7 @@ const AdminDashboard = () => {
                         <input className={inputClass} value={memberProfileForm.department} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, department: e.target.value })} />
                       </div>
                       <div>
-                        <label className="text-xs text-muted-foreground mb-1 block">Batch</label>
+                        <label className="text-xs text-muted-foreground mb-1 block">Series</label>
                         <input className={inputClass} value={memberProfileForm.batch} onChange={(e) => setMemberProfileForm({ ...memberProfileForm, batch: e.target.value })} />
                       </div>
                       <div>
@@ -1172,11 +1449,35 @@ const AdminDashboard = () => {
           )}
           {tab === "team" && (
             <div className="max-w-4xl mx-auto">
-              <div className="flex justify-end mb-4">
-                <button onClick={() => { showTeamForm ? resetTeamForm() : setShowTeamForm(true); }}
-                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2">
-                  <Plus size={16} /> {showTeamForm ? "Cancel" : "Add Team Member"}
-                </button>
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+                <div>
+                  <h3 className="font-display text-base font-bold text-foreground flex items-center gap-2">
+                    <Shield size={18} className="text-[#2de2c9]" />
+                    Team & Leadership Management
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Manage Executive and Advisory boards, designations, and hierarchy order.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleSyncOfficial2026Panel}
+                    disabled={syncing2026Panel}
+                    className="px-3.5 py-2 rounded-lg bg-[#2de2c9]/15 border border-[#2de2c9]/40 text-[#2de2c9] text-xs font-mono font-semibold hover:bg-[#2de2c9]/25 transition-colors flex items-center gap-2 shadow-[0_0_12px_rgba(45,226,201,0.15)] disabled:opacity-50"
+                    title="Load/Sync official 46 members from 2026 Executive Panel document"
+                  >
+                    <Sparkles size={14} className={syncing2026Panel ? "animate-spin" : ""} />
+                    {syncing2026Panel ? "Syncing Panel..." : "Sync 2026 Panel (46 Members)"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { showTeamForm ? resetTeamForm() : setShowTeamForm(true); }}
+                    className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2"
+                  >
+                    <Plus size={16} /> {showTeamForm ? "Cancel" : "Add Team Member"}
+                  </button>
+                </div>
               </div>
 
               {showTeamForm && (
@@ -1189,49 +1490,156 @@ const AdminDashboard = () => {
                     onUpload={(url) => setTeamForm({ ...teamForm, image_url: url })} />
                   <div className="grid md:grid-cols-2 gap-4">
                     <input placeholder="Full Name *" required value={teamForm.name} onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })} className={inputClass} />
-                    <input placeholder="Position (e.g., President) *" required value={teamForm.position} onChange={(e) => setTeamForm({ ...teamForm, position: e.target.value })} className={inputClass} />
-                    <select value={teamForm.category} onChange={(e) => setTeamForm({ ...teamForm, category: e.target.value })} className={inputClass}>
-                      {TEAM_CATEGORIES.map((cat) => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                    <input placeholder="Department" value={teamForm.department} onChange={(e) => setTeamForm({ ...teamForm, department: e.target.value })} className={inputClass} />
-                    <input placeholder="Sort Order (0 = first)" type="number" value={teamForm.sort_order} onChange={(e) => setTeamForm({ ...teamForm, sort_order: e.target.value })} className={inputClass} />
+                    <div>
+                      <input
+                        list="preset-designations-list"
+                        placeholder="Position (e.g. President, Vice President) *"
+                        required
+                        value={teamForm.position}
+                        onChange={(e) => setTeamForm({ ...teamForm, position: e.target.value })}
+                        className={inputClass + " w-full"}
+                      />
+                      <datalist id="preset-designations-list">
+                        {EXECUTIVE_DESIGNATION_PRESETS.map((preset) => (
+                          <option key={preset} value={preset} />
+                        ))}
+                      </datalist>
+                      {teamForm.position && (
+                        <div className="mt-1 flex items-center gap-1.5 text-[11px] font-mono text-[#2de2c9]">
+                          <Sparkles size={12} />
+                          <span>
+                            Tier: <strong>{EXECUTIVE_TIERS[getExecutiveTier(teamForm.position)].title}</strong> (#{EXECUTIVE_TIERS[getExecutiveTier(teamForm.position)].rank})
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <select value={teamForm.category} onChange={(e) => setTeamForm({ ...teamForm, category: e.target.value })} className={inputClass + " w-full"}>
+                        {TEAM_CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                      {teamForm.category === "Custom..." && (
+                        <input
+                          placeholder="Enter custom term (e.g., 8th Executive (2025-2026)) *"
+                          required
+                          value={teamForm.custom_category || ""}
+                          onChange={(e) => setTeamForm({ ...teamForm, custom_category: e.target.value })}
+                          className={inputClass + " mt-2 w-full"}
+                        />
+                      )}
+                    </div>
+                    <input placeholder="Department (e.g., EEE, CSE, ECE)" value={teamForm.department} onChange={(e) => setTeamForm({ ...teamForm, department: e.target.value })} className={inputClass} />
+                    <input placeholder="Series (e.g., 20, 21, 22)" value={teamForm.batch} onChange={(e) => setTeamForm({ ...teamForm, batch: e.target.value })} className={inputClass} />
+                    <input placeholder="Sort Order (0 = first in tier)" type="number" value={teamForm.sort_order} onChange={(e) => setTeamForm({ ...teamForm, sort_order: e.target.value })} className={inputClass} />
                     <input placeholder="Email" value={teamForm.email} onChange={(e) => setTeamForm({ ...teamForm, email: e.target.value })} className={inputClass} />
                     <input placeholder="LinkedIn URL" value={teamForm.linkedin} onChange={(e) => setTeamForm({ ...teamForm, linkedin: e.target.value })} className={inputClass} />
                     <input placeholder="GitHub URL" value={teamForm.github} onChange={(e) => setTeamForm({ ...teamForm, github: e.target.value })} className={inputClass} />
                   </div>
                   <textarea placeholder="Bio / Description" rows={3} value={teamForm.bio} onChange={(e) => setTeamForm({ ...teamForm, bio: e.target.value })} className={inputClass + " resize-none"} />
                   <button type="submit" className="px-6 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">
-                    {editingTeamId ? "Update" : "Add Member"}
+                    {editingTeamId ? "Update Member" : "Add Member"}
                   </button>
                 </motion.form>
               )}
 
+              {/* Category & Tier Filters for Admin */}
+              <div className="flex items-center justify-between gap-3 mb-4 flex-wrap bg-card/60 p-3 rounded-xl border border-border/40">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-muted-foreground">Term:</span>
+                    <select
+                      value={teamAdminFilter}
+                      onChange={(e) => setTeamAdminFilter(e.target.value)}
+                      className="text-xs px-2.5 py-1.5 rounded-lg bg-secondary border border-border text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      <option value="all">All Terms ({teamMembers.length})</option>
+                      {[...new Set(teamMembers.map((t: any) => t.category || "Executive Board"))].map((cat: string) => (
+                        <option key={cat} value={cat}>
+                          {cat} ({teamMembers.filter((t: any) => (t.category || "Executive Board") === cat).length})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-muted-foreground">Tier:</span>
+                    <select
+                      value={teamTierFilter}
+                      onChange={(e) => setTeamTierFilter(e.target.value)}
+                      className="text-xs px-2.5 py-1.5 rounded-lg bg-secondary border border-border text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      <option value="all">All Leadership Tiers</option>
+                      <option value="president">Tier 1: President</option>
+                      <option value="vice_president">Tier 2: Vice Presidents</option>
+                      <option value="general_secretary">Tier 3: General Secretary</option>
+                      <option value="assistant_general_secretary">Tier 4: AGS</option>
+                      <option value="secretary">Tier 5: Secretaries</option>
+                      <option value="assistant_secretary">Tier 6: Assistant Secretaries</option>
+                      <option value="executive_member">Tier 7: Executive Members</option>
+                      <option value="other">Tier 8: Other / Advisors</option>
+                    </select>
+                  </div>
+                </div>
+
+                <span className="text-xs text-muted-foreground font-mono">
+                  Showing {
+                    teamMembers
+                      .filter((t: any) => teamAdminFilter === "all" || (t.category || "Executive Board") === teamAdminFilter)
+                      .filter((t: any) => teamTierFilter === "all" || getExecutiveTier(t.position) === teamTierFilter).length
+                  } members
+                </span>
+              </div>
+
               <div className="space-y-3">
-                {teamMembers.length === 0 && <p className="text-center text-muted-foreground">No team members yet.</p>}
-                {teamMembers.map((t: any) => (
-                  <motion.div key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    className="p-4 rounded-xl glass flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      {t.image_url ? (
-                        <img src={t.image_url} alt={t.name} className="w-10 h-10 rounded-full object-cover shrink-0" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shrink-0">
-                          <span className="font-display text-xs font-bold text-primary">{t.name.split(" ").map((n: string) => n[0]).join("")}</span>
+                {teamMembers.length === 0 && <p className="text-center text-muted-foreground py-8">No team members yet.</p>}
+                {teamMembers
+                  .filter((t: any) => teamAdminFilter === "all" || (t.category || "Executive Board") === teamAdminFilter)
+                  .filter((t: any) => teamTierFilter === "all" || getExecutiveTier(t.position) === teamTierFilter)
+                  .sort((a: any, b: any) => {
+                    const tierA = EXECUTIVE_TIERS[getExecutiveTier(a.position)].rank;
+                    const tierB = EXECUTIVE_TIERS[getExecutiveTier(b.position)].rank;
+                    if (tierA !== tierB) return tierA - tierB;
+                    return (a.sort_order ?? 999) - (b.sort_order ?? 999);
+                  })
+                  .map((t: any) => {
+                    const tierId = getExecutiveTier(t.position);
+                    const tier = EXECUTIVE_TIERS[tierId];
+                    return (
+                      <motion.div key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        className="p-4 rounded-xl glass border border-border/40 hover:border-[#2de2c9]/40 flex items-center justify-between gap-4 transition-all">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          {t.image_url ? (
+                            <img src={t.image_url} alt={t.name} className="w-11 h-11 rounded-full object-cover shrink-0 ring-1 ring-border" />
+                          ) : (
+                            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shrink-0 ring-1 ring-border">
+                              <span className="font-display text-xs font-bold text-primary">{t.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}</span>
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="font-semibold text-sm text-foreground">{t.name}</h4>
+                              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${tier.badgeClass}`}>
+                                TIER {tier.rank}: {tier.shortTitle}
+                              </span>
+                              {typeof t.sort_order === "number" && (
+                                <span className="text-[10px] font-mono text-muted-foreground bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
+                                  Order #{t.sort_order}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              <span className="text-foreground/90 font-medium">{t.position}</span> · <span className="text-primary font-mono">{t.category || "Executive Board"}</span> · {t.department || "—"}{t.batch ? ` (Series ${t.batch})` : ""}
+                            </p>
+                          </div>
                         </div>
-                      )}
-                      <div className="min-w-0">
-                        <h4 className="font-semibold text-sm text-foreground">{t.name}</h4>
-                        <p className="text-xs text-muted-foreground">{t.position} · {t.category || "Executive Board"} · {t.department || "—"}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      <button onClick={() => editTeam(t)} className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"><Pencil size={14} /></button>
-                      <button onClick={() => deleteTeam(t.id)} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><Trash2 size={14} /></button>
-                    </div>
-                  </motion.div>
-                ))}
+                        <div className="flex gap-1 shrink-0">
+                          <button onClick={() => editTeam(t)} className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="Edit"><Pencil size={14} /></button>
+                          <button onClick={() => deleteTeam(t.id)} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="Delete"><Trash2 size={14} /></button>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
               </div>
             </div>
           )}
@@ -1529,7 +1937,7 @@ const AdminDashboard = () => {
                   <h3 className="font-display text-sm font-bold tracking-wider text-primary">{editingAlumniId ? "Edit Alumni" : "Add New Alumni"}</h3>
                   <div className="grid md:grid-cols-2 gap-4">
                     <input placeholder="Full Name *" required value={alumniForm.name} onChange={(e) => setAlumniForm({ ...alumniForm, name: e.target.value })} className={inputClass} />
-                    <input placeholder="Batch (e.g., 2018)" value={alumniForm.batch} onChange={(e) => setAlumniForm({ ...alumniForm, batch: e.target.value })} className={inputClass} />
+                    <input placeholder="Series (e.g., 2018 or 18)" value={alumniForm.batch} onChange={(e) => setAlumniForm({ ...alumniForm, batch: e.target.value })} className={inputClass} />
                     <input placeholder="Department" value={alumniForm.department} onChange={(e) => setAlumniForm({ ...alumniForm, department: e.target.value })} className={inputClass} />
                     <input placeholder="Current Company" value={alumniForm.company} onChange={(e) => setAlumniForm({ ...alumniForm, company: e.target.value })} className={inputClass} />
                   </div>
@@ -1541,7 +1949,7 @@ const AdminDashboard = () => {
                 {alumni.length === 0 && <p className="text-center text-muted-foreground">No alumni records yet.</p>}
                 {alumni.map((a: any) => (
                   <motion.div key={a.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl glass flex items-center justify-between gap-4">
-                    <div className="flex-1 min-w-0"><h4 className="font-semibold text-sm text-foreground">{a.name}</h4><p className="text-xs text-muted-foreground">{a.batch ? `Batch ${a.batch}` : "—"} · {a.department || "—"} · {a.company || "—"}</p></div>
+                    <div className="flex-1 min-w-0"><h4 className="font-semibold text-sm text-foreground">{a.name}</h4><p className="text-xs text-muted-foreground">{a.batch ? `Series ${a.batch}` : "—"} · {a.department || "—"} · {a.company || "—"}</p></div>
                     <div className="flex gap-1 shrink-0">
                       <button onClick={() => editAlumni(a)} className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"><Pencil size={14} /></button>
                       <button onClick={() => deleteAlumni(a.id)} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><Trash2 size={14} /></button>
@@ -1981,6 +2389,863 @@ const AdminDashboard = () => {
             </div>
           )}
 
+          {/* ════════ Hero Banner & CTA Control Tab ════════ */}
+          {tab === "banner" && (
+            <div className="max-w-4xl mx-auto space-y-6">
+              {/* Header Box */}
+              <div className="p-6 rounded-2xl glass border border-primary/30 relative overflow-hidden">
+                <div className="absolute -right-16 -top-16 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="p-2 rounded-lg bg-primary/15 text-primary border border-primary/30">
+                        <Sparkles size={18} />
+                      </span>
+                      <h3 className="text-xl font-bold text-foreground">Hero Announcement Banner &amp; CTA</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground max-w-2xl">
+                      Manage the live temporary announcement banner shown <strong>above the logo</strong> in the Hero section and customize the primary CTA button (e.g., switch between &quot;Join Us&quot; and &quot;Register Now&quot;).
+                    </p>
+                  </div>
+
+                  <a
+                    href="/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary hover:bg-secondary/80 border border-border text-foreground text-xs font-semibold transition-all self-start md:self-auto shrink-0"
+                  >
+                    <ExternalLink size={14} className="text-primary" /> Preview Landing Page
+                  </a>
+                </div>
+              </div>
+
+              {/* Status Toggle Card */}
+              <div className="p-5 rounded-2xl bg-secondary/30 border border-border/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <span className={`relative flex h-3.5 w-3.5 shrink-0 ${heroBannerForm.isActive ? "" : "opacity-40"}`}>
+                    {heroBannerForm.isActive && (
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#2de2c9] opacity-75" />
+                    )}
+                    <span className={`relative inline-flex rounded-full h-3.5 w-3.5 ${heroBannerForm.isActive ? "bg-[#2de2c9] shadow-[0_0_10px_#2de2c9]" : "bg-muted-foreground"}`} />
+                  </span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground text-sm">Banner Display Status:</span>
+                      <span className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-full ${
+                        heroBannerForm.isActive
+                          ? "bg-green-500/15 text-green-400 border border-green-500/30"
+                          : "bg-muted text-muted-foreground border border-border"
+                      }`}>
+                        {heroBannerForm.isActive ? "ACTIVE & LIVE ON HERO" : "INACTIVE / HIDDEN"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {heroBannerForm.isActive
+                        ? "Currently rendered above the logo crest on the public landing page."
+                        : "Hidden from public visitors. Activate whenever recruitment or an event begins."}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setHeroBannerForm(prev => ({ ...prev, isActive: !prev.isActive }))}
+                  className={`px-5 py-2.5 rounded-xl font-semibold text-xs tracking-wide transition-all shadow-md shrink-0 flex items-center gap-2 ${
+                    heroBannerForm.isActive
+                      ? "bg-destructive/15 text-destructive hover:bg-destructive/25 border border-destructive/30"
+                      : "bg-[#2de2c9] text-[#050b14] hover:brightness-110 shadow-[0_0_15px_rgba(45,226,201,0.4)]"
+                  }`}
+                >
+                  <Radio size={14} />
+                  {heroBannerForm.isActive ? "Turn OFF Banner" : "Turn ON Banner"}
+                </button>
+              </div>
+
+              {/* 1-Click Preset Templates */}
+              <div className="p-5 rounded-2xl bg-secondary/30 border border-border/50">
+                <h4 className="text-xs font-mono uppercase tracking-widest text-primary mb-3 flex items-center gap-1.5">
+                  <Sparkles size={13} /> 1-Click Quick Preset Templates
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHeroBannerForm({
+                        isActive: true,
+                        badge: "Recruitment Ongoing",
+                        title: "Member Recruitment 2025 Now Open",
+                        daysLeft: "Register Now",
+                        linkUrl: "/join",
+                        buttonText: "Join Us",
+                        buttonUrl: "/join",
+                      });
+                      toast.info("Recruitment template loaded! Click 'Save & Publish' to make it live.");
+                    }}
+                    className="p-3 rounded-xl bg-secondary/60 hover:bg-secondary border border-border/60 hover:border-primary/40 text-left transition-all group"
+                  >
+                    <div className="text-lg mb-1">🎓</div>
+                    <div className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">Member Recruitment</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">Recruitment Ongoing · Join Us</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHeroBannerForm({
+                        isActive: true,
+                        badge: "Flagship Event",
+                        title: "IoT Innovation Expo & Hackathon 2025",
+                        daysLeft: "3 Days Left",
+                        linkUrl: "/events",
+                        buttonText: "Register Now",
+                        buttonUrl: "/events",
+                      });
+                      toast.info("Event template loaded! Click 'Save & Publish' to make it live.");
+                    }}
+                    className="p-3 rounded-xl bg-secondary/60 hover:bg-secondary border border-border/60 hover:border-[#00d2ff]/40 text-left transition-all group"
+                  >
+                    <div className="text-lg mb-1">🚀</div>
+                    <div className="text-xs font-bold text-foreground group-hover:text-[#00d2ff] transition-colors">Hackathon / Event</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">Event Name · Days Left · Register Now</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHeroBannerForm({
+                        isActive: true,
+                        badge: "Workshop",
+                        title: "Hands-on ESP32 & IoT Systems Workshop",
+                        daysLeft: "Limited Seats",
+                        linkUrl: "/courses",
+                        buttonText: "Join Workshop",
+                        buttonUrl: "/courses",
+                      });
+                      toast.info("Workshop template loaded! Click 'Save & Publish' to make it live.");
+                    }}
+                    className="p-3 rounded-xl bg-secondary/60 hover:bg-secondary border border-border/60 hover:border-accent/40 text-left transition-all group"
+                  >
+                    <div className="text-lg mb-1">🛠️</div>
+                    <div className="text-xs font-bold text-foreground group-hover:text-accent transition-colors">Hands-on Workshop</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">Workshop · Limited Seats · Join</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHeroBannerForm(DEFAULT_HERO_BANNER);
+                      toast.info("Default settings restored.");
+                    }}
+                    className="p-3 rounded-xl bg-secondary/60 hover:bg-secondary border border-border/60 hover:border-foreground/30 text-left transition-all group"
+                  >
+                    <div className="text-lg mb-1">🔄</div>
+                    <div className="text-xs font-bold text-foreground group-hover:text-foreground transition-colors">Reset Default</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">Restore standard defaults</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Live Visual Preview */}
+              <div className="p-6 rounded-2xl bg-[#030914] border border-[#2de2c9]/30 relative overflow-hidden shadow-[0_0_30px_rgba(45,226,201,0.1)]">
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#2de2c9] animate-pulse" />
+                    <span className="font-mono text-xs text-[#2de2c9] uppercase tracking-wider font-semibold">
+                      Live Hero Preview (Interactive)
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">What visitors see on homepage</span>
+                </div>
+
+                <div className="flex flex-col items-center justify-center py-6 gap-3.5 text-center">
+                  {/* Wide Banner Preview */}
+                  {heroBannerForm.isActive ? (
+                    <div className="group relative w-full max-w-xl flex items-center justify-between gap-2.5 sm:gap-4 px-4 py-2.5 rounded-xl bg-[#06101c]/95 border border-[#2de2c9]/45 shadow-[0_4px_24px_rgba(0,0,0,0.6),0_0_20px_rgba(45,226,201,0.18)] select-none overflow-hidden">
+                      {/* Corner Brackets */}
+                      <span className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-[#2de2c9] pointer-events-none rounded-tl-[3px]" />
+                      <span className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-[#2de2c9] pointer-events-none rounded-tr-[3px]" />
+                      <span className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-[#2de2c9] pointer-events-none rounded-bl-[3px]" />
+                      <span className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-[#2de2c9] pointer-events-none rounded-br-[3px]" />
+
+                      {/* Scanline */}
+                      <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-[#2de2c9] to-transparent pointer-events-none shadow-[0_0_8px_#2de2c9]" />
+                      <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-[#00d2ff]/40 to-transparent pointer-events-none" />
+
+                      <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 z-10">
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#2de2c9] opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#2de2c9] shadow-[0_0_8px_#2de2c9]" />
+                        </span>
+                        {heroBannerForm.badge && (
+                          <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#2de2c9]/15 text-[#2de2c9] border border-[#2de2c9]/40 tracking-wider uppercase">
+                            {heroBannerForm.badge}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 text-left px-2 z-10">
+                        <span className="font-body text-xs font-bold tracking-wide bg-gradient-to-r from-[#2de2c9] via-[#67e8f9] to-[#38bdf8] bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(45,226,201,0.4)] truncate block">
+                          {heroBannerForm.title || "Announcement Title"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 z-10">
+                        {heroBannerForm.daysLeft && (
+                          <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#00d2ff]/15 text-[#38bdf8] border border-[#00d2ff]/40">
+                            {heroBannerForm.daysLeft}
+                          </span>
+                        )}
+                        <span className="text-[11px] font-mono text-[#2de2c9] font-bold flex items-center gap-1 px-2 py-0.5 rounded bg-[#2de2c9]/15 border border-[#2de2c9]/40">
+                          Details <ArrowRight size={12} />
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-full max-w-md py-3 rounded-xl border border-dashed border-white/20 text-xs text-muted-foreground/60 select-none text-center">
+                      [Banner Currently Disabled / Hidden]
+                    </div>
+                  )}
+
+                  {/* Logo Emblem Mock */}
+                  <div className="w-16 h-16 rounded-full bg-[#081524] border border-[#2de2c9]/40 flex items-center justify-center shadow-[0_0_20px_rgba(45,226,201,0.2)] mt-1">
+                    <span className="text-[10px] font-mono text-[#2de2c9] font-bold">LOGO</span>
+                  </div>
+
+                  <p className="font-mono text-[10px] tracking-widest uppercase text-[#2de2c9]/80 -mt-1">
+                    Rajshahi University of Engineering &amp; Technology
+                  </p>
+                  <p className="font-display text-lg font-bold text-white tracking-wide">
+                    RUET IoT Club
+                  </p>
+
+                  {/* Dynamic CTA Button Preview */}
+                  <div className="pt-2">
+                    <div
+                      className="relative inline-flex items-center gap-2.5 px-6 py-2.5 bg-gradient-to-r from-[#2de2c9] via-[#00d2ff] to-[#38bdf8] text-[#050b14] font-bold text-xs tracking-wider shadow-[0_0_20px_rgba(45,226,201,0.5)] select-none cursor-pointer"
+                      style={{
+                        clipPath: "polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px)"
+                      }}
+                    >
+                      <span>{heroBannerForm.buttonText || "Join Us"}</span>
+                      <ArrowRight size={14} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Edit Form */}
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setSavingHeroBanner(true);
+                  try {
+                    const res = await saveHeroBannerConfig(heroBannerForm, user?.id);
+                    if (res.success) {
+                      toast.success("Hero Banner & CTA configuration published live!");
+                      // Dispatch local storage event for instant sync in current window
+                      window.dispatchEvent(
+                        new StorageEvent("storage", {
+                          key: "ruet_iot_hero_banner_config",
+                          newValue: JSON.stringify(heroBannerForm),
+                        })
+                      );
+                    } else {
+                      toast.error("Failed to save banner configuration to Supabase");
+                    }
+                  } catch (err) {
+                    console.error("Save error:", err);
+                    toast.error("Error saving banner configuration");
+                  } finally {
+                    setSavingHeroBanner(false);
+                  }
+                }}
+                className="p-6 rounded-2xl bg-secondary/30 border border-border/50 space-y-5"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Badge */}
+                  <div>
+                    <label className="text-xs font-semibold text-foreground mb-1.5 flex items-center justify-between">
+                      <span>Banner Badge / Category Tag</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">e.g. Recruitment, Event, Workshop</span>
+                    </label>
+                    <input
+                      className={inputClass}
+                      value={heroBannerForm.badge}
+                      onChange={(e) => setHeroBannerForm({ ...heroBannerForm, badge: e.target.value })}
+                      placeholder="e.g. Recruitment Ongoing, Upcoming Event"
+                    />
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {["Recruitment Ongoing", "Upcoming Event", "Workshop", "Hackathon", "Registration Open"].map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => setHeroBannerForm({ ...heroBannerForm, badge: tag })}
+                          className="text-[10px] font-mono px-2 py-0.5 rounded bg-secondary/80 hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors border border-border/40"
+                        >
+                          +{tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Days Left / Subtext */}
+                  <div>
+                    <label className="text-xs font-semibold text-foreground mb-1.5 flex items-center justify-between">
+                      <span>Status / Days Left / Subtext</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">e.g. Register Now, 3 Days Left</span>
+                    </label>
+                    <input
+                      className={inputClass}
+                      value={heroBannerForm.daysLeft || ""}
+                      onChange={(e) => setHeroBannerForm({ ...heroBannerForm, daysLeft: e.target.value })}
+                      placeholder="e.g. Register Now, 3 Days Left, Ending Soon"
+                    />
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {["Register Now", "3 Days Left", "2 Days Left", "Ending Today", "Apply Before 25th"].map((sub) => (
+                        <button
+                          key={sub}
+                          type="button"
+                          onClick={() => setHeroBannerForm({ ...heroBannerForm, daysLeft: sub })}
+                          className="text-[10px] font-mono px-2 py-0.5 rounded bg-secondary/80 hover:bg-[#00d2ff]/20 text-muted-foreground hover:text-[#00d2ff] transition-colors border border-border/40"
+                        >
+                          +{sub}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Event / Announcement Name */}
+                <div>
+                  <label className="text-xs font-semibold text-foreground mb-1.5 block">
+                    Event / Announcement Title <span className="text-primary">*</span>
+                  </label>
+                  <input
+                    required
+                    className={inputClass}
+                    value={heroBannerForm.title}
+                    onChange={(e) => setHeroBannerForm({ ...heroBannerForm, title: e.target.value })}
+                    placeholder="e.g. Member Recruitment 2025 Now Open or IoT Carnival 2025"
+                  />
+                </div>
+
+                {/* Banner Click URL */}
+                <div>
+                  <label className="text-xs font-semibold text-foreground mb-1.5 flex items-center justify-between">
+                    <span>Banner Click Destination URL</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">Where users go when clicking the top banner</span>
+                  </label>
+                  <input
+                    className={inputClass}
+                    value={heroBannerForm.linkUrl}
+                    onChange={(e) => setHeroBannerForm({ ...heroBannerForm, linkUrl: e.target.value })}
+                    placeholder="/join, /events, /courses, or https://..."
+                  />
+                  <div className="flex gap-2 mt-2">
+                    {["/join", "/events", "/courses", "/projects"].map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setHeroBannerForm({ ...heroBannerForm, linkUrl: p })}
+                        className="text-[10px] font-mono px-2 py-0.5 rounded bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="pt-2 pb-1 border-t border-border/40">
+                  <h4 className="text-xs font-mono uppercase tracking-widest text-[#2de2c9] mb-1">
+                    Primary CTA Button Customization (&quot;Join Us&quot; Button)
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    You can change the primary Hero button text (e.g. change &quot;Join Us&quot; to &quot;Register Now&quot; or &quot;Join Workshop&quot;) and its destination link.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Button Text */}
+                  <div>
+                    <label className="text-xs font-semibold text-foreground mb-1.5 block">
+                      CTA Button Label <span className="text-primary">*</span>
+                    </label>
+                    <input
+                      required
+                      className={inputClass}
+                      value={heroBannerForm.buttonText}
+                      onChange={(e) => setHeroBannerForm({ ...heroBannerForm, buttonText: e.target.value })}
+                      placeholder="e.g. Join Us, Register Now, Join Workshop"
+                    />
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {["Join Us", "Register Now", "Apply Now", "Join Workshop", "Get Ticket"].map((b) => (
+                        <button
+                          key={b}
+                          type="button"
+                          onClick={() => setHeroBannerForm({ ...heroBannerForm, buttonText: b })}
+                          className="text-[10px] font-mono px-2 py-0.5 rounded bg-secondary/80 hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors border border-border/40"
+                        >
+                          {b}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Button URL */}
+                  <div>
+                    <label className="text-xs font-semibold text-foreground mb-1.5 block">
+                      CTA Button Destination URL <span className="text-primary">*</span>
+                    </label>
+                    <input
+                      required
+                      className={inputClass}
+                      value={heroBannerForm.buttonUrl}
+                      onChange={(e) => setHeroBannerForm({ ...heroBannerForm, buttonUrl: e.target.value })}
+                      placeholder="/join, /events, /courses, or https://..."
+                    />
+                    <div className="flex gap-2 mt-2">
+                      {["/join", "/events", "/courses"].map((b) => (
+                        <button
+                          key={b}
+                          type="button"
+                          onClick={() => setHeroBannerForm({ ...heroBannerForm, buttonUrl: b })}
+                          className="text-[10px] font-mono px-2 py-0.5 rounded bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {b}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit & Action Buttons */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-border/40">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="submit"
+                      disabled={savingHeroBanner}
+                      className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/20 flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <Sparkles size={16} />
+                      {savingHeroBanner ? "Publishing Changes..." : "Save & Publish Changes"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const latest = await fetchHeroBannerConfig();
+                        setHeroBannerForm(latest);
+                        toast.info("Refreshed from server");
+                      }}
+                      className="px-4 py-2.5 rounded-xl bg-secondary hover:bg-secondary/80 text-muted-foreground font-medium text-xs transition-colors"
+                    >
+                      Discard Unsaved
+                    </button>
+                  </div>
+
+                  <a
+                    href="/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+                  >
+                    View Homepage <ExternalLink size={13} />
+                  </a>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* ════════ Partners & Collaborators Tab ════════ */}
+          {tab === "partners" && (
+            <div className="max-w-5xl mx-auto space-y-6">
+              {/* Header Box */}
+              <div className="p-6 rounded-2xl glass border border-[#2de2c9]/30 relative overflow-hidden">
+                <div className="absolute -right-16 -top-16 w-48 h-48 bg-[#2de2c9]/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="p-2 rounded-lg bg-[#2de2c9]/15 text-[#2de2c9] border border-[#2de2c9]/30">
+                        <Handshake size={18} />
+                      </span>
+                      <h3 className="text-xl font-bold text-foreground">Partners &amp; Collaborators Management</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground max-w-2xl">
+                      Manage official partner organizations, research institutions, and sponsors displayed on the homepage. Changes save directly to Supabase and update in real-time.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetPartnerForm();
+                        setShowPartnerForm(true);
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-all shadow-md shadow-primary/20"
+                    >
+                      <Plus size={15} /> Add New Partner
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleResetDefaultPartners}
+                      className="px-3.5 py-2 rounded-xl bg-secondary hover:bg-secondary/80 border border-border text-muted-foreground hover:text-foreground text-xs font-medium transition-colors"
+                      title="Reset to default 3 partners (IID, The Earth Society, Youth For CARE)"
+                    >
+                      Reset Defaults
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Add / Edit Partner Form Modal or Card */}
+              <AnimatePresence>
+                {showPartnerForm && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <form
+                      onSubmit={handlePartnerSubmit}
+                      className="p-6 rounded-2xl bg-[#071322] border border-[#2de2c9]/45 shadow-[0_4px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(45,226,201,0.12)] space-y-4"
+                    >
+                      <div className="flex items-center justify-between pb-3 border-b border-border/40">
+                        <h4 className="font-bold text-base text-foreground flex items-center gap-2">
+                          <Handshake size={16} className="text-[#2de2c9]" />
+                          {editingPartnerId ? "Edit Partner Organization" : "Add New Partner Organization"}
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={resetPartnerForm}
+                          className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Name */}
+                        <div>
+                          <label className="text-xs font-semibold text-foreground mb-1 block">
+                            Organization Name <span className="text-primary">*</span>
+                          </label>
+                          <input
+                            required
+                            className={inputClass}
+                            value={partnerForm.name || ""}
+                            onChange={(e) => setPartnerForm({ ...partnerForm, name: e.target.value })}
+                            placeholder="e.g. Institute for Informed Development, Google, RUET"
+                          />
+                        </div>
+
+                        {/* Subtitle / Short Name */}
+                        <div>
+                          <label className="text-xs font-semibold text-foreground mb-1 block">
+                            Subtitle / Tagline (Optional)
+                          </label>
+                          <input
+                            className={inputClass}
+                            value={partnerForm.subtitle || ""}
+                            onChange={(e) => setPartnerForm({ ...partnerForm, subtitle: e.target.value })}
+                            placeholder="e.g. Evidence-Based Research Partner"
+                          />
+                        </div>
+
+                        {/* Website URL */}
+                        <div>
+                          <label className="text-xs font-semibold text-foreground mb-1 block">
+                            Website URL
+                          </label>
+                          <input
+                            type="url"
+                            className={inputClass}
+                            value={partnerForm.website || ""}
+                            onChange={(e) => setPartnerForm({ ...partnerForm, website: e.target.value })}
+                            placeholder="https://example.org"
+                          />
+                        </div>
+
+                        {/* Accent Glow Color */}
+                        <div>
+                          <label className="text-xs font-semibold text-foreground mb-1 block">
+                            Card Ambient Accent Glow
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              className={inputClass}
+                              value={partnerForm.accentGlow || ""}
+                              onChange={(e) => setPartnerForm({ ...partnerForm, accentGlow: e.target.value })}
+                              placeholder="rgba(45, 226, 201, 0.35)"
+                            />
+                            <div className="flex gap-1 shrink-0">
+                              {[
+                                { label: "Cyan", val: "rgba(0, 180, 216, 0.35)", bg: "#00b4d8" },
+                                { label: "Teal", val: "rgba(45, 226, 201, 0.35)", bg: "#2de2c9" },
+                                { label: "Gold", val: "rgba(234, 179, 8, 0.35)", bg: "#eab308" },
+                                { label: "Purple", val: "rgba(168, 85, 247, 0.35)", bg: "#a855f7" },
+                              ].map((c) => (
+                                <button
+                                  key={c.label}
+                                  type="button"
+                                  onClick={() => setPartnerForm({ ...partnerForm, accentGlow: c.val })}
+                                  className="w-6 h-6 rounded-full border border-white/30 transition-transform hover:scale-110"
+                                  style={{ backgroundColor: c.bg }}
+                                  title={c.label}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      <div>
+                        <label className="text-xs font-semibold text-foreground mb-1 block">
+                          Description <span className="text-primary">*</span>
+                        </label>
+                        <textarea
+                          required
+                          rows={3}
+                          className={inputClass}
+                          value={partnerForm.description || ""}
+                          onChange={(e) => setPartnerForm({ ...partnerForm, description: e.target.value })}
+                          placeholder="Brief explanation of the partner organization and collaboration focus..."
+                        />
+                      </div>
+
+                      {/* Logo Selector: Preset vs Custom URL / Upload */}
+                      <div className="p-4 rounded-xl bg-secondary/40 border border-border/50 space-y-3">
+                        <label className="text-xs font-semibold text-foreground block">
+                          Logo Option
+                        </label>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {[
+                            { id: "iid", label: "IID Node Logo" },
+                            { id: "earth-society", label: "The Earth Society" },
+                            { id: "youth-for-care", label: "Youth For CARE" },
+                            { id: "custom", label: "Custom Image / URL" },
+                          ].map((opt) => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => setPartnerForm({ ...partnerForm, presetLogoId: opt.id as any })}
+                              className={`p-2.5 rounded-lg text-xs font-medium border text-center transition-all ${
+                                partnerForm.presetLogoId === opt.id
+                                  ? "bg-primary/20 text-primary border-primary shadow-[0_0_10px_rgba(45,226,201,0.2)]"
+                                  : "bg-secondary/60 text-muted-foreground border-border hover:bg-secondary"
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {partnerForm.presetLogoId === "custom" && (
+                          <div className="pt-2 space-y-2">
+                            <label className="text-xs text-muted-foreground block">
+                              Custom Logo Image URL or Upload:
+                            </label>
+                            <div className="flex gap-2">
+                              <input
+                                className={inputClass}
+                                value={partnerForm.logoUrl || ""}
+                                onChange={(e) => setPartnerForm({ ...partnerForm, logoUrl: e.target.value })}
+                                placeholder="https://example.com/logo.png"
+                              />
+                            </div>
+                            <div className="pt-1">
+                              <ImageUpload
+                                onUploadComplete={(url) => setPartnerForm({ ...partnerForm, logoUrl: url })}
+                                folder="partners"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Active Toggle & Buttons */}
+                      <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-border/40">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={partnerForm.active !== false}
+                            onChange={(e) => setPartnerForm({ ...partnerForm, active: e.target.checked })}
+                            className="rounded border-border text-primary focus:ring-primary w-4 h-4"
+                          />
+                          <span className="text-xs font-semibold text-foreground">
+                            Active (Visible on Homepage)
+                          </span>
+                        </label>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={resetPartnerForm}
+                            className="px-4 py-2 rounded-xl bg-secondary text-muted-foreground font-semibold text-xs hover:bg-secondary/80 transition-colors"
+                          >
+                            Cancel
+                          </button>
+
+                          <button
+                            type="submit"
+                            disabled={savingPartners}
+                            className="px-6 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition-all flex items-center gap-1.5 shadow-md shadow-primary/20 disabled:opacity-50"
+                          >
+                            <Check size={14} />
+                            {savingPartners ? "Saving..." : editingPartnerId ? "Update Partner" : "Save Partner"}
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Partners List Grid */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                  <span>
+                    Showing {partnersList.length} Partner Organizations ({partnersList.filter((p) => p.active !== false).length} Active on Homepage)
+                  </span>
+                </div>
+
+                {partnersList.length === 0 ? (
+                  <div className="p-12 text-center rounded-2xl bg-secondary/20 border border-border text-muted-foreground text-sm">
+                    No partner organizations configured. Click &quot;Add New Partner&quot; or &quot;Reset Defaults&quot; above.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {partnersList.map((partner) => (
+                      <div
+                        key={partner.id}
+                        className={`p-5 rounded-2xl bg-[#081524]/90 border transition-all duration-200 relative flex flex-col justify-between overflow-hidden ${
+                          partner.active !== false
+                            ? "border-[#2de2c9]/35 hover:border-[#2de2c9]/70 shadow-[0_4px_20px_rgba(0,0,0,0.35)]"
+                            : "border-border/40 opacity-60 bg-secondary/20"
+                        }`}
+                      >
+                        {/* Glow indicator */}
+                        <div
+                          className="absolute -top-10 -right-10 w-24 h-24 rounded-full blur-xl pointer-events-none opacity-20"
+                          style={{ background: partner.accentGlow || "rgba(45, 226, 201, 0.35)" }}
+                        />
+
+                        <div>
+                          {/* Top Row: Preset/Logo Preview + Status Badge */}
+                          <div className="flex items-start justify-between gap-2 mb-3">
+                            <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-secondary text-muted-foreground border border-border/50">
+                              {partner.presetLogoId === "iid"
+                                ? "Preset: IID"
+                                : partner.presetLogoId === "earth-society"
+                                ? "Preset: Earth Society"
+                                : partner.presetLogoId === "youth-for-care"
+                                ? "Preset: Youth For CARE"
+                                : "Custom Logo"}
+                            </span>
+
+                            <span
+                              className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                                partner.active !== false
+                                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                                  : "bg-muted text-muted-foreground border border-border"
+                              }`}
+                            >
+                              {partner.active !== false ? "Active" : "Hidden"}
+                            </span>
+                          </div>
+
+                          {/* Logo snippet */}
+                          <div className="h-12 flex items-center justify-center w-full mb-3 bg-[#050b14]/70 rounded-xl p-2 border border-border/30">
+                            {partner.presetLogoId === "iid" && (
+                              <span className="font-bold text-xs text-[#00b4d8]">IID (Institute for Informed Development)</span>
+                            )}
+                            {partner.presetLogoId === "earth-society" && (
+                              <span className="font-serif font-bold text-xs text-[#eab308]">The Earth Society</span>
+                            )}
+                            {partner.presetLogoId === "youth-for-care" && (
+                              <span className="font-bold text-xs text-[#2de2c9]">Youth For CARE</span>
+                            )}
+                            {partner.presetLogoId === "custom" && partner.logoUrl && (
+                              <img src={partner.logoUrl} alt={partner.name} className="max-h-8 max-w-full object-contain" />
+                            )}
+                            {partner.presetLogoId === "custom" && !partner.logoUrl && (
+                              <span className="font-mono text-xs text-muted-foreground">{partner.name}</span>
+                            )}
+                          </div>
+
+                          {/* Name & Subtitle */}
+                          <h4 className="font-bold text-sm text-foreground mb-0.5">
+                            {partner.name}
+                          </h4>
+                          {partner.subtitle && (
+                            <p className="text-[11px] font-mono text-[#2de2c9] mb-2 truncate">
+                              {partner.subtitle}
+                            </p>
+                          )}
+
+                          {/* Description */}
+                          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mb-3">
+                            {partner.description}
+                          </p>
+
+                          {/* Website Link */}
+                          {partner.website && (
+                            <a
+                              href={partner.website}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] font-mono text-[#38bdf8] hover:underline mb-4"
+                            >
+                              <ExternalLink size={11} /> {partner.website}
+                            </a>
+                          )}
+                        </div>
+
+                        {/* Card Actions */}
+                        <div className="flex items-center justify-between pt-3 border-t border-border/40 text-xs">
+                          <button
+                            type="button"
+                            onClick={() => togglePartnerActive(partner.id)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
+                              partner.active !== false
+                                ? "bg-secondary text-muted-foreground hover:text-foreground"
+                                : "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
+                            }`}
+                          >
+                            {partner.active !== false ? "Hide" : "Show"}
+                          </button>
+
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => editPartner(partner)}
+                              className="p-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
+                              title="Edit partner"
+                            >
+                              <Pencil size={13} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => deletePartner(partner.id)}
+                              className="p-1.5 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive transition-colors"
+                              title="Delete partner"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* ════════ Announcements Tab ════════ */}
           {tab === "announcements" && (
             <div className="max-w-4xl mx-auto">
@@ -1991,12 +3256,12 @@ const AdminDashboard = () => {
                 </button>
               </div>
 
-              {announcements.length === 0 && !showAnnouncementForm && (
+              {announcements.filter(a => a.title !== "HERO_BANNER_CONFIG" && a.title !== "PARTNERS_LIST_CONFIG").length === 0 && !showAnnouncementForm && (
                 <p className="text-muted-foreground text-center py-12">No announcements yet. Create one to notify members.</p>
               )}
 
               <div className="space-y-3">
-                {announcements.map((a) => (
+                {announcements.filter(a => a.title !== "HERO_BANNER_CONFIG" && a.title !== "PARTNERS_LIST_CONFIG").map((a) => (
                   <div key={a.id} className="bg-secondary/30 border border-border/40 rounded-xl p-4 flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-foreground">{a.title}</h4>
@@ -2307,6 +3572,7 @@ const AdminDashboard = () => {
               </div>
             </div>
           )}
+          </motion.div>
         </div>
       </section>
     </Layout>

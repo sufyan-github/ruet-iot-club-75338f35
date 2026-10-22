@@ -189,7 +189,7 @@ const JoinUs = () => {
     }
   };
 
-  const inputClass = "w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";
+  const inputClass = "w-full px-4 py-3 chip-shape bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";
 
   if (success) {
     return (
@@ -203,7 +203,7 @@ const JoinUs = () => {
             <h2 className="font-display text-2xl font-bold text-foreground mb-4">Application Submitted!</h2>
             <p className="text-muted-foreground mb-2">Thank you for applying to RUET IoT Club.</p>
             <p className="text-sm text-muted-foreground mb-6">We review applications weekly. Your payment will be verified and you'll receive a confirmation.</p>
-            <Link to="/" className="px-6 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">
+            <Link to="/" className="px-6 py-2 chip-shape bg-gradient-to-r from-[#2de2c9] to-[#00d2ff] text-[#050b14] font-bold text-sm shadow-[0_2px_12px_rgba(45,226,201,0.35)] hover:brightness-110 transition-all">
               Back to Home
             </Link>
           </div>
@@ -219,7 +219,7 @@ const JoinUs = () => {
           <SectionHeading title="Membership Application" subtitle="Fill out all sections to complete your application. We review applications weekly." />
 
           {!user && (
-            <div className="max-w-2xl mx-auto mb-8 p-4 rounded-xl glass border-primary/20 text-center">
+            <div className="max-w-2xl mx-auto mb-8 p-4 chip-card border border-[#2de2c9]/30 text-center">
               <p className="text-sm text-muted-foreground">
                 Please <Link to="/auth" className="text-primary hover:underline font-semibold">sign in or create an account</Link> first to submit your membership application.
               </p>
@@ -230,7 +230,8 @@ const JoinUs = () => {
             onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-6">
 
             {/* Profile Photo */}
-            <div className="p-6 rounded-xl glass space-y-4">
+            <div className="relative p-6 chip-card border border-[#2de2c9]/25 space-y-4 overflow-hidden">
+              <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9]" />
               <h3 className="font-display text-sm font-bold tracking-wider text-primary">Profile Photo</h3>
               <div className="flex items-center gap-6">
                 <div
@@ -255,7 +256,8 @@ const JoinUs = () => {
             </div>
 
             {/* Personal Information */}
-            <div className="p-6 rounded-xl glass space-y-4">
+            <div className="relative p-6 chip-card border border-[#2de2c9]/25 space-y-4 overflow-hidden">
+              <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9]" />
               <h3 className="font-display text-sm font-bold tracking-wider text-primary">Personal Information</h3>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
@@ -278,7 +280,8 @@ const JoinUs = () => {
             </div>
 
             {/* Academic Information */}
-            <div className="p-6 rounded-xl glass space-y-4">
+            <div className="relative p-6 chip-card border border-[#2de2c9]/25 space-y-4 overflow-hidden">
+              <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9]" />
               <h3 className="font-display text-sm font-bold tracking-wider text-primary">Academic Information</h3>
               <div className="grid md:grid-cols-3 gap-4">
                 <div>
@@ -289,9 +292,9 @@ const JoinUs = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Batch *</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">Series *</label>
                   <select name="batch" required value={form.batch} onChange={handleChange} className={inputClass}>
-                    <option value="">Select batch</option>
+                    <option value="">Select series</option>
                     {batches.map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
                 </div>
@@ -306,7 +309,8 @@ const JoinUs = () => {
             </div>
 
             {/* Technical Background */}
-            <div className="p-6 rounded-xl glass space-y-4">
+            <div className="relative p-6 chip-card border border-[#2de2c9]/25 space-y-4 overflow-hidden">
+              <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9]" />
               <h3 className="font-display text-sm font-bold tracking-wider text-primary">Technical Background</h3>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Experience Level *</label>
@@ -326,7 +330,8 @@ const JoinUs = () => {
             </div>
 
             {/* Motivation & Commitment */}
-            <div className="p-6 rounded-xl glass space-y-4">
+            <div className="relative p-6 chip-card border border-[#2de2c9]/25 space-y-4 overflow-hidden">
+              <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9]" />
               <h3 className="font-display text-sm font-bold tracking-wider text-primary">Motivation & Commitment</h3>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Why do you want to join? *</label>
@@ -342,7 +347,8 @@ const JoinUs = () => {
             </div>
 
             {/* Additional Information */}
-            <div className="p-6 rounded-xl glass space-y-4">
+            <div className="relative p-6 chip-card border border-[#2de2c9]/25 space-y-4 overflow-hidden">
+              <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9]" />
               <h3 className="font-display text-sm font-bold tracking-wider text-primary">Additional Information</h3>
               <div className="grid md:grid-cols-3 gap-4">
                 <div>
@@ -361,7 +367,7 @@ const JoinUs = () => {
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Resume/CV (Optional)</label>
                 <div onClick={() => fileRef.current?.click()}
-                  className="w-full px-4 py-4 rounded-lg bg-secondary border-2 border-dashed border-border hover:border-primary/50 transition-colors cursor-pointer flex items-center gap-3 text-sm">
+                  className="w-full px-4 py-4 chip-shape bg-secondary border-2 border-dashed border-border hover:border-primary/50 transition-colors cursor-pointer flex items-center gap-3 text-sm">
                   <Upload size={20} className="text-muted-foreground" />
                   <span className="text-muted-foreground">
                     {resumeFile ? resumeFile.name : "Choose File — PDF, DOC, DOCX (Max 5MB)"}
@@ -372,7 +378,8 @@ const JoinUs = () => {
             </div>
 
             {/* Payment */}
-            <div className="p-6 rounded-xl glass space-y-4">
+            <div className="relative p-6 chip-card border border-[#2de2c9]/25 space-y-4 overflow-hidden">
+              <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9]" />
               <h3 className="font-display text-sm font-bold tracking-wider text-primary">Membership Fee (৳300)</h3>
               <div>
                 <label className="text-xs text-muted-foreground mb-2 block">Payment Method *</label>
@@ -382,10 +389,10 @@ const JoinUs = () => {
                       key={method}
                       type="button"
                       onClick={() => setForm({ ...form, paymentMethod: method, transactionId: method === "Cash" ? "" : form.transactionId })}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      className={`px-4 py-2 chip-shape text-sm font-medium transition-all ${
                         form.paymentMethod === method
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                          ? "bg-gradient-to-r from-[#2de2c9] to-[#00d2ff] text-[#050b14] font-bold shadow-[0_2px_12px_rgba(45,226,201,0.4)]"
+                          : "bg-[#071322]/80 text-muted-foreground border border-[#2de2c9]/25 hover:text-foreground"
                       }`}
                     >
                       {method === "Cash" ? "💵 Cash" : method}
@@ -395,14 +402,14 @@ const JoinUs = () => {
               </div>
 
               {(form.paymentMethod === "bKash" || form.paymentMethod === "Nagad" || form.paymentMethod === "Rocket") && (
-                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm text-muted-foreground">
+                <div className="p-3 chip-shape bg-primary/5 border border-primary/20 text-sm text-muted-foreground">
                   <p>Send <strong className="text-foreground">৳300</strong> to:</p>
                   <p className="text-primary font-mono text-lg font-bold mt-1">+8801580352238</p>
                   <p className="mt-1 text-xs">({form.paymentMethod} Personal) — Use "Send Money" option and note the Transaction ID.</p>
                 </div>
               )}
               {form.paymentMethod === "Cash" && (
-                <div className="p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20 text-sm text-muted-foreground">
+                <div className="p-3 chip-shape bg-yellow-500/5 border border-yellow-500/20 text-sm text-muted-foreground">
                   <p className="font-semibold text-yellow-400">💵 Cash Payment</p>
                   <p className="text-xs mt-1">Pay <strong className="text-foreground">৳300</strong> directly to the club admin. An unpaid status will be recorded for tracking until payment is received.</p>
                 </div>
@@ -417,7 +424,7 @@ const JoinUs = () => {
             </div>
 
             <button type="submit" disabled={submitting || !user}
-              className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors glow-border disabled:opacity-50">
+              className="w-full py-4 chip-shape bg-gradient-to-r from-[#2de2c9] via-[#00d2ff] to-[#38bdf8] text-[#050b14] font-bold text-base shadow-[0_4px_24px_rgba(45,226,201,0.45)] hover:shadow-[0_4px_32px_rgba(45,226,201,0.7)] hover:brightness-110 transition-all disabled:opacity-50">
               {submitting ? "Submitting Application..." : "Submit Application"}
             </button>
             <p className="text-xs text-center text-muted-foreground">

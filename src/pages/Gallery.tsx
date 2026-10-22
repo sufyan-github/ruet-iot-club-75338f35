@@ -40,12 +40,15 @@ const Gallery = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.05 }}
                   onClick={() => setSelectedPhoto(photo)}
-                  className="aspect-square rounded-xl glass overflow-hidden relative group cursor-pointer"
+                  className="aspect-square chip-card border border-[#2de2c9]/25 hover:border-[#2de2c9]/70 overflow-hidden relative group cursor-pointer"
                 >
+                  {/* Pin-1 Micro Dot */}
+                  <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9] z-20" />
+
                   <img src={getOptimizedImageUrl(photo.image_url, { width: 400, height: 400 })} alt={photo.title || "Activity"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#071322]/90 via-[#071322]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="absolute bottom-3 left-3 right-3">
-                      {photo.title && <h4 className="font-semibold text-sm text-foreground">{photo.title}</h4>}
+                      {photo.title && <h4 className="font-semibold text-sm text-[#2de2c9]">{photo.title}</h4>}
                       {photo.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{photo.description}</p>}
                     </div>
                   </div>
@@ -61,7 +64,7 @@ const Gallery = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm p-4"
           onClick={() => setSelectedPhoto(null)}>
           <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-            className="max-w-3xl w-full rounded-2xl overflow-hidden glass" onClick={(e) => e.stopPropagation()}>
+            className="max-w-3xl w-full chip-card border border-[#2de2c9]/40 overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <img src={getOptimizedImageUrl(selectedPhoto.image_url, { width: 1024 })} alt={selectedPhoto.title || "Activity"} className="w-full max-h-[70vh] object-contain bg-background" />
             <div className="p-4">
               {selectedPhoto.title && <h3 className="font-semibold text-foreground">{selectedPhoto.title}</h3>}

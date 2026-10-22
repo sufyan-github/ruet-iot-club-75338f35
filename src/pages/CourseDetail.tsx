@@ -163,14 +163,15 @@ const CourseDetail = () => {
           </button>
 
           {/* Header */}
-          <div className="rounded-xl glass overflow-hidden mb-8">
+          <div className="relative chip-card border border-[#2de2c9]/25 overflow-hidden mb-8">
+            <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9] z-20" />
             {course.image_url && (
               <img src={getOptimizedImageUrl(course.image_url, { width: 800, height: 350 })} alt={course.title} className="w-full h-48 md:h-64 object-cover" />
             )}
             <div className="p-6">
               <div className="flex items-center gap-2 mb-3">
-                {course.category && <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary">{course.category}</span>}
-                <span className={`text-xs font-mono px-2 py-0.5 rounded ${course.is_paid ? "bg-yellow-500/10 text-yellow-400" : "bg-green-500/10 text-green-400"}`}>
+                {course.category && <span className="text-xs px-2 py-0.5 chip-shape bg-primary/10 text-primary border border-primary/20">{course.category}</span>}
+                <span className={`text-xs font-mono px-2 py-0.5 chip-shape ${course.is_paid ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500/30" : "bg-green-500/10 text-green-400 border border-green-500/30"}`}>
                   {course.is_paid ? `৳${course.price}` : "Free"}
                 </span>
               </div>
@@ -182,7 +183,8 @@ const CourseDetail = () => {
 
           {/* Enrollment / Progress */}
           {!registration ? (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl glass p-6 mb-8">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative chip-card border border-[#2de2c9]/25 p-6 mb-8 overflow-hidden">
+              <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9]" />
               <h2 className="font-display text-lg font-bold text-foreground mb-4">
                 {course.is_paid ? "Enroll in this Course" : "Start Learning"}
               </h2>
@@ -190,38 +192,39 @@ const CourseDetail = () => {
                 <div className="space-y-3 mb-4">
                   <p className="text-sm text-muted-foreground">Fee: <span className="text-primary font-semibold">৳{course.price}</span></p>
                   <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                    className="w-full px-4 py-3 chip-shape bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
                     <option value="bKash">bKash</option>
                     <option value="Nagad">Nagad</option>
                     <option value="Rocket">Rocket</option>
                     <option value="Cash">Cash Payment</option>
                   </select>
                   {(paymentMethod === "bKash" || paymentMethod === "Nagad" || paymentMethod === "Rocket") && (
-                    <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm text-muted-foreground">
+                    <div className="p-3 chip-shape bg-primary/5 border border-primary/20 text-sm text-muted-foreground">
                       <p>Send <strong className="text-foreground">৳{course.price}</strong> to:</p>
                       <p className="text-primary font-mono text-lg font-bold mt-1">+8801580352238</p>
                       <p className="text-xs mt-1">({paymentMethod} Personal) — Use "Send Money" option and note the Transaction ID.</p>
                     </div>
                   )}
                   {paymentMethod === "Cash" && (
-                    <div className="p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20 text-sm text-muted-foreground">
+                    <div className="p-3 chip-shape bg-yellow-500/5 border border-yellow-500/20 text-sm text-muted-foreground">
                       <p className="font-semibold text-yellow-400">💵 Cash Payment</p>
                       <p className="text-xs mt-1">Pay <strong className="text-foreground">৳{course.price}</strong> directly to the club admin. An unpaid payslip will be generated for tracking.</p>
                     </div>
                   )}
                   {paymentMethod !== "Cash" && (
                     <input placeholder="Transaction ID *" value={txnId} onChange={(e) => setTxnId(e.target.value)}
-                      className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                      className="w-full px-4 py-3 chip-shape bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
                   )}
                 </div>
               )}
               <button onClick={handleRegister} disabled={registering}
-                className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-50">
+                className="px-6 py-3.5 chip-shape bg-gradient-to-r from-[#2de2c9] to-[#00d2ff] text-[#050b14] font-bold text-sm shadow-[0_2px_12px_rgba(45,226,201,0.35)] hover:brightness-110 transition-all disabled:opacity-50">
                 {registering ? "Processing..." : course.is_paid ? "Submit Payment & Enroll" : "Enroll for Free"}
               </button>
             </motion.div>
           ) : (registration.payment_status === "pending" || registration.payment_status === "unpaid") && course.is_paid ? (
-            <div className="rounded-xl glass p-6 mb-8 space-y-4">
+            <div className="relative chip-card border border-[#2de2c9]/25 p-6 mb-8 space-y-4 overflow-hidden">
+              <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9]" />
               <div className="text-center">
                 <p className="text-yellow-400 font-medium">
                   {registration.payment_status === "unpaid" ? "💵 Cash Payment - Unpaid" : "⏳ Payment verification pending"}
@@ -246,7 +249,8 @@ const CourseDetail = () => {
               />
             </div>
           ) : (
-            <div className="rounded-xl glass p-6 mb-8">
+            <div className="relative chip-card border border-[#2de2c9]/25 p-6 mb-8 overflow-hidden">
+              <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9]" />
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-display text-lg font-bold text-foreground">Your Progress</h2>
                 {registration.completed && (

@@ -36,19 +36,22 @@ const Research = () => {
             subtitle="Exploring innovation through ongoing research and published papers"
           />
 
-          {/* Stats */}
+          {/* Stats - Modular Chip Cards */}
           <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto mb-10">
-            <div className="p-4 rounded-xl glass text-center">
+            <div className="relative p-4 chip-card border border-[#2de2c9]/25 hover:border-[#2de2c9]/70 text-center overflow-hidden">
+              <span className="absolute top-2 left-2 w-1 h-1 rounded-full bg-[#2de2c9]" />
               <p className="text-2xl font-display font-bold text-foreground">{papers.length}</p>
               <p className="text-xs text-muted-foreground mt-1">Total Papers</p>
             </div>
-            <div className="p-4 rounded-xl glass text-center">
+            <div className="relative p-4 chip-card border border-[#2de2c9]/25 hover:border-[#2de2c9]/70 text-center overflow-hidden">
+              <span className="absolute top-2 left-2 w-1 h-1 rounded-full bg-[#2de2c9]" />
               <p className="text-2xl font-display font-bold text-primary">
                 {papers.filter((p) => p.status === "published").length}
               </p>
               <p className="text-xs text-muted-foreground mt-1">Published</p>
             </div>
-            <div className="p-4 rounded-xl glass text-center">
+            <div className="relative p-4 chip-card border border-[#2de2c9]/25 hover:border-[#2de2c9]/70 text-center overflow-hidden">
+              <span className="absolute top-2 left-2 w-1 h-1 rounded-full bg-[#2de2c9]" />
               <p className="text-2xl font-display font-bold text-yellow-400">
                 {papers.filter((p) => p.status === "ongoing").length}
               </p>
@@ -62,10 +65,10 @@ const Research = () => {
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize ${
+                className={`px-4 py-2 chip-shape text-sm font-medium transition-all capitalize ${
                   filter === f
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                    ? "bg-gradient-to-r from-[#2de2c9] to-[#00d2ff] text-[#050b14] font-bold shadow-[0_2px_12px_rgba(45,226,201,0.4)]"
+                    : "bg-[#071322]/80 text-muted-foreground border border-[#2de2c9]/25 hover:text-foreground hover:border-[#2de2c9]/60"
                 }`}
               >
                 {f === "all" ? "All" : f}
@@ -76,7 +79,7 @@ const Research = () => {
           {loading ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-32 rounded-xl bg-secondary/50 animate-pulse" />
+                <div key={i} className="h-32 chip-shape bg-secondary/30 border border-border/20 animate-pulse" />
               ))}
             </div>
           ) : filtered.length === 0 ? (
@@ -90,16 +93,21 @@ const Research = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.05 }}
-                  className="p-6 rounded-xl glass hover:border-primary/30 transition-all duration-300"
+                  className="relative p-6 chip-card border border-[#2de2c9]/25 hover:border-[#2de2c9]/70 transition-all duration-300 overflow-hidden"
                 >
+                  {/* Pin-1 Index Notch Socket */}
+                  <span className="chip-pin-1 absolute top-2.5 left-2.5 z-20" />
+                  <span className="absolute top-0 right-0 w-2.5 h-2.5 border-t-2 border-r-2 border-[#2de2c9]/60 group-hover:border-[#00d2ff] pointer-events-none transition-colors" />
+                  <span className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b-2 border-l-2 border-[#2de2c9]/60 group-hover:border-[#00d2ff] pointer-events-none transition-colors" />
+
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
                         <span
-                          className={`inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded ${
+                          className={`inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 chip-shape ${
                             paper.status === "published"
-                              ? "bg-green-500/10 text-green-400"
-                              : "bg-yellow-500/10 text-yellow-400"
+                              ? "bg-green-500/15 text-green-400 border border-green-500/30"
+                              : "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30"
                           }`}
                         >
                           {paper.status === "published" ? (

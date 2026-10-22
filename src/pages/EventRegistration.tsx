@@ -145,7 +145,8 @@ const EventRegistration = () => {
           <SectionHeading title="Event Registration" subtitle={event.title} />
 
           {/* Event Info Card */}
-          <div className="p-6 rounded-xl glass mb-8">
+          <div className="relative p-6 chip-card border border-[#2de2c9]/25 mb-8 overflow-hidden">
+            <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9]" />
             {event.image_url && (
               <img src={getOptimizedImageUrl(event.image_url, { width: 600, height: 250 })} alt={event.title} className="w-full h-48 object-cover rounded-lg mb-4" />
             )}
@@ -169,7 +170,8 @@ const EventRegistration = () => {
 
           {/* Registration Form */}
           <motion.form initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            onSubmit={handleSubmit} className="p-6 rounded-xl glass space-y-4">
+            onSubmit={handleSubmit} className="relative p-6 chip-card border border-[#2de2c9]/25 space-y-4 overflow-hidden">
+            <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9]" />
             <h3 className="font-display text-sm font-bold tracking-wider text-primary mb-2">Your Details</h3>
             <div className="grid md:grid-cols-2 gap-4">
               <input placeholder="Full Name *" required value={form.name}
@@ -184,7 +186,7 @@ const EventRegistration = () => {
 
             {/* Payment section for paid events */}
             {event.is_paid && (
-              <div className="p-4 rounded-lg bg-secondary/50 border border-border space-y-4">
+              <div className="p-4 chip-shape bg-secondary/50 border border-border space-y-4">
                 <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <CreditCard size={16} className="text-primary" /> Payment Details
                 </h4>
@@ -194,10 +196,10 @@ const EventRegistration = () => {
                   <div className="flex flex-wrap gap-2">
                     {["bKash", "Nagad", "Rocket", "Cash"].map((method) => (
                       <button key={method} type="button" onClick={() => setForm({ ...form, payment_method: method })}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        className={`px-4 py-2 chip-shape text-sm font-medium transition-all ${
                           form.payment_method === method
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-secondary text-muted-foreground hover:text-foreground"
+                            ? "bg-gradient-to-r from-[#2de2c9] to-[#00d2ff] text-[#050b14] font-bold shadow-[0_2px_12px_rgba(45,226,201,0.4)]"
+                            : "bg-[#071322]/80 text-muted-foreground border border-[#2de2c9]/25 hover:text-foreground"
                         }`}>
                         {method === "Cash" ? "💵 Cash" : method}
                       </button>
@@ -208,7 +210,7 @@ const EventRegistration = () => {
                 {form.payment_method && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     {(form.payment_method === "bKash" || form.payment_method === "Nagad" || form.payment_method === "Rocket") && (
-                      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm text-muted-foreground mb-3">
+                      <div className="p-3 chip-shape bg-primary/5 border border-primary/20 text-sm text-muted-foreground mb-3">
                         <p>Send ৳{event.registration_fee} to <strong className="text-foreground">
                           {event.payment_number || "+8801580352238"} ({form.payment_method} Personal)
                         </strong></p>
@@ -216,7 +218,7 @@ const EventRegistration = () => {
                       </div>
                     )}
                     {form.payment_method === "Cash" && (
-                      <div className="p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20 text-sm text-muted-foreground mb-3">
+                      <div className="p-3 chip-shape bg-yellow-500/5 border border-yellow-500/20 text-sm text-muted-foreground mb-3">
                         <p className="font-semibold text-yellow-400">💵 Cash Payment</p>
                         <p className="text-xs mt-1">Pay <strong className="text-foreground">৳{event.registration_fee}</strong> directly to the club admin. An unpaid payslip will be generated for tracking.</p>
                       </div>
@@ -231,7 +233,7 @@ const EventRegistration = () => {
             )}
 
             <button type="submit" disabled={submitting}
-              className="w-full px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 glow-border">
+              className="w-full px-6 py-3.5 chip-shape bg-gradient-to-r from-[#2de2c9] to-[#00d2ff] text-[#050b14] font-bold text-sm shadow-[0_2px_14px_rgba(45,226,201,0.35)] hover:brightness-110 transition-all disabled:opacity-50">
               {submitting ? "Submitting..." : event.is_paid
                 ? form.payment_method === "Cash"
                   ? `Register (Pay ৳${event.registration_fee} Cash)`

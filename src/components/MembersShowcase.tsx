@@ -31,7 +31,7 @@ const MembersShowcase = () => {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 max-w-5xl mx-auto">
         {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div key={i} className="h-40 rounded-xl bg-secondary/50 animate-pulse" />
+          <div key={i} className="h-40 chip-shape bg-secondary/30 border border-border/20 animate-pulse" />
         ))}
       </div>
     );
@@ -50,8 +50,12 @@ const MembersShowcase = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: i * 0.05 }}
-          className="p-4 rounded-xl glass text-center hover:border-primary/30 transition-all duration-300 group"
+          className="relative p-4 chip-card border border-[#2de2c9]/20 hover:border-[#2de2c9]/60 text-center transition-all duration-300 group overflow-hidden select-none"
         >
+          {/* Pin-1 Index Notch Socket */}
+          <span className="chip-pin-1 absolute top-2.5 left-2.5 z-20" />
+          <span className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#2de2c9]/60 group-hover:border-[#00d2ff] pointer-events-none transition-colors" />
+          <span className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[#2de2c9]/60 group-hover:border-[#00d2ff] pointer-events-none transition-colors" />
           {member.avatar_url ? (
             <img
               src={getOptimizedImageUrl(member.avatar_url, { width: 80, height: 80 })}
@@ -77,7 +81,7 @@ const MembersShowcase = () => {
           )}
           {(member.batch || member.session) && (
             <p className="text-[10px] text-muted-foreground mt-0.5">
-              {member.batch && `Batch: ${member.batch}`}
+              {member.batch && `Series: ${member.batch}`}
               {member.batch && member.session && " · "}
               {member.session && `${member.session}`}
             </p>

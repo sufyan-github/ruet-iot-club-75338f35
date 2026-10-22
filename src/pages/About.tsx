@@ -33,8 +33,14 @@ const About = () => {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="p-8 rounded-xl glass"
+              className="relative p-8 chip-card border border-[#2de2c9]/25 hover:border-[#2de2c9]/70 overflow-hidden"
             >
+              <span className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-[#2de2c9]/60 pointer-events-none" />
+              <span className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-[#2de2c9]/60 pointer-events-none" />
+              <div className="flex items-center justify-between mb-3 text-[10px] font-mono text-[#2de2c9]/80 tracking-wider">
+                <span>CORE_01 // MISSION</span>
+                <span className="chip-pin-1" />
+              </div>
               <Target className="text-primary mb-4" size={32} />
               <h3 className="font-display text-lg font-bold tracking-wider text-primary mb-3">Mission</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
@@ -49,8 +55,14 @@ const About = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
-              className="p-8 rounded-xl glass"
+              className="relative p-8 chip-card border border-[#3b9bff]/25 hover:border-[#3b9bff]/70 overflow-hidden"
             >
+              <span className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-[#3b9bff]/60 pointer-events-none" />
+              <span className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-[#3b9bff]/60 pointer-events-none" />
+              <div className="flex items-center justify-between mb-3 text-[10px] font-mono text-[#3b9bff]/80 tracking-wider">
+                <span>CORE_02 // VISION</span>
+                <span className="chip-pin-1" />
+              </div>
               <Eye className="text-accent mb-4" size={32} />
               <h3 className="font-display text-lg font-bold tracking-wider text-accent mb-3">Vision</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
@@ -68,9 +80,13 @@ const About = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="p-5 rounded-xl glass text-center"
+                className="relative p-5 chip-card border border-[#2de2c9]/25 hover:border-[#2de2c9]/70 text-center overflow-hidden"
               >
-                <v.icon className="mx-auto mb-3 text-primary" size={24} />
+                <span className="chip-pin-1 absolute top-2.5 left-2.5 z-20" />
+                <span className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#2de2c9]/60 pointer-events-none" />
+                <span className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[#2de2c9]/60 pointer-events-none" />
+                <span className="absolute top-2 right-2 text-[9px] font-mono text-[#2de2c9]/80 font-bold">0{i + 1}</span>
+                <v.icon className="mx-auto mb-3 text-primary group-hover:scale-110 transition-transform" size={24} />
                 <h4 className="font-semibold text-sm text-foreground mb-1">{v.title}</h4>
                 <p className="text-xs text-muted-foreground">{v.desc}</p>
               </motion.div>

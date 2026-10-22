@@ -61,7 +61,8 @@ const Contact = () => {
               animate={{ opacity: 1, x: 0 }}
               className="space-y-6"
             >
-              <div className="p-6 rounded-xl glass">
+              <div className="relative p-6 chip-card border border-[#2de2c9]/25 hover:border-[#2de2c9]/70 overflow-hidden">
+                <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9]" />
                 <h3 className="font-display text-sm font-bold tracking-wider text-primary mb-4">Get in Touch</h3>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
@@ -88,7 +89,8 @@ const Contact = () => {
                 </div>
               </div>
 
-              <div className="p-6 rounded-xl glass">
+              <div className="relative p-6 chip-card border border-[#2de2c9]/25 hover:border-[#2de2c9]/70 overflow-hidden">
+                <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9]" />
                 <h3 className="font-display text-sm font-bold tracking-wider text-primary mb-4">Membership & Payment</h3>
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
@@ -102,7 +104,7 @@ const Contact = () => {
                 </div>
               </div>
 
-              <div className="rounded-xl overflow-hidden glass h-48">
+              <div className="chip-card border border-[#2de2c9]/25 overflow-hidden h-48">
                 <iframe
                   src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3634.6!2d88.6!3d24.37!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjTCsDIyJzEyLjAiTiA4OMKwMzYnMDAuMCJF!5e0!3m2!1sen!2sbd!4v1"
                   width="100%" height="100%" style={{ border: 0 }} allowFullScreen loading="lazy"
@@ -115,19 +117,20 @@ const Contact = () => {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               onSubmit={handleSubmit}
-              className="p-6 rounded-xl glass space-y-4"
+              className="relative p-6 chip-card border border-[#2de2c9]/25 space-y-4 overflow-hidden"
             >
+              <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9]" />
               <h3 className="font-display text-sm font-bold tracking-wider text-primary mb-2">Send a Message</h3>
               <input name="name" placeholder="Your Name *" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                className="w-full px-4 py-3 chip-shape bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
               <input name="email" type="email" placeholder="Your Email *" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                className="w-full px-4 py-3 chip-shape bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
               <input name="subject" placeholder="Subject *" required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                className="w-full px-4 py-3 chip-shape bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
               <textarea name="message" placeholder="Your Message *" required rows={5} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none" />
+                className="w-full px-4 py-3 chip-shape bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none" />
               <button type="submit" disabled={submitting}
-                className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors glow-border disabled:opacity-50">
+                className="w-full py-3.5 chip-shape bg-gradient-to-r from-[#2de2c9] to-[#00d2ff] text-[#050b14] font-bold shadow-[0_2px_12px_rgba(45,226,201,0.35)] hover:brightness-110 transition-all disabled:opacity-50">
                 {submitting ? "Sending..." : "Send Message"}
               </button>
             </motion.form>

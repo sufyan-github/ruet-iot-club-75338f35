@@ -1,4 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
@@ -19,6 +21,7 @@ interface Member {
 }
 
 const Members = () => {
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -48,6 +51,10 @@ const Members = () => {
 
   const selectClass = "px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";
 
+  if (!authLoading && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <Layout>
       <SEO title="Our Members | RUET IoT Club" description="Browse approved members of RUET IoT Club from departments across Rajshahi University of Engineering & Technology." path="/members" />
@@ -72,7 +79,7 @@ const Members = () => {
               {departments.map(d => <option key={d} value={d!}>{d}</option>)}
             </select>
             <select value={batchFilter} onChange={e => setBatchFilter(e.target.value)} className={selectClass}>
-              <option value="">All Batches</option>
+              <option value="">All Series</option>
               {batches.map(b => <option key={b} value={b!}>{b}</option>)}
             </select>
           </div>
@@ -80,7 +87,7 @@ const Members = () => {
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="h-48 rounded-xl bg-secondary/50 animate-pulse" />
+                <div key={i} className="h-48 chip-shape bg-secondary/30 border border-border/20 animate-pulse" />
               ))}
             </div>
           ) : filtered.length === 0 ? (
@@ -103,8 +110,12 @@ const Members = () => {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: Math.min(i * 0.03, 0.5) }}
-                    className="p-5 rounded-xl glass text-center hover:border-primary/30 transition-all duration-300 group"
+                    className="relative p-5 chip-card border border-[#2de2c9]/20 hover:border-[#2de2c9]/60 text-center transition-all duration-300 group overflow-hidden select-none"
                   >
+                    {/* Pin-1 Index Notch Socket */}
+                    <span className="chip-pin-1 absolute top-2.5 left-2.5 z-20" />
+                    <span className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#2de2c9]/60 group-hover:border-[#00d2ff] pointer-events-none transition-colors" />
+                    <span className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[#2de2c9]/60 group-hover:border-[#00d2ff] pointer-events-none transition-colors" />
                     {member.avatar_url ? (
                       <img
                         src={getOptimizedImageUrl(member.avatar_url, { width: 96, height: 96 })}
@@ -130,7 +141,7 @@ const Members = () => {
                     )}
                     {(member.batch || member.session) && (
                       <p className="text-[11px] text-muted-foreground mt-0.5">
-                        {member.batch && `Batch: ${member.batch}`}
+                        {member.batch && `Series: ${member.batch}`}
                         {member.batch && member.session && " · "}
                         {member.session && member.session}
                       </p>

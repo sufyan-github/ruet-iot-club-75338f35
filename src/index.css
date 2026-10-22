@@ -1,10 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Teko:wght@600;700&family=Chakra+Petch:wght@600;700&family=Orbitron:wght@400;500;600;700;800;900&family=Oxanium:wght@600;700;800;900&family=Rajdhani:wght@600;700;800&family=Space+Grotesk:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
   :root {
     --background: 220 20% 4%;
     --foreground: 210 20% 92%;
@@ -89,6 +99,77 @@
   }
 
   .glass {
-    @apply bg-card/60 backdrop-blur-xl border border-border/50;
+    background: rgba(7, 18, 32, 0.82);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(45, 226, 201, 0.22);
+  }
+
+  /* Hardware / IC Chip Package utilities */
+  .chip-shape {
+    clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+  }
+
+  .chip-shape-md {
+    clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px);
+  }
+
+  .chip-shape-lg {
+    clip-path: polygon(16px 0, calc(100% - 16px) 0, 100% 16px, 100% calc(100% - 16px), calc(100% - 16px) 100%, 16px 100%, 0 calc(100% - 16px), 0 16px);
+  }
+
+  .chip-card {
+    position: relative;
+    background-color: rgba(7, 18, 32, 0.92);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(45, 226, 201, 0.42);
+    clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px);
+    background-image:
+      radial-gradient(circle at 100% 0%, rgba(45, 226, 201, 0.08) 0%, transparent 45%),
+      linear-gradient(90deg, rgba(45, 226, 201, 0.04) 1px, transparent 1px),
+      linear-gradient(rgba(45, 226, 201, 0.04) 1px, transparent 1px);
+    background-size: 100% 100%, 10px 10px, 10px 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 15px rgba(45, 226, 201, 0.12);
+    transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .chip-card:hover {
+    background-color: rgba(10, 26, 44, 0.96);
+    border-color: #00d2ff;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 24px rgba(45, 226, 201, 0.35);
+    transform: translateY(-2px);
+  }
+
+  /* Microchip Pin-1 Socket Marker */
+  .chip-pin-1 {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 9999px;
+    background: #031526;
+    border: 1px solid #2de2c9;
+    box-shadow: 0 0 6px rgba(45, 226, 201, 0.45);
+  }
+  .chip-pin-1::after {
+    content: '';
+    width: 0.35rem;
+    height: 0.35rem;
+    border-radius: 9999px;
+    background: #2de2c9;
+    box-shadow: 0 0 4px #2de2c9;
+  }
+
+  /* Universal scrollbar hiding utilities */
+  .no-scrollbar::-webkit-scrollbar,
+  .scrollbar-none::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+  .no-scrollbar,
+  .scrollbar-none {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
   }
 }

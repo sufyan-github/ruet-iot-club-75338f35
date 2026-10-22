@@ -189,7 +189,7 @@ const Dashboard = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Batch</label>
+                      <label className="text-xs text-muted-foreground mb-1 block">Series</label>
                       <input className={inputClass} value={form.batch} onChange={(e) => setForm({ ...form, batch: e.target.value })} />
                     </div>
                     <div>
@@ -224,7 +224,7 @@ const Dashboard = () => {
                   <ProfileRow label="Email" value={user.email} />
                   <ProfileRow label="Student ID" value={profile?.student_id} />
                   <ProfileRow label="Department" value={profile?.department} />
-                  <ProfileRow label="Batch" value={profile?.batch} />
+                  <ProfileRow label="Series" value={profile?.batch} />
                   <ProfileRow label="Session" value={profile?.session} />
                   <ProfileRow label="Phone" value={profile?.phone} />
                   <ProfileRow label="Skills" value={profile?.skills} />
