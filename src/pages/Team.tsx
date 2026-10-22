@@ -42,16 +42,9 @@ interface SessionOption {
   isCurrent?: boolean;
 }
 
-// Preset committee terms / sessions
+// Preset committee terms / sessions (1st was 2023-2024, current is 3rd: 2025-2026)
 const COMMITTEE_SESSIONS: SessionOption[] = [
-  { id: "current", label: "Current (2025-2026)", years: "2025-2026", isCurrent: true },
-  { id: "7th", label: "7th (2024-2025)", years: "2024-2025" },
-  { id: "6th", label: "6th (2023-2024)", years: "2023-2024" },
-  { id: "5th", label: "5th (2022-2023)", years: "2022-2023" },
-  { id: "4th", label: "4th (2021-2022)", years: "2021-2022" },
-  { id: "3rd", label: "3rd (2020-2021)", years: "2020-2021" },
-  { id: "2nd", label: "2nd (2019-2020)", years: "2019-2020" },
-  { id: "1st", label: "1st (2018-2019)", years: "2018-2019" },
+  { id: "current", label: "3rd Executive (2025-2026)", years: "2025-2026", isCurrent: true },
 ];
 
 const isAdvisoryCategory = (category?: string | null) => {
@@ -71,57 +64,27 @@ const memberMatchesSession = (member: any, sessionId: string, board: "executive"
 
   if (sessionId === "current") {
     const isExplicitPast =
-      lower.includes("2018") ||
-      lower.includes("2019") ||
-      lower.includes("2020") ||
-      lower.includes("2021") ||
-      lower.includes("2022") ||
-      lower.includes("2023") ||
-      lower.includes("2024") ||
       lower.includes("1st") ||
       lower.includes("2nd") ||
-      lower.includes("3rd") ||
-      lower.includes("4th") ||
-      lower.includes("5th") ||
-      lower.includes("6th") ||
-      lower.includes("7th") ||
       lower.includes("first") ||
       lower.includes("second") ||
-      lower.includes("third") ||
-      lower.includes("fourth") ||
-      lower.includes("fifth") ||
-      lower.includes("sixth") ||
-      lower.includes("seventh") ||
+      lower.includes("2023-2024") ||
+      lower.includes("2024-2025") ||
       lower.includes("founding") ||
       lower.includes("previous");
 
-    if (lower.includes("current")) return true;
+    if (lower.includes("current") || lower.includes("3rd") || lower.includes("third") || lower.includes("2025-2026")) return true;
     if (board === "executive" && (cat === "Executive Board" || cat === "Executive Committee")) return true;
     if (board === "advisory" && cat === "Advisory Board") return true;
 
     return !isExplicitPast;
   }
 
-  if (sessionId === "7th") {
-    return lower.includes("7th") || lower.includes("seventh") || lower.includes("2024-2025") || lower.includes("2024");
-  }
-  if (sessionId === "6th") {
-    return lower.includes("6th") || lower.includes("sixth") || lower.includes("2023-2024") || (lower.includes("2023") && !lower.includes("2022"));
-  }
-  if (sessionId === "5th") {
-    return lower.includes("5th") || lower.includes("fifth") || lower.includes("2022-2023") || (lower.includes("2022") && !lower.includes("2021"));
-  }
-  if (sessionId === "4th") {
-    return lower.includes("4th") || lower.includes("fourth") || lower.includes("2021-2022") || lower.includes("2021-2023");
-  }
-  if (sessionId === "3rd") {
-    return lower.includes("3rd") || lower.includes("third") || lower.includes("2020-2021") || lower.includes("2020");
-  }
   if (sessionId === "2nd") {
-    return lower.includes("2nd") || lower.includes("second") || lower.includes("2019-2020") || lower.includes("2019");
+    return lower.includes("2nd") || lower.includes("second") || lower.includes("2024-2025");
   }
   if (sessionId === "1st") {
-    return lower.includes("1st") || lower.includes("first") || lower.includes("2018-2019") || lower.includes("2018") || lower.includes("founding");
+    return lower.includes("1st") || lower.includes("first") || lower.includes("2023-2024");
   }
 
   return cat === sessionId || lower.includes(sessionId.toLowerCase());
@@ -173,18 +136,18 @@ const MemberCard = ({
       transition={{ duration: 0.3, delay: Math.min(index * 0.03, 0.35) }}
       className={`relative text-center transition-all duration-300 group select-none flex flex-col justify-between overflow-hidden ${
         isLeader
-          ? "p-6 sm:p-7 bg-[#071322]/95 hover:bg-[#0b1c30] border-2 border-[#2de2c9]/70 hover:border-[#00d2ff] shadow-[0_4px_24px_rgba(0,0,0,0.7),0_0_24px_rgba(45,226,201,0.28)] hover:shadow-[0_4px_32px_rgba(0,0,0,0.85),0_0_36px_rgba(45,226,201,0.45)]"
+          ? "p-4 sm:p-7 bg-[#071322]/95 hover:bg-[#0b1c30] border-2 border-[#2de2c9]/70 hover:border-[#00d2ff] shadow-[0_4px_24px_rgba(0,0,0,0.7),0_0_24px_rgba(45,226,201,0.28)] hover:shadow-[0_4px_32px_rgba(0,0,0,0.85),0_0_36px_rgba(45,226,201,0.45)]"
           : tierId === "vice_president"
-          ? "p-5 sm:p-6 bg-[#071322]/90 hover:bg-[#0b1c30] border border-[#00d2ff]/50 hover:border-[#00d2ff] shadow-[0_4px_20px_rgba(0,0,0,0.6),0_0_18px_rgba(0,210,255,0.2)] hover:shadow-[0_4px_28px_rgba(0,0,0,0.8),0_0_24px_rgba(0,210,255,0.35)]"
+          ? "p-3 sm:p-6 bg-[#071322]/90 hover:bg-[#0b1c30] border border-[#00d2ff]/50 hover:border-[#00d2ff] shadow-[0_4px_20px_rgba(0,0,0,0.6),0_0_18px_rgba(0,210,255,0.2)] hover:shadow-[0_4px_28px_rgba(0,0,0,0.8),0_0_24px_rgba(0,210,255,0.35)]"
           : tierId === "assistant_general_secretary"
-          ? "p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#38bdf8]/45 hover:border-[#38bdf8] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(56,189,248,0.18)]"
+          ? "p-3 sm:p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#38bdf8]/45 hover:border-[#38bdf8] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(56,189,248,0.18)]"
           : tierId === "secretary"
-          ? "p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#a855f7]/45 hover:border-[#c084fc] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(168,85,247,0.18)]"
+          ? "p-3 sm:p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#a855f7]/45 hover:border-[#c084fc] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(168,85,247,0.18)]"
           : tierId === "assistant_secretary"
-          ? "p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#6366f1]/45 hover:border-[#818cf8] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(99,102,241,0.18)]"
+          ? "p-3 sm:p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#6366f1]/45 hover:border-[#818cf8] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(99,102,241,0.18)]"
           : tierId === "executive_member"
-          ? "p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#10b981]/45 hover:border-[#34d399] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(16,185,129,0.18)]"
-          : "p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#2de2c9]/35 hover:border-[#2de2c9] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(45,226,201,0.15)]"
+          ? "p-3 sm:p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#10b981]/45 hover:border-[#34d399] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(16,185,129,0.18)]"
+          : "p-3 sm:p-5 bg-[#071322]/88 hover:bg-[#0a192c] border border-[#2de2c9]/35 hover:border-[#2de2c9] shadow-[0_4px_18px_rgba(0,0,0,0.6),0_0_15px_rgba(45,226,201,0.15)]"
       }`}
       style={{
         clipPath: isLeader
@@ -203,22 +166,22 @@ const MemberCard = ({
       />
 
       {/* IC Package Corner Tech Brackets */}
-      <span className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-[#2de2c9]/60 group-hover:border-[#00d2ff] pointer-events-none transition-colors" />
-      <span className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-[#2de2c9]/60 group-hover:border-[#00d2ff] pointer-events-none transition-colors" />
+      <span className="absolute top-0 right-0 w-2 h-2 sm:w-3 sm:h-3 border-t-2 border-r-2 border-[#2de2c9]/60 group-hover:border-[#00d2ff] pointer-events-none transition-colors" />
+      <span className="absolute bottom-0 left-0 w-2 h-2 sm:w-3 sm:h-3 border-b-2 border-l-2 border-[#2de2c9]/60 group-hover:border-[#00d2ff] pointer-events-none transition-colors" />
 
       {/* IC Pin Socket Notch (No text) */}
-      <span className="chip-pin-1 absolute top-3 left-3 z-20 pointer-events-none" />
+      <span className="chip-pin-1 absolute top-2 left-2 sm:top-3 sm:left-3 z-20 pointer-events-none" />
 
       {/* Sort Order / IC Model Number */}
       {typeof member.sort_order === "number" && member.sort_order > 0 && (
-        <span className="absolute top-2.5 right-2.5 z-20 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#031526]/90 text-[#2de2c9] border border-[#2de2c9]/40 group-hover:border-[#00d2ff] transition-colors shadow-sm">
+        <span className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 z-20 text-[9px] sm:text-[10px] font-mono font-bold px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded bg-[#031526]/90 text-[#2de2c9] border border-[#2de2c9]/40 group-hover:border-[#00d2ff] transition-colors shadow-sm">
           #{String(member.sort_order).padStart(2, "0")}
         </span>
       )}
 
-      <div className="relative z-10 pt-4">
+      <div className="relative z-10 pt-2 sm:pt-4">
         {/* Avatar with Glowing Concentric Cyber Ring */}
-        <div className="relative mx-auto mb-3.5 inline-block">
+        <div className="relative mx-auto mb-2 sm:mb-3.5 inline-block">
           <div
             className={`absolute -inset-1 rounded-full opacity-60 group-hover:opacity-100 transition-all blur-sm ${
               isLeader
@@ -237,10 +200,10 @@ const MemberCard = ({
               alt={member.name}
               className={`relative rounded-full object-cover border-2 transition-all ${
                 isLeader
-                  ? "w-24 h-24 sm:w-28 sm:h-28 border-[#2de2c9] shadow-[0_0_18px_rgba(45,226,201,0.4)]"
+                  ? "w-16 h-16 sm:w-28 sm:h-28 border-[#2de2c9] shadow-[0_0_18px_rgba(45,226,201,0.4)]"
                   : tierId === "vice_president"
-                  ? "w-20 h-20 border-[#00d2ff] shadow-[0_0_14px_rgba(0,210,255,0.3)]"
-                  : "w-20 h-20 border-[#2de2c9]/60 group-hover:border-[#2de2c9]"
+                  ? "w-14 h-14 sm:w-20 sm:h-20 border-[#00d2ff] shadow-[0_0_14px_rgba(0,210,255,0.3)]"
+                  : "w-12 h-12 sm:w-20 sm:h-20 border-[#2de2c9]/60 group-hover:border-[#2de2c9]"
               }`}
               loading="lazy"
             />
@@ -248,15 +211,15 @@ const MemberCard = ({
             <div
               className={`relative rounded-full bg-[#05111e] flex items-center justify-center border-2 transition-all ${
                 isLeader
-                  ? "w-24 h-24 sm:w-28 sm:h-28 border-[#2de2c9] shadow-[0_0_18px_rgba(45,226,201,0.35)]"
+                  ? "w-16 h-16 sm:w-28 sm:h-28 border-[#2de2c9] shadow-[0_0_18px_rgba(45,226,201,0.35)]"
                   : tierId === "vice_president"
-                  ? "w-20 h-20 border-[#00d2ff] shadow-[0_0_14px_rgba(0,210,255,0.25)]"
-                  : "w-20 h-20 border-[#2de2c9]/60 group-hover:border-[#2de2c9]"
+                  ? "w-14 h-14 sm:w-20 sm:h-20 border-[#00d2ff] shadow-[0_0_14px_rgba(0,210,255,0.25)]"
+                  : "w-12 h-12 sm:w-20 sm:h-20 border-[#2de2c9]/60 group-hover:border-[#2de2c9]"
               }`}
             >
               <span
                 className={`font-display font-bold text-[#2de2c9] ${
-                  isLeader ? "text-2xl" : "text-xl"
+                  isLeader ? "text-lg sm:text-2xl" : "text-sm sm:text-xl"
                 }`}
               >
                 {member.name
@@ -275,17 +238,17 @@ const MemberCard = ({
         <h3
           className={`font-semibold text-foreground transition-colors ${
             isLeader
-              ? "text-base sm:text-lg font-bold group-hover:text-[#2de2c9]"
-              : "text-sm sm:text-base group-hover:text-primary leading-snug"
+              ? "text-sm sm:text-lg font-bold group-hover:text-[#2de2c9]"
+              : "text-xs sm:text-base font-semibold group-hover:text-primary leading-tight"
           }`}
         >
           {member.name}
         </h3>
 
         {/* Designation / Position with IC Chip-Shape Cut */}
-        <div className="mt-2.5 mb-1.5 flex justify-center">
+        <div className="mt-1.5 sm:mt-2.5 mb-1 sm:mb-1.5 flex justify-center">
           <span
-            className={`chip-shape inline-flex items-center gap-1.5 text-xs font-mono font-bold px-3 py-1 tracking-wide ${
+            className={`chip-shape inline-flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-mono font-bold px-2 py-0.5 sm:px-3 sm:py-1 tracking-tight sm:tracking-wide max-w-full truncate ${
               isLeader
                 ? "bg-[#2de2c9]/20 text-[#2de2c9] border border-[#2de2c9]/50 shadow-[0_0_12px_rgba(45,226,201,0.25)]"
                 : tierId === "vice_president"
@@ -301,15 +264,15 @@ const MemberCard = ({
                 : "bg-[#2de2c9]/10 text-[#2de2c9] border border-[#2de2c9]/30"
             }`}
           >
-            {tierId === "president" && <Crown size={12} className="text-[#2de2c9]" />}
-            {tierId === "general_secretary" && <Award size={12} className="text-[#2de2c9]" />}
+            {tierId === "president" && <Crown size={11} className="text-[#2de2c9]" />}
+            {tierId === "general_secretary" && <Award size={11} className="text-[#2de2c9]" />}
             {member.position}
           </span>
         </div>
 
         {/* Department & Batch / Series */}
         {(member.department || member.batch) && (
-          <p className="text-xs text-muted-foreground mt-1.5">
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 sm:mt-1.5 line-clamp-1">
             {member.department && <span className="font-medium text-foreground/85">{member.department}</span>}
             {member.department && member.batch && " · "}
             {member.batch && <span>Series {member.batch}</span>}
@@ -318,24 +281,24 @@ const MemberCard = ({
 
         {/* Bio / Quote (if any) */}
         {member.bio && (
-          <p className="text-xs text-muted-foreground mt-2 leading-relaxed line-clamp-3">
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 sm:mt-2 leading-tight sm:leading-relaxed line-clamp-2 sm:line-clamp-3">
             {member.bio}
           </p>
         )}
       </div>
 
       {/* Bottom I/O Bus Terminal: Social & Contact */}
-      <div className="relative z-10 mt-4 pt-3 border-t border-[#2de2c9]/20 bg-[#040d18]/60 -mx-6 -mb-6 sm:-mx-7 sm:-mb-7 px-4 py-3">
-        <div className="flex justify-center items-center gap-3">
+      <div className={`relative z-10 mt-2.5 sm:mt-4 pt-2 sm:pt-3 border-t border-[#2de2c9]/20 bg-[#040d18]/60 ${isLeader ? "-mx-4 -mb-4 sm:-mx-7 sm:-mb-7" : "-mx-3 -mb-3 sm:-mx-5 sm:-mb-5"} px-2 py-1.5 sm:px-4 sm:py-3`}>
+        <div className="flex justify-center items-center gap-2 sm:gap-3">
           {member.linkedin && (
             <a
               href={member.linkedin}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-[#2de2c9] transition-colors p-1"
+              className="text-muted-foreground hover:text-[#2de2c9] transition-colors p-0.5 sm:p-1"
               title="LinkedIn"
             >
-              <Linkedin size={15} />
+              <Linkedin size={13} className="sm:w-[15px] sm:h-[15px]" />
             </a>
           )}
           {member.github && (
@@ -343,34 +306,34 @@ const MemberCard = ({
               href={member.github}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-[#2de2c9] transition-colors p-1"
+              className="text-muted-foreground hover:text-[#2de2c9] transition-colors p-0.5 sm:p-1"
               title="GitHub"
             >
-              <Github size={15} />
+              <Github size={13} className="sm:w-[15px] sm:h-[15px]" />
             </a>
           )}
           {member.email && (
             <a
               href={`mailto:${member.email}`}
-              className="text-muted-foreground hover:text-[#2de2c9] transition-colors p-1"
+              className="text-muted-foreground hover:text-[#2de2c9] transition-colors p-0.5 sm:p-1"
               title="Email"
             >
-              <Mail size={15} />
+              <Mail size={13} className="sm:w-[15px] sm:h-[15px]" />
             </a>
           )}
           {member.phone && (
             <a
               href={`tel:${member.phone}`}
-              className="text-muted-foreground hover:text-[#2de2c9] transition-colors p-1"
+              className="text-muted-foreground hover:text-[#2de2c9] transition-colors p-0.5 sm:p-1"
               title="Call"
             >
-              <Phone size={15} />
+              <Phone size={13} className="sm:w-[15px] sm:h-[15px]" />
             </a>
           )}
         </div>
 
         {member.phone && (
-          <p className="text-[11px] text-muted-foreground mt-1.5 font-mono">{member.phone}</p>
+          <p className="text-[9px] sm:text-[11px] text-muted-foreground mt-1 sm:mt-1.5 font-mono">{member.phone}</p>
         )}
       </div>
     </motion.div>
@@ -719,8 +682,8 @@ const Team = () => {
                   </button>
                 </div>
               ) : (
-                <div className="space-y-12">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground font-mono mb-2">
+                <div className="space-y-8 sm:space-y-12">
+                  <div className="hidden sm:flex items-center justify-between text-xs text-muted-foreground font-mono mb-2">
                     <span>
                       {boardMembers.length} {activeBoard === "executive" ? "Executive Members" : "Advisors"}
                     </span>
@@ -728,10 +691,10 @@ const Team = () => {
 
                   {activeBoard === "executive" ? (
                     /* ── Executive Hierarchical Tiers ── */
-                    <div className="space-y-12">
-                      {/* Tier Quick Filter / Jump Bar */}
+                    <div className="space-y-8 sm:space-y-12">
+                      {/* Tier Quick Filter / Jump Bar (Hidden on Mobile) */}
                       {tierGroups.length > 1 && (
-                        <div className="flex items-center justify-center gap-2 flex-wrap mb-8">
+                        <div className="hidden sm:flex items-center justify-center gap-2 flex-wrap mb-8">
                           <button
                             type="button"
                             onClick={() => setSelectedTierFilter("all")}
@@ -775,18 +738,18 @@ const Team = () => {
 
                       {/* Render Each Tier in Strict Rank Order */}
                       {displayedTierGroups.map((group) => (
-                        <div key={group.tier.id} className="space-y-6">
+                        <div key={group.tier.id} className="space-y-4 sm:space-y-6">
                           {/* Clean Section Header (No redundant TIER text, description, or sub-labels) */}
                           <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-border/25">
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2.5 sm:gap-3">
                               <div
-                                className={`p-2 rounded-xl bg-gradient-to-br ${group.tier.gradient} border ${group.tier.borderColor} shadow-sm`}
+                                className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gradient-to-br ${group.tier.gradient} border ${group.tier.borderColor} shadow-sm`}
                               >
                                 {getTierIcon(group.tier.id)}
                               </div>
                               <div className="flex items-center gap-2">
                                 <h3
-                                  className={`font-display text-lg sm:text-xl font-bold ${group.tier.textColor}`}
+                                  className={`font-display text-base sm:text-xl font-bold ${group.tier.textColor}`}
                                 >
                                   {group.tier.title}
                                 </h3>
@@ -797,17 +760,17 @@ const Team = () => {
                             </div>
                           </div>
 
-                          {/* Member cards grid */}
+                          {/* Member cards grid (Compact on mobile) */}
                           <div
-                            className={`grid gap-5 ${
+                            className={`grid gap-3 sm:gap-5 ${
                               group.tier.id === "president"
-                                ? "grid-cols-1 max-w-md mx-auto"
+                                ? "grid-cols-1 max-w-xs sm:max-w-md mx-auto"
                                 : group.tier.id === "general_secretary"
-                                ? "grid-cols-1 max-w-md mx-auto"
+                                ? "grid-cols-1 max-w-xs sm:max-w-md mx-auto"
                                 : group.tier.id === "vice_president"
-                                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto"
+                                ? "grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto"
                                 : group.tier.id === "assistant_general_secretary"
-                                ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 max-w-6xl mx-auto"
+                                ? "grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 max-w-6xl mx-auto"
                                 : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 max-w-6xl mx-auto"
                             }`}
                           >
