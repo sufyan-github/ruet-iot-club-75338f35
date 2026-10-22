@@ -296,34 +296,19 @@ const DesktopBar = ({ open, handleRef, barRef, unread, onToggle, onClose }: Desk
               )}
             </nav>
 
-            {/* Right side: Notifications, Sign In / Join Us, and Small 'X' Close Button */}
+            {/* Right side: Notifications, User Dashboard, and Small 'X' Close Button (Sign In & Join Us temporarily disabled) */}
             <div className="flex items-center gap-2 xl:gap-3 ml-2 xl:ml-4 shrink-0">
-              {user && <NotificationBell />}
-              <div className="w-px h-5 bg-border/40" />
-
-              {loading ? null : user ? (
-                <Link
-                  to="/dashboard"
-                  className="px-2.5 xl:px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition-colors glow-border focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                >
-                  Dashboard
-                </Link>
-              ) : (
-                <div className="flex items-center gap-1.5 xl:gap-2">
+              {user && (
+                <>
+                  <NotificationBell />
+                  <div className="w-px h-5 bg-border/40" />
                   <Link
-                    to="/auth"
-                    className="px-2.5 xl:px-3 py-1.5 chip-shape text-xs font-medium text-muted-foreground hover:text-foreground border border-border/50 hover:border-border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    to="/dashboard"
+                    className="px-2.5 xl:px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition-colors glow-border focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
-                    Sign In
+                    Dashboard
                   </Link>
-                  <Link
-                    to="/join"
-                    className="inline-flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 chip-shape bg-gradient-to-r from-[#2de2c9] to-[#00d2ff] text-[#050b14] font-bold text-xs shadow-[0_2px_12px_rgba(45,226,201,0.35)] hover:brightness-110 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#050b14]" />
-                    Join Us
-                  </Link>
-                </div>
+                </>
               )}
 
               {/* Small X Close Button */}
@@ -450,9 +435,9 @@ const MobileSheet = ({ unread }: { unread: number }) => {
               )}
             </motion.nav>
 
-            {/* Bottom auth area: Sign In and Join Us */}
-            <div className="px-5 pb-6 pt-3 border-t border-border/30 flex flex-col gap-2">
-              {loading ? null : user ? (
+            {/* Bottom auth area: (Sign In & Join Us temporarily disabled) */}
+            {user && (
+              <div className="px-5 pb-6 pt-3 border-t border-border/30 flex flex-col gap-2">
                 <Link
                   to="/dashboard"
                   onClick={() => setSheetOpen(false)}
@@ -460,26 +445,8 @@ const MobileSheet = ({ unread }: { unread: number }) => {
                 >
                   Dashboard
                 </Link>
-              ) : (
-                <>
-                  <Link
-                    to="/auth"
-                    onClick={() => setSheetOpen(false)}
-                    className="px-4 py-2.5 chip-shape border border-border/50 text-foreground font-medium text-sm text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  >
-                    Sign In
-                  </Link>
-                  <Link
-                    to="/join"
-                    onClick={() => setSheetOpen(false)}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 chip-shape bg-gradient-to-r from-[#2de2c9] via-[#00d2ff] to-[#38bdf8] text-[#050b14] font-bold text-sm text-center shadow-[0_2px_14px_rgba(45,226,201,0.4)] hover:brightness-110 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#050b14]" />
-                    Join Us
-                  </Link>
-                </>
-              )}
-            </div>
+              </div>
+            )}
           </SheetContent>
         </Sheet>
       </div>

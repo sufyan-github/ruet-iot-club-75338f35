@@ -450,7 +450,7 @@ const Hero = () => {
           custom={dJoin}
           className="pt-6 sm:pt-7 md:pt-8 flex flex-wrap items-center justify-center gap-5 sm:gap-6"
         >
-          {/* Button 1: Dynamic Primary Chip (Join Us / Register Now / Event CTA) */}
+          {/* Button 1: Dynamic Primary Chip (Join Us / Register Now / Event CTA with Continuous Fading / Breathing Glow) */}
           {isExternalLink(bannerConfig.buttonUrl) ? (
             <a
               href={bannerConfig.buttonUrl || "/join"}
@@ -458,9 +458,36 @@ const Hero = () => {
               rel="noopener noreferrer"
               className="group relative inline-flex items-center gap-3 px-8 py-3.5 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2de2c9] transition-all duration-300"
             >
-              {/* Silicon IC Body with 45° Chamfered Corners (Primary Glowing Teal) */}
-              <div
-                className="absolute inset-0 bg-gradient-to-r from-[#2de2c9] via-[#00d2ff] to-[#38bdf8] transition-all duration-300 shadow-[0_4px_24px_rgba(45,226,201,0.45)] group-hover:shadow-[0_4px_32px_rgba(45,226,201,0.7)] group-hover:brightness-110"
+              {/* Continuous Breathing Glow Aura (Fading effect) */}
+              <motion.div
+                animate={{
+                  opacity: [0.3, 0.85, 0.3],
+                  scale: [0.97, 1.05, 0.97],
+                }}
+                transition={{
+                  duration: 2.2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="absolute -inset-1 rounded-xl bg-gradient-to-r from-[#2de2c9] via-[#00d2ff] to-[#38bdf8] blur-lg pointer-events-none"
+              />
+
+              {/* Silicon IC Body with 45° Chamfered Corners (Pulsing / Fading Glow) */}
+              <motion.div
+                animate={{
+                  boxShadow: [
+                    "0 4px 20px rgba(45,226,201,0.45)",
+                    "0 4px 36px rgba(45,226,201,0.85), 0 0 24px rgba(0,210,255,0.55)",
+                    "0 4px 20px rgba(45,226,201,0.45)",
+                  ],
+                  opacity: [0.9, 1, 0.9],
+                }}
+                transition={{
+                  duration: 2.2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="absolute inset-0 bg-gradient-to-r from-[#2de2c9] via-[#00d2ff] to-[#38bdf8] transition-all duration-300 group-hover:brightness-110"
                 style={{
                   clipPath:
                     "polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)",
@@ -480,8 +507,19 @@ const Hero = () => {
               />
 
               {/* Pin-1 Index Notch / Orientation Marker */}
-              <span className="relative z-10 w-2 h-2 rounded-full bg-[#050b14] flex items-center justify-center">
-                <span className="w-1 h-1 rounded-full bg-[#2de2c9] shadow-[0_0_4px_#2de2c9]" />
+              <span className="relative z-10 w-2.5 h-2.5 rounded-full bg-[#050b14] flex items-center justify-center">
+                <motion.span
+                  animate={{
+                    scale: [0.85, 1.35, 0.85],
+                    opacity: [0.7, 1, 0.7],
+                  }}
+                  transition={{
+                    duration: 1.8,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  className="w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9]"
+                />
               </span>
 
               {/* Chip Label & Text */}
@@ -500,9 +538,36 @@ const Hero = () => {
               to={bannerConfig.buttonUrl || "/join"}
               className="group relative inline-flex items-center gap-3 px-8 py-3.5 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2de2c9] transition-all duration-300"
             >
-              {/* Silicon IC Body with 45° Chamfered Corners (Primary Glowing Teal) */}
-              <div
-                className="absolute inset-0 bg-gradient-to-r from-[#2de2c9] via-[#00d2ff] to-[#38bdf8] transition-all duration-300 shadow-[0_4px_24px_rgba(45,226,201,0.45)] group-hover:shadow-[0_4px_32px_rgba(45,226,201,0.7)] group-hover:brightness-110"
+              {/* Continuous Breathing Glow Aura (Fading effect) */}
+              <motion.div
+                animate={{
+                  opacity: [0.3, 0.85, 0.3],
+                  scale: [0.97, 1.05, 0.97],
+                }}
+                transition={{
+                  duration: 2.2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="absolute -inset-1 rounded-xl bg-gradient-to-r from-[#2de2c9] via-[#00d2ff] to-[#38bdf8] blur-lg pointer-events-none"
+              />
+
+              {/* Silicon IC Body with 45° Chamfered Corners (Pulsing / Fading Glow) */}
+              <motion.div
+                animate={{
+                  boxShadow: [
+                    "0 4px 20px rgba(45,226,201,0.45)",
+                    "0 4px 36px rgba(45,226,201,0.85), 0 0 24px rgba(0,210,255,0.55)",
+                    "0 4px 20px rgba(45,226,201,0.45)",
+                  ],
+                  opacity: [0.9, 1, 0.9],
+                }}
+                transition={{
+                  duration: 2.2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="absolute inset-0 bg-gradient-to-r from-[#2de2c9] via-[#00d2ff] to-[#38bdf8] transition-all duration-300 group-hover:brightness-110"
                 style={{
                   clipPath:
                     "polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)",
@@ -522,8 +587,19 @@ const Hero = () => {
               />
 
               {/* Pin-1 Index Notch / Orientation Marker */}
-              <span className="relative z-10 w-2 h-2 rounded-full bg-[#050b14] flex items-center justify-center">
-                <span className="w-1 h-1 rounded-full bg-[#2de2c9] shadow-[0_0_4px_#2de2c9]" />
+              <span className="relative z-10 w-2.5 h-2.5 rounded-full bg-[#050b14] flex items-center justify-center">
+                <motion.span
+                  animate={{
+                    scale: [0.85, 1.35, 0.85],
+                    opacity: [0.7, 1, 0.7],
+                  }}
+                  transition={{
+                    duration: 1.8,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  className="w-1.5 h-1.5 rounded-full bg-[#2de2c9] shadow-[0_0_6px_#2de2c9]"
+                />
               </span>
 
               {/* Chip Label & Text */}

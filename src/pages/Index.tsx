@@ -364,12 +364,29 @@ const Index = () => {
               <p className="text-muted-foreground mb-6">
                 Join RUET IoT Club and be part of Bangladesh's leading IoT community.
               </p>
-              <Link
-                to="/join"
-                className="group relative inline-flex items-center gap-2.5 px-8 py-3.5 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all duration-300 chip-shape bg-gradient-to-r from-[#2de2c9] via-[#00d2ff] to-[#38bdf8] text-[#050b14] font-bold shadow-[0_4px_24px_rgba(45,226,201,0.45)] hover:shadow-[0_4px_32px_rgba(45,226,201,0.7)] hover:brightness-110"
+              <motion.div
+                animate={{
+                  boxShadow: [
+                    "0 4px 20px rgba(45,226,201,0.35)",
+                    "0 4px 34px rgba(45,226,201,0.75), 0 0 24px rgba(0,210,255,0.5)",
+                    "0 4px 20px rgba(45,226,201,0.35)",
+                  ],
+                  opacity: [0.88, 1, 0.88],
+                }}
+                transition={{
+                  duration: 2.2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="inline-block"
               >
-                Become a Member <ArrowRight size={18} className="transition-transform duration-200 group-hover:translate-x-1" />
-              </Link>
+                <Link
+                  to="/join"
+                  className="group relative inline-flex items-center gap-2.5 px-8 py-3.5 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all duration-300 chip-shape bg-gradient-to-r from-[#2de2c9] via-[#00d2ff] to-[#38bdf8] text-[#050b14] font-bold hover:brightness-110"
+                >
+                  Become a Member <ArrowRight size={18} className="transition-transform duration-200 group-hover:translate-x-1" />
+                </Link>
+              </motion.div>
             </motion.div>
           </div>
         </section>
