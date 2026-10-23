@@ -4,9 +4,9 @@ import Layout from "@/components/Layout";
 import SectionHeading from "@/components/SectionHeading";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Check, X, Users, FolderOpen, Calendar, Eye, GraduationCap, Pencil, Trash2, Plus, UserCog, Image, FileText, Download, ChevronDown, ChevronUp, BookOpen, Mail, FlaskConical, Video, Award, BarChart3, Shield, Megaphone, MessageSquare, Send, Reply, UserCheck, Clock, Sparkles, Radio, ArrowRight, ExternalLink, Handshake } from "lucide-react";
+import { Check, X, Users, FolderOpen, Calendar, Eye, GraduationCap, Pencil, Trash2, Plus, UserCog, Image, FileText, Download, ChevronDown, ChevronUp, BookOpen, Mail, FlaskConical, Video, Award, BarChart3, Shield, Megaphone, MessageSquare, Send, Reply, UserCheck, Clock, Sparkles, Radio, ArrowRight, ExternalLink, Handshake, Copy, Search, Info, RefreshCw, Filter, CheckCircle2, AlertCircle } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 import {
   fetchHeroBannerConfig,
@@ -28,6 +28,16 @@ import {
   getExecutiveTier,
   EXECUTIVE_TIERS,
 } from "@/lib/teamHierarchy";
+import {
+  fetchClubPanels,
+  upsertClubPanel,
+  publishPanelAsCurrent,
+  deleteClubPanel,
+  type ClubPanel,
+  DEFAULT_EXECUTIVE_ROLES,
+  DEFAULT_ADVISORY_ROLES,
+  INITIAL_PANELS,
+} from "@/lib/panelManagement";
 
 const downloadCSV = (rows: Record<string, string>[], filename: string) => {
   if (rows.length === 0) return;
@@ -45,7 +55,25 @@ const downloadCSV = (rows: Record<string, string>[], filename: string) => {
   URL.revokeObjectURL(url);
 };
 
-type TabType = "overview" | "applications" | "members" | "payments" | "team" | "projects" | "events" | "participants" | "alumni" | "photos" | "blog" | "research" | "courses" | "hero" | "banner" | "partners" | "announcements" | "messages" | "reports";
+const formatRelativeTime = (isoString?: string) => {
+  if (!isoString) return "—";
+  try {
+    const diffMs = Date.now() - new Date(isoString).getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    if (diffSec < 60) return "Just now";
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return new Date(isoString).toLocaleDateString();
+  } catch {
+    return isoString;
+  }
+};
+
+type TabType = "overview" | "roles" | "logs" | "applications" | "members" | "payments" | "team" | "projects" | "events" | "participants" | "alumni" | "photos" | "blog" | "research" | "courses" | "hero" | "banner" | "partners" | "announcements" | "messages" | "reports";
 
 const emptyPartnerForm: Partial<PartnerData> = {
   name: "",
@@ -175,6 +203,21 @@ const AdminDashboard = () => {
   const [teamForm, setTeamForm] = useState(emptyTeamForm);
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
 
+  // Panel & Committee Governance States
+  const [panels, setPanels] = useState<ClubPanel[]>(INITIAL_PANELS);
+  const [activePanelId, setActivePanelId] = useState<string>("panel-3rd-exec-2025-2026");
+  const [showPanelModal, setShowPanelModal] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [newRoleInput, setNewRoleInput] = useState("");
+  const [panelModalForm, setPanelModalForm] = useState({
+    title: "4th Executive Board (2026-2027)",
+    boardType: "executive" as "executive" | "advisory",
+    sessionYears: "2026-2027",
+    ordinal: 4,
+    allowedRoles: [...DEFAULT_EXECUTIVE_ROLES],
+    description: "",
+  });
+
   const [showPhotoForm, setShowPhotoForm] = useState(false);
   const [photoForm, setPhotoForm] = useState(emptyPhotoForm);
   const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
@@ -192,16 +235,46 @@ const AdminDashboard = () => {
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!loading && (!user || !canAccess)) {
-      navigate("/");
-      if (!canAccess && user) toast.error("Admin or Moderator access required");
-    }
-  }, [user, loading, canAccess, navigate]);
+  // ─── Staff & Roles Management State ───
+  const [staffEmailInput, setStaffEmailInput] = useState("");
+  const [staffRoleInput, setStaffRoleInput] = useState<"admin" | "moderator">("moderator");
+  const [selectedUserIdForRole, setSelectedUserIdForRole] = useState("");
+  const [assigningStaffRole, setAssigningStaffRole] = useState(false);
+  const [staffFilter, setStaffFilter] = useState<"all" | "admin" | "moderator">("all");
+  const [staffSearchQuery, setStaffSearchQuery] = useState("");
+  const [showSqlGuide, setShowSqlGuide] = useState(false);
+
+  // ─── Staff Invitation State ───
+  const [staffInvitations, setStaffInvitations] = useState<any[]>([]);
+  const [lastGeneratedInviteLink, setLastGeneratedInviteLink] = useState<string | null>(null);
+
+  // ─── Audit & Activity Logs State ───
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [logStaffFilter, setLogStaffFilter] = useState<"all" | "admin" | "moderator">("all");
+  const [logActionFilter, setLogActionFilter] = useState<string>("all");
+  const [logSearchQuery, setLogSearchQuery] = useState("");
 
   useEffect(() => {
-    if (canAccess) fetchData();
-  }, [canAccess, tab]);
+    if (!loading) {
+      if (!user) {
+        navigate("/auth?portal=staff");
+        return;
+      }
+      if (!isAdmin && isModerator) {
+        toast.info("Redirecting to Moderator Workspace");
+        navigate("/moderator");
+        return;
+      }
+      if (!isAdmin) {
+        toast.error("Administrator access required");
+        navigate("/");
+      }
+    }
+  }, [user, loading, isAdmin, isModerator, navigate]);
+
+  useEffect(() => {
+    if (isAdmin) fetchData();
+  }, [isAdmin, tab]);
 
   const logActivity = async (action: string, entity_type?: string, entity_id?: string, details?: any) => {
     if (!user) return;
@@ -211,7 +284,12 @@ const AdminDashboard = () => {
         action,
         entity_type: entity_type || null,
         entity_id: entity_id || null,
-        details: details || {},
+        details: {
+          user_name: user.user_metadata?.full_name || "Club Administrator",
+          user_email: user.email || null,
+          user_role: "admin",
+          ...(details || {}),
+        },
       });
     } catch { /* silent */ }
   };
@@ -251,6 +329,75 @@ const AdminDashboard = () => {
           courseCompleted: (courseRegsRes.data || []).filter(r => r.completed).length,
           eventRegistrations: (eventRegsRes.data || []).length,
         });
+        break;
+      }
+      case "roles": {
+        const [profilesRes, rolesRes, invitesRes] = await Promise.all([
+          supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+          supabase.from("user_roles").select("*"),
+          supabase
+            .from("announcements")
+            .select("*")
+            .like("title", "STAFF_INVITATION:%")
+            .order("created_at", { ascending: false }),
+        ]);
+        const membersList = profilesRes.data || [];
+        const rolesList = rolesRes.data || [];
+        setMembers(membersList);
+        setMemberRoles(rolesList);
+
+        const parsedInvites: any[] = [];
+        for (const row of invitesRes.data || []) {
+          try {
+            const data = JSON.parse(row.message || "{}");
+            const inviteObj = {
+              id: row.id,
+              ...data,
+              announcement_id: row.id,
+              created_at: row.created_at || data.created_at,
+            };
+
+            // Auto-activate role if user has signed up with this email
+            if (inviteObj.status === "pending" || inviteObj.status === "claimed") {
+              const matchedMember = membersList.find(
+                (m: any) => (m.email || "").toLowerCase() === (inviteObj.email || "").toLowerCase()
+              );
+              if (matchedMember) {
+                const hasTargetRole = rolesList.some(
+                  (r: any) => r.user_id === matchedMember.user_id && r.role === inviteObj.role
+                );
+                if (!hasTargetRole) {
+                  await supabase.from("user_roles").insert({
+                    user_id: matchedMember.user_id,
+                    role: inviteObj.role as any,
+                  });
+                  inviteObj.status = "accepted";
+                  inviteObj.user_id = matchedMember.user_id;
+                  await supabase
+                    .from("announcements")
+                    .update({ message: JSON.stringify(inviteObj) })
+                    .eq("id", row.id);
+                } else {
+                  inviteObj.status = "accepted";
+                }
+              }
+            }
+
+            parsedInvites.push(inviteObj);
+          } catch {
+            /* ignore malformed message */
+          }
+        }
+        setStaffInvitations(parsedInvites);
+        break;
+      }
+      case "logs": {
+        const { data } = await supabase
+          .from("admin_activity_log")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(300);
+        setAuditLogs(data || []);
         break;
       }
       case "applications":
@@ -306,8 +453,14 @@ const AdminDashboard = () => {
         break;
       }
       case "team": {
-        const { data } = await supabase.from("team_members").select("*").order("sort_order", { ascending: true });
+        const [{ data }, pList] = await Promise.all([
+          supabase.from("team_members").select("*").order("sort_order", { ascending: true }),
+          fetchClubPanels(),
+        ]);
         setTeamMembers(data || []);
+        if (pList && pList.length > 0) {
+          setPanels(pList);
+        }
         break;
       }
       case "photos": {
@@ -349,7 +502,12 @@ const AdminDashboard = () => {
         break;
       }
       case "announcements": {
-        const { data } = await supabase.from("announcements").select("*").neq("title", "HERO_BANNER_CONFIG").order("created_at", { ascending: false });
+        const { data } = await supabase
+          .from("announcements")
+          .select("*")
+          .neq("title", "HERO_BANNER_CONFIG")
+          .not("title", "like", "STAFF_INVITATION:%")
+          .order("created_at", { ascending: false });
         setAnnouncements(data || []);
         break;
       }
@@ -451,19 +609,158 @@ const AdminDashboard = () => {
 
   // ─── Role Management ───
   const assignRole = async (userId: string, role: string) => {
+    if (userId === user?.id && role !== "admin") {
+      if (!confirm("Caution: You are changing your own role away from Admin! You will lose access to this admin dashboard. Continue?")) return;
+    }
     // Remove existing roles first, then add new one
     await supabase.from("user_roles").delete().eq("user_id", userId);
     if (role !== "none") {
       const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: role as any });
-      if (error) { toast.error("Failed to assign role"); return; }
+      if (error) { toast.error("Failed to assign role: " + error.message); return; }
     }
     toast.success(`Role updated to ${role}`);
+    logActivity("assign_role", "user_roles", userId, { role });
     fetchData();
   };
 
   const getUserRole = (userId: string) => {
     const role = memberRoles.find((r: any) => r.user_id === userId);
     return role?.role || "none";
+  };
+
+  const handleAssignStaffRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAssigningStaffRole(true);
+
+    let targetUserId = selectedUserIdForRole;
+
+    if (!targetUserId && staffEmailInput.trim()) {
+      const cleanEmail = staffEmailInput.trim().toLowerCase();
+      const matched = members.find((m) => (m.email || "").toLowerCase() === cleanEmail);
+      if (matched) {
+        targetUserId = matched.user_id;
+      } else {
+        // Try RPC assign_role_by_email
+        try {
+          const { data, error } = await (supabase.rpc as any)("assign_role_by_email", {
+            _email: cleanEmail,
+            _role: staffRoleInput,
+          });
+          if (error) {
+            toast.error(error.message);
+          } else if (data && data.success) {
+            toast.success(data.message || `Assigned ${staffRoleInput} to ${cleanEmail}`);
+            setStaffEmailInput("");
+            setSelectedUserIdForRole("");
+            fetchData();
+            setAssigningStaffRole(false);
+            return;
+          } else {
+            toast.error(data?.message || "No registered user found with this email. Ask them to sign up first.");
+          }
+        } catch (err: any) {
+          toast.error("User with email '" + cleanEmail + "' is not registered yet. Ask them to register at /auth.");
+        }
+        setAssigningStaffRole(false);
+        return;
+      }
+    }
+
+    if (!targetUserId) {
+      toast.error("Please select a registered user or enter their email");
+      setAssigningStaffRole(false);
+      return;
+    }
+
+    await assignRole(targetUserId, staffRoleInput);
+    setStaffEmailInput("");
+    setSelectedUserIdForRole("");
+    setAssigningStaffRole(false);
+  };
+
+  // ─── Staff Invitation Handler (Stored via announcements table for zero-migration support) ───
+  const handleSendStaffInvitation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!staffEmailInput.trim()) return;
+    setAssigningStaffRole(true);
+
+    const email = staffEmailInput.trim().toLowerCase();
+    const token = crypto.randomUUID();
+    const inviteUrl = `${window.location.origin}/accept-invite?token=${token}`;
+
+    const invitePayload = {
+      type: "STAFF_INVITATION",
+      email,
+      role: staffRoleInput,
+      token,
+      invited_by: user?.id,
+      status: "pending",
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      created_at: new Date().toISOString(),
+    };
+
+    try {
+      // Store in announcements table with dedicated STAFF_INVITATION prefix
+      const { error: insertError } = await supabase.from("announcements").insert({
+        title: `STAFF_INVITATION:${token}`,
+        message: JSON.stringify(invitePayload),
+        created_by: user?.id,
+      });
+
+      if (insertError) {
+        toast.error("Failed to create invitation: " + insertError.message);
+        setAssigningStaffRole(false);
+        return;
+      }
+
+      setLastGeneratedInviteLink(inviteUrl);
+
+      try {
+        await supabase.functions.invoke("send-notification", {
+          body: {
+            type: "staff_invitation",
+            to_email: email,
+            role: staffRoleInput,
+            invited_by_name: user?.user_metadata?.full_name || "Club Administrator",
+            invite_url: inviteUrl,
+          },
+        });
+        toast.success(`Invitation email dispatched to ${email}!`);
+      } catch {
+        toast.info("Invite link generated! You can copy and share it directly.");
+      }
+
+      logActivity("invite_staff", "announcements", token, {
+        email,
+        role: staffRoleInput,
+        inviteUrl,
+      });
+
+      setStaffEmailInput("");
+      fetchData();
+    } catch (err: any) {
+      toast.error("Invitation failed: " + err.message);
+    }
+    setAssigningStaffRole(false);
+  };
+
+  const revokeInvitation = async (invId: string, email: string) => {
+    if (!confirm(`Revoke invitation for ${email}?`)) return;
+    const { error } = await supabase.from("announcements").delete().eq("id", invId);
+    if (error) {
+      toast.error("Failed to revoke invitation: " + error.message);
+    } else {
+      toast.success("Invitation revoked");
+      logActivity("revoke_invitation", "announcements", invId, { email });
+      fetchData();
+    }
+  };
+
+  const promoteModeratorToAdmin = async (userId: string, name: string, email: string) => {
+    if (!confirm(`Are you sure you want to promote Moderator "${name}" (${email}) to full Administrator?`)) return;
+    await assignRole(userId, "admin");
+    logActivity("promote_moderator_to_admin", "user_roles", userId, { name, email });
+    toast.success(`Successfully promoted ${name} to Administrator!`);
   };
 
   // ─── Admin Edit Member Profile ───
@@ -594,8 +891,107 @@ const AdminDashboard = () => {
     }
   };
 
+  const activePanel = panels.find((p) => p.id === activePanelId) || panels[0];
+
+  const handleCreateNewPanel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!panelModalForm.title.trim()) {
+      toast.error("Please enter a panel title");
+      return;
+    }
+
+    try {
+      const created = await upsertClubPanel({
+        title: panelModalForm.title.trim(),
+        boardType: panelModalForm.boardType,
+        sessionYears: panelModalForm.sessionYears.trim(),
+        ordinal: Number(panelModalForm.ordinal) || 4,
+        status: "draft",
+        isCurrent: false,
+        allowedRoles: panelModalForm.allowedRoles,
+        description: panelModalForm.description,
+      });
+
+      const updatedPanels = await fetchClubPanels();
+      setPanels(updatedPanels);
+      setActivePanelId(created.id);
+      setTeamForm((prev) => ({ ...prev, category: created.title }));
+      setShowPanelModal(false);
+      toast.success(`🎉 New panel "${created.title}" created in Draft mode! You can now add roles and members.`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create panel");
+    }
+  };
+
+  const handlePublishActivePanel = async () => {
+    if (!activePanel) return;
+    const isExecutive = activePanel.boardType === "executive";
+    const boardName = isExecutive ? "Executive Board" : "Advisory Board";
+
+    const confirmed = window.confirm(
+      `Publish "${activePanel.title}" as the new Current ${boardName}?\n\n• This will make "${activePanel.title}" visible on the public Team page as the active Current panel.\n• The previous current panel will automatically be archived as a past term in the dropdown.\n\nDo you want to proceed?`
+    );
+    if (!confirmed) return;
+
+    try {
+      const updated = await publishPanelAsCurrent(activePanel.id);
+      setPanels(updated);
+      toast.success(`🚀 "${activePanel.title}" is now published and active as the Current ${boardName}!`);
+      logActivity("publish_panel_as_current", "club_panels", activePanel.id, { title: activePanel.title });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to publish panel");
+    }
+  };
+
+  const handleAddRoleToActivePanel = async () => {
+    if (!activePanel || !newRoleInput.trim()) return;
+    const role = newRoleInput.trim();
+    if (activePanel.allowedRoles.includes(role)) {
+      toast.info("Role already exists in this panel");
+      return;
+    }
+    const updatedRoles = [...activePanel.allowedRoles, role];
+    await upsertClubPanel({ ...activePanel, allowedRoles: updatedRoles });
+    const refreshed = await fetchClubPanels();
+    setPanels(refreshed);
+    setNewRoleInput("");
+    toast.success(`Added role "${role}" to this panel!`);
+  };
+
+  const handleRemoveRoleFromActivePanel = async (roleToRemove: string) => {
+    if (!activePanel) return;
+    if (activePanel.allowedRoles.length <= 1) {
+      toast.error("Panel must have at least one role");
+      return;
+    }
+    const updatedRoles = activePanel.allowedRoles.filter((r) => r !== roleToRemove);
+    await upsertClubPanel({ ...activePanel, allowedRoles: updatedRoles });
+    const refreshed = await fetchClubPanels();
+    setPanels(refreshed);
+    toast.success(`Removed role "${roleToRemove}"`);
+  };
+
+  const handleDeleteActivePanel = async () => {
+    if (!activePanel) return;
+    if (activePanel.isCurrent) {
+      toast.error("Cannot delete the active Current panel. Please set another panel as Current first.");
+      return;
+    }
+    const confirmed = window.confirm(`Are you sure you want to delete panel "${activePanel.title}"?`);
+    if (!confirmed) return;
+    await deleteClubPanel(activePanel.id);
+    const refreshed = await fetchClubPanels();
+    setPanels(refreshed);
+    const fallback = refreshed[0];
+    if (fallback) setActivePanelId(fallback.id);
+    toast.success("Panel deleted");
+  };
+
   const editTeam = (t: any) => {
     const isCustom = !TEAM_CATEGORIES.includes(t.category) && t.category;
+    const matchedPanel = panels.find((p) => p.title === t.category || p.id === t.category);
+    if (matchedPanel) setActivePanelId(matchedPanel.id);
+
     setTeamForm({
       name: t.name,
       position: t.position,
@@ -607,14 +1003,21 @@ const AdminDashboard = () => {
       github: t.github || "",
       email: t.email || "",
       sort_order: t.sort_order?.toString() || "0",
-      category: isCustom ? "Custom..." : (t.category || "Executive Board"),
+      category: t.category || activePanel?.title || "3rd Executive (2025-2026)",
       custom_category: isCustom ? t.category : "",
     });
     setEditingTeamId(t.id);
     setShowTeamForm(true);
   };
   const deleteTeam = async (id: string) => { const { error } = await supabase.from("team_members").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Team member removed"); fetchData(); } };
-  const resetTeamForm = () => { setTeamForm(emptyTeamForm); setEditingTeamId(null); setShowTeamForm(false); };
+  const resetTeamForm = () => {
+    setTeamForm({
+      ...emptyTeamForm,
+      category: activePanel?.title || "3rd Executive (2025-2026)",
+    });
+    setEditingTeamId(null);
+    setShowTeamForm(false);
+  };
 
   const [syncing2026Panel, setSyncing2026Panel] = useState(false);
   const [teamTierFilter, setTeamTierFilter] = useState<string>("all");
@@ -859,6 +1262,8 @@ const AdminDashboard = () => {
 
   const tabsList: { key: TabType; label: string; icon: typeof Users }[] = [
     { key: "overview", label: "Overview", icon: BarChart3 },
+    { key: "roles", label: "Staff & Roles", icon: Shield },
+    { key: "logs", label: "Audit & Staff Logs", icon: Clock },
     { key: "applications", label: "Applications", icon: FileText },
     { key: "members", label: "Members", icon: Users },
     { key: "payments", label: "Payments", icon: Eye },
@@ -885,7 +1290,27 @@ const AdminDashboard = () => {
     <Layout>
       <section className="py-20">
         <div className="container">
-          <SectionHeading title="Admin Dashboard" subtitle="Manage all club operations" />
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-border/40">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                  <Shield size={13} /> Administrator Control Center
+                </span>
+              </div>
+              <h1 className="font-display text-2xl md:text-3xl font-bold tracking-tight">Admin Dashboard</h1>
+              <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
+                Manage club operations, payments, roles & website configuration
+              </p>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <Link
+                to="/moderator"
+                className="px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold bg-[#2de2c9]/15 text-[#2de2c9] border border-[#2de2c9]/35 hover:bg-[#2de2c9]/25 transition-all flex items-center gap-1.5 shadow-[0_0_12px_rgba(45,226,201,0.2)]"
+              >
+                <Shield size={14} /> Open Moderator Workspace
+              </Link>
+            </div>
+          </div>
 
           <div className="flex flex-wrap justify-center gap-2 mb-8">
             {tabsList.map((t) => (
@@ -977,6 +1402,1000 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* ════════ Staff & Roles Management Tab ════════ */}
+          {tab === "roles" && (
+            <div className="max-w-5xl mx-auto space-y-8">
+              {/* Top Stats */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="p-4 rounded-xl glass border border-purple-500/30">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-muted-foreground font-medium">Administrators</span>
+                    <Shield size={16} className="text-purple-400" />
+                  </div>
+                  <p className="font-display text-2xl font-bold text-purple-300">
+                    {memberRoles.filter((r: any) => r.role === "admin").length}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Full System Access</p>
+                </div>
+
+                <div className="p-4 rounded-xl glass border border-[#2de2c9]/30">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-muted-foreground font-medium">Moderators</span>
+                    <Shield size={16} className="text-[#2de2c9]" />
+                  </div>
+                  <p className="font-display text-2xl font-bold text-[#2de2c9]">
+                    {memberRoles.filter((r: any) => r.role === "moderator").length}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Operational Management</p>
+                </div>
+
+                <div className="p-4 rounded-xl glass border border-border/60">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-muted-foreground font-medium">Total Staff</span>
+                    <UserCog size={16} className="text-primary" />
+                  </div>
+                  <p className="font-display text-2xl font-bold text-foreground">
+                    {memberRoles.filter((r: any) => r.role === "admin" || r.role === "moderator").length}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Active Club Officers</p>
+                </div>
+
+                <div className="p-4 rounded-xl glass border border-border/60">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-muted-foreground font-medium">Registered Accounts</span>
+                    <Users size={16} className="text-muted-foreground" />
+                  </div>
+                  <p className="font-display text-2xl font-bold text-foreground">
+                    {members.length}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Eligible for Role</p>
+                </div>
+              </div>
+
+              {/* Instructions Guide & Bootstrap Helper */}
+              <div className="p-6 rounded-xl glass border border-border/80 space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2.5 rounded-lg bg-primary/10 text-primary border border-primary/25 shrink-0 mt-0.5">
+                      <Info size={20} />
+                    </div>
+                    <div>
+                      <h3 className="font-display text-base font-bold text-foreground">
+                        How to Add Admin & Moderator
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                        Follow these simple steps to provision new Club Administrators or Executive Moderators.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowSqlGuide(!showSqlGuide)}
+                    className="px-3 py-1.5 rounded-lg bg-secondary text-xs font-semibold text-primary hover:bg-secondary/80 border border-border/60 transition-colors shrink-0"
+                  >
+                    {showSqlGuide ? "Hide SQL Bootstrap" : "Initial Supabase SQL"}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 text-xs">
+                  <div className="p-3.5 rounded-lg bg-secondary/50 border border-border/50 space-y-2">
+                    <p className="font-bold text-primary flex items-center gap-1.5">
+                      <span className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[11px]">1</span>
+                      Standard In-App Assignment (Recommended)
+                    </p>
+                    <ol className="list-decimal list-inside text-muted-foreground space-y-1 text-[11px]">
+                      <li>Ask the person to sign up at <strong className="text-foreground">ruetiotclub.org/auth</strong>.</li>
+                      <li>In the form below, select their name or enter their registered email.</li>
+                      <li>Choose role <strong className="text-purple-300">Admin</strong> or <strong className="text-[#2de2c9]">Moderator</strong>.</li>
+                      <li>Click &quot;Assign Staff Role&quot;. They can immediately log in through the Staff Portal!</li>
+                    </ol>
+                  </div>
+
+                  <div className="p-3.5 rounded-lg bg-secondary/50 border border-border/50 space-y-2">
+                    <p className="font-bold text-[#2de2c9] flex items-center gap-1.5">
+                      <span className="w-5 h-5 rounded-full bg-[#2de2c9]/20 text-[#2de2c9] flex items-center justify-center text-[11px]">2</span>
+                      Permissions Comparison
+                    </p>
+                    <ul className="text-muted-foreground space-y-1 text-[11px]">
+                      <li>
+                        <strong className="text-purple-300">Admin:</strong> Complete authority. Approves bKash fees, manages roles, partner resets, and financial reports.
+                      </li>
+                      <li>
+                        <strong className="text-[#2de2c9]">Moderator:</strong> Operational authority. Publishes events, approves attendees, adds projects, writes blogs, posts notices, and replies to messages. Core financials & roles remain protected.
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                {showSqlGuide && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="p-5 rounded-xl bg-black/80 border border-primary/40 space-y-4 text-xs font-mono"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-muted-foreground pb-2 border-b border-border/60">
+                      <div>
+                        <span className="text-xs font-bold text-primary flex items-center gap-1.5 font-sans">
+                          <AlertCircle size={15} /> Database Migration Required for Email Invitations
+                        </span>
+                        <p className="text-[11px] font-sans text-muted-foreground mt-0.5">
+                          Run this SQL once in your Supabase SQL Editor to create the <code className="text-primary font-mono">staff_invitations</code> table, RLS policies, and RPC.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <a
+                          href="https://supabase.com/dashboard/project/kinczqtjiuxvdogcqexp/sql/new"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 border border-primary/40 text-xs font-semibold flex items-center gap-1 font-sans transition-colors"
+                        >
+                          <ExternalLink size={12} /> Open Supabase SQL Editor
+                        </a>
+
+                        <button
+                          onClick={() => {
+                            const sql = `-- 1. Create Helper Function to Check Staff Status
+CREATE OR REPLACE FUNCTION public.is_staff(_user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.user_roles
+    WHERE user_id = _user_id AND role IN ('admin', 'moderator')
+  )
+$$;
+
+GRANT EXECUTE ON FUNCTION public.is_staff(UUID) TO anon, authenticated;
+
+-- 2. Create staff_invitations Table
+CREATE TABLE IF NOT EXISTS public.staff_invitations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL,
+  role public.app_role NOT NULL DEFAULT 'moderator',
+  token TEXT NOT NULL UNIQUE,
+  invited_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'expired', 'revoked')),
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '7 days'),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.staff_invitations ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can manage invitations" ON public.staff_invitations;
+CREATE POLICY "Admins can manage invitations"
+  ON public.staff_invitations FOR ALL
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'))
+  WITH CHECK (public.has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Anyone can view invitation by token" ON public.staff_invitations;
+CREATE POLICY "Anyone can view invitation by token"
+  ON public.staff_invitations FOR SELECT
+  TO anon, authenticated
+  USING (status = 'pending' AND expires_at > now());
+
+-- 3. Acceptance RPC for onboarding
+CREATE OR REPLACE FUNCTION public.accept_staff_invitation(_token TEXT, _user_id UUID)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  inv RECORD;
+BEGIN
+  SELECT * INTO inv
+  FROM public.staff_invitations
+  WHERE token = _token
+    AND status = 'pending'
+    AND expires_at > now();
+
+  IF inv IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'message', 'Invalid, expired, or already used invitation token');
+  END IF;
+
+  DELETE FROM public.user_roles WHERE user_id = _user_id;
+
+  INSERT INTO public.user_roles (user_id, role)
+  VALUES (_user_id, inv.role);
+
+  UPDATE public.staff_invitations
+  SET status = 'accepted'
+  WHERE id = inv.id;
+
+  UPDATE public.profiles
+  SET status = 'approved', updated_at = now()
+  WHERE user_id = _user_id;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'role', inv.role,
+    'email', inv.email,
+    'message', 'Invitation accepted! Granted ' || inv.role || ' role.'
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.accept_staff_invitation(TEXT, UUID) TO anon, authenticated;
+
+-- 4. Audit Log Enhancements
+ALTER TABLE public.admin_activity_log ADD COLUMN IF NOT EXISTS user_name TEXT;
+ALTER TABLE public.admin_activity_log ADD COLUMN IF NOT EXISTS user_email TEXT;
+ALTER TABLE public.admin_activity_log ADD COLUMN IF NOT EXISTS user_role TEXT;
+
+DROP POLICY IF EXISTS "Staff can insert activity log" ON public.admin_activity_log;
+CREATE POLICY "Staff can insert activity log"
+  ON public.admin_activity_log FOR INSERT
+  TO authenticated
+  WITH CHECK (public.is_staff(auth.uid()));
+
+DROP POLICY IF EXISTS "Strictly Admins can view activity log" ON public.admin_activity_log;
+CREATE POLICY "Strictly Admins can view activity log"
+  ON public.admin_activity_log FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
+
+-- Reload PostgREST Schema Cache
+NOTIFY pgrst, 'reload schema';`;
+                            navigator.clipboard.writeText(sql);
+                            toast.success("Complete migration SQL copied! Paste into Supabase SQL Editor and click RUN.");
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold flex items-center gap-1.5 font-sans shadow-sm transition-all"
+                        >
+                          <Copy size={13} /> Copy Complete Setup SQL
+                        </button>
+                      </div>
+                    </div>
+
+                    <pre className="text-primary text-[11px] overflow-x-auto p-3 bg-secondary/30 rounded-lg border border-border/50 max-h-56 leading-relaxed">
+{`-- Step 1: Open Supabase Dashboard -> SQL Editor (or click the button above)
+-- Step 2: Paste this complete SQL script and click RUN:
+
+CREATE TABLE IF NOT EXISTS public.staff_invitations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL,
+  role public.app_role NOT NULL DEFAULT 'moderator',
+  token TEXT NOT NULL UNIQUE,
+  invited_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'expired', 'revoked')),
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '7 days'),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.staff_invitations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admins can manage invitations"
+  ON public.staff_invitations FOR ALL
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'))
+  WITH CHECK (public.has_role(auth.uid(), 'admin'));
+
+CREATE POLICY "Anyone can view invitation by token"
+  ON public.staff_invitations FOR SELECT
+  TO anon, authenticated
+  USING (status = 'pending' AND expires_at > now());
+
+NOTIFY pgrst, 'reload schema';`}
+                    </pre>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* ── 1. PRIMARY FLOW: Email Invitation for Automated Onboarding ── */}
+              <div className="p-6 rounded-2xl glass border border-primary/40 relative overflow-hidden space-y-5 bg-gradient-to-b from-primary/5 via-transparent to-transparent">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border/50">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-lg bg-primary/15 text-primary border border-primary/30">
+                      <Mail size={18} />
+                    </div>
+                    <div>
+                      <h3 className="font-display text-base font-bold text-foreground flex items-center gap-2">
+                        Invite Moderator or Staff via Email
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
+                          Automated Onboarding
+                        </span>
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Send an official onboarding invite. The invitee opens their email, sets up their Name, Password, Roll, Dept & Session, and their Moderator account activates automatically.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSendStaffInvitation} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
+                        <Mail size={13} className="text-primary" /> Recipient Email Address
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="e.g. prospective.moderator@ruetiotclub.org"
+                        value={staffEmailInput}
+                        onChange={(e) => setStaffEmailInput(e.target.value)}
+                        className={inputClass}
+                      />
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        They will receive an invitation link valid for 7 days.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
+                        <Shield size={13} className="text-primary" /> Initial Role
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setStaffRoleInput("moderator")}
+                          className={`px-3 py-2.5 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                            staffRoleInput === "moderator"
+                              ? "bg-[#2de2c9]/15 text-[#2de2c9] border-[#2de2c9] shadow-[0_0_12px_rgba(45,226,201,0.25)]"
+                              : "bg-secondary/40 text-muted-foreground border-border/70 hover:bg-secondary/70"
+                          }`}
+                        >
+                          <Shield size={13} /> Moderator
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setStaffRoleInput("admin")}
+                          className={`px-3 py-2.5 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                            staffRoleInput === "admin"
+                              ? "bg-purple-500/15 text-purple-300 border-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.25)]"
+                              : "bg-secondary/40 text-muted-foreground border-border/70 hover:bg-secondary/70"
+                          }`}
+                        >
+                          <Shield size={13} /> Admin
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        You can promote moderators to Admin anytime later.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                    <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Sparkles size={13} className="text-primary shrink-0" />
+                      <span>Generates secure token &amp; sends direct email notification</span>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={assigningStaffRole || !staffEmailInput.trim()}
+                      className="px-6 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all glow-border disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      <Send size={15} />
+                      {assigningStaffRole ? "Dispatching Invitation..." : `Send ${staffRoleInput === "admin" ? "Admin" : "Moderator"} Invitation`}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Last Generated Invite Link Banner (Fail-safe for manual sharing) */}
+                {lastGeneratedInviteLink && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 rounded-xl bg-primary/10 border border-primary/40 space-y-2 mt-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-primary font-semibold text-xs">
+                        <CheckCircle2 size={16} />
+                        <span>Invitation Link Ready to Share</span>
+                      </div>
+                      <button
+                        onClick={() => setLastGeneratedInviteLink(null)}
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      An email was dispatched. You can also copy and send this direct onboarding URL to them directly via WhatsApp/Messenger:
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        readOnly
+                        value={lastGeneratedInviteLink}
+                        className="w-full px-3 py-2 rounded-lg bg-black/60 border border-border text-xs font-mono text-primary select-all"
+                      />
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(lastGeneratedInviteLink);
+                          toast.success("Invite URL copied to clipboard!");
+                        }}
+                        className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 shrink-0 flex items-center gap-1.5"
+                      >
+                        <Copy size={13} /> Copy Link
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* ── 2. Pending Staff Invitations Table ── */}
+              <div className="p-6 rounded-2xl glass border border-border/80 space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-display text-base font-bold flex items-center gap-2">
+                      <Clock size={17} className="text-primary" /> Pending &amp; Recent Invitations
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Invited officers who have not yet completed their onboarding setup
+                    </p>
+                  </div>
+                  <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-secondary text-foreground border border-border">
+                    {staffInvitations.filter((i: any) => i.status === "pending").length} Pending
+                  </span>
+                </div>
+
+                {staffInvitations.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-muted-foreground border border-dashed border-border/60 rounded-xl">
+                    No invitations sent yet. Send your first moderator invitation above.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-border/60 text-muted-foreground font-mono">
+                          <th className="py-2.5 px-3 font-medium">Invitee Email</th>
+                          <th className="py-2.5 px-3 font-medium">Role</th>
+                          <th className="py-2.5 px-3 font-medium">Status</th>
+                          <th className="py-2.5 px-3 font-medium">Sent Date</th>
+                          <th className="py-2.5 px-3 font-medium">Expires</th>
+                          <th className="py-2.5 px-3 font-medium text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/40">
+                        {staffInvitations.map((inv: any) => {
+                          const inviteUrl = `${window.location.origin}/accept-invite?token=${inv.token}`;
+                          const isExpired = new Date(inv.expires_at).getTime() < Date.now();
+                          const isPending = inv.status === "pending" && !isExpired;
+
+                          return (
+                            <tr key={inv.id} className="hover:bg-secondary/30 transition-colors">
+                              <td className="py-3 px-3 font-semibold text-foreground">
+                                {inv.email}
+                              </td>
+                              <td className="py-3 px-3">
+                                <span
+                                  className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${
+                                    inv.role === "admin"
+                                      ? "bg-purple-500/15 text-purple-300 border border-purple-500/30"
+                                      : "bg-[#2de2c9]/15 text-[#2de2c9] border border-[#2de2c9]/30"
+                                  }`}
+                                >
+                                  <Shield size={10} /> {inv.role === "admin" ? "Admin" : "Moderator"}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3">
+                                {inv.status === "accepted" ? (
+                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                                    ✓ Accepted
+                                  </span>
+                                ) : isExpired ? (
+                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-red-500/15 text-red-300 border border-red-500/30">
+                                    Expired
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                    ● Awaiting Setup
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 text-muted-foreground">
+                                {formatRelativeTime(inv.created_at)}
+                              </td>
+                              <td className="py-3 px-3 text-muted-foreground">
+                                {new Date(inv.expires_at).toLocaleDateString()}
+                              </td>
+                              <td className="py-3 px-3 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  {isPending && (
+                                    <button
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(inviteUrl);
+                                        toast.success("Invite link copied to clipboard!");
+                                      }}
+                                      className="px-2.5 py-1 rounded bg-secondary hover:bg-secondary/80 text-foreground text-[11px] font-semibold flex items-center gap-1 transition-colors"
+                                      title="Copy Onboarding URL"
+                                    >
+                                      <Copy size={11} /> Copy Link
+                                    </button>
+                                  )}
+
+                                  <button
+                                    onClick={() => revokeInvitation(inv.id, inv.email)}
+                                    className="px-2 py-1 rounded bg-destructive/10 hover:bg-destructive/20 text-destructive text-[11px] transition-colors"
+                                    title="Revoke Invitation"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* ── 3. Quick Direct Assignment for Registered Accounts ── */}
+              <div className="p-6 rounded-2xl glass border border-border/80 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
+                      <UserCheck size={16} className="text-muted-foreground" /> Direct Assignment for Existing Registered Accounts
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Fast-track an existing member who has already signed up at ruetiotclub.org
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleAssignStaffRole} className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="md:col-span-2">
+                      <select
+                        value={selectedUserIdForRole}
+                        onChange={(e) => setSelectedUserIdForRole(e.target.value)}
+                        className={inputClass}
+                      >
+                        <option value="">-- Choose from registered members ({members.length}) --</option>
+                        {members.map((m: any) => {
+                          const currentR = getUserRole(m.user_id);
+                          return (
+                            <option key={m.user_id} value={m.user_id}>
+                              {m.full_name} {m.student_id ? `(${m.student_id})` : ""} — {m.email || "No email"} [{currentR}]
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="submit"
+                        disabled={assigningStaffRole || !selectedUserIdForRole}
+                        className="w-full px-4 py-3 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground text-xs font-semibold border border-border transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                      >
+                        <Check size={14} />
+                        {assigningStaffRole ? "Assigning..." : `Direct Assign as ${staffRoleInput === "admin" ? "Admin" : "Moderator"}`}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+
+              {/* ── 4. Active Staff Directory & Promotion Controls ── */}
+              <div className="space-y-4 pt-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-display text-base font-bold">Active Staff Directory</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Promote moderators to full Administrators, manage roles, and review privileges
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={staffFilter}
+                      onChange={(e) => setStaffFilter(e.target.value as any)}
+                      className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-xs text-foreground focus:outline-none"
+                    >
+                      <option value="all">All Staff ({memberRoles.filter((r: any) => r.role === "admin" || r.role === "moderator").length})</option>
+                      <option value="admin">Admins Only ({memberRoles.filter((r: any) => r.role === "admin").length})</option>
+                      <option value="moderator">Moderators Only ({memberRoles.filter((r: any) => r.role === "moderator").length})</option>
+                    </select>
+
+                    <div className="relative">
+                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <input
+                        value={staffSearchQuery}
+                        onChange={(e) => setStaffSearchQuery(e.target.value)}
+                        placeholder="Search staff..."
+                        className="pl-8 pr-3 py-1.5 rounded-lg bg-secondary border border-border text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 w-36 sm:w-48"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {memberRoles
+                    .filter((r: any) => r.role === "admin" || r.role === "moderator")
+                    .filter((r: any) => (staffFilter === "all" ? true : r.role === staffFilter))
+                    .map((r: any) => {
+                      const profile = members.find((m: any) => m.user_id === r.user_id);
+                      const name = profile?.full_name || "Account User";
+                      const email = profile?.email || "—";
+                      const dept = profile?.department || "—";
+                      const studentId = profile?.student_id || "—";
+                      const phone = profile?.phone || "—";
+                      const isCurrentUser = r.user_id === user?.id;
+
+                      const q = staffSearchQuery.toLowerCase();
+                      if (q && !name.toLowerCase().includes(q) && !email.toLowerCase().includes(q) && !studentId.toLowerCase().includes(q)) {
+                        return null;
+                      }
+
+                      return (
+                        <div
+                          key={r.id || r.user_id}
+                          className="p-4 rounded-xl glass border border-border/70 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                        >
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-sm text-foreground">{name}</span>
+                              {isCurrentUser && (
+                                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-primary/20 text-primary">
+                                  You (Active Session)
+                                </span>
+                              )}
+                              <span
+                                className={`text-[11px] font-mono font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
+                                  r.role === "admin"
+                                    ? "bg-purple-500/15 text-purple-300 border border-purple-500/30"
+                                    : "bg-[#2de2c9]/15 text-[#2de2c9] border border-[#2de2c9]/30"
+                                }`}
+                              >
+                                <Shield size={11} /> {r.role === "admin" ? "Administrator" : "Moderator"}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {dept} · Roll: {studentId} · ✉️ {email} · 📞 {phone}
+                            </p>
+                            <p className="text-[10px] font-mono text-muted-foreground flex items-center gap-1">
+                              <span>User ID: {r.user_id}</span>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(r.user_id);
+                                  toast.success("User ID copied");
+                                }}
+                                title="Copy User ID"
+                                className="text-primary hover:opacity-80"
+                              >
+                                <Copy size={10} />
+                              </button>
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            {r.role === "moderator" ? (
+                              <button
+                                onClick={() => promoteModeratorToAdmin(r.user_id, name, email)}
+                                className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-purple-500/20 to-purple-600/30 text-purple-200 border border-purple-500/40 hover:from-purple-500/30 hover:to-purple-600/40 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+                                title="Promote this Moderator to full Administrator"
+                              >
+                                <Shield size={12} className="text-purple-300" /> ★ Promote to Admin
+                              </button>
+                            ) : (
+                              !isCurrentUser && (
+                                <button
+                                  onClick={() => assignRole(r.user_id, "moderator")}
+                                  className="px-3 py-1.5 rounded-lg bg-[#2de2c9]/10 text-[#2de2c9] border border-[#2de2c9]/25 hover:bg-[#2de2c9]/20 text-xs font-semibold flex items-center gap-1 transition-colors"
+                                >
+                                  <Shield size={12} /> Switch to Moderator
+                                </button>
+                              )
+                            )}
+
+                            {!isCurrentUser && (
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Revoke staff privileges from ${name}? They will become a standard member.`)) {
+                                    assignRole(r.user_id, "member");
+                                  }
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive border border-destructive/25 hover:bg-destructive/20 text-xs font-semibold transition-colors"
+                              >
+                                Revoke Role
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                  {memberRoles.filter((r: any) => r.role === "admin" || r.role === "moderator").length === 0 && (
+                    <div className="py-12 text-center text-sm text-muted-foreground glass rounded-xl border border-border/60">
+                      No staff members assigned yet. Use the invitation form above to add your first moderator or admin!
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ════════ System Audit & Staff Activity Logs Tab (Admin Only) ════════ */}
+          {tab === "logs" && (
+            <div className="max-w-6xl mx-auto space-y-6">
+              {/* Header with Badges & Export */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-border/50">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1">
+                      <Shield size={11} /> Admin Confidential
+                    </span>
+                    <span className="text-xs text-muted-foreground">Strictly visible to Administrators</span>
+                  </div>
+                  <h3 className="font-display text-xl font-bold text-foreground flex items-center gap-2">
+                    <Clock size={20} className="text-primary" /> System Audit &amp; Staff Activity Log
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Real-time chronicle of all additions, updates, approvals and management actions performed by Admins and Moderators.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => {
+                      fetchData();
+                      toast.success("Activity logs refreshed");
+                    }}
+                    className="px-3 py-2 rounded-lg bg-secondary text-xs font-semibold text-foreground hover:bg-secondary/80 border border-border flex items-center gap-1.5 transition-colors"
+                  >
+                    <RefreshCw size={13} /> Refresh
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const rows = auditLogs.map((l: any) => ({
+                        "Date & Time": new Date(l.created_at).toLocaleString(),
+                        "Staff Name": l.user_name || "Club Staff",
+                        "Staff Email": l.user_email || "—",
+                        "Staff Role": l.user_role || "admin",
+                        "Action": l.action,
+                        "Entity Type": l.entity_type || "—",
+                        "Entity ID": l.entity_id || "—",
+                        "Details": JSON.stringify(l.details || {}),
+                      }));
+                      downloadCSV(rows, `ruet-iot-club-audit-logs-${new Date().toISOString().slice(0, 10)}.csv`);
+                      toast.success("Audit logs exported to CSV");
+                    }}
+                    className="px-3.5 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 flex items-center gap-1.5 shadow-sm transition-all"
+                  >
+                    <Download size={13} /> Export CSV
+                  </button>
+                </div>
+              </div>
+
+              {/* Metric Counters */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="p-4 rounded-xl glass border border-border/70">
+                  <span className="text-xs text-muted-foreground font-medium">Total Logged Actions</span>
+                  <p className="font-display text-2xl font-bold text-foreground mt-1">
+                    {auditLogs.length}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Historical records</p>
+                </div>
+
+                <div className="p-4 rounded-xl glass border border-[#2de2c9]/30">
+                  <span className="text-xs text-muted-foreground font-medium flex items-center gap-1 text-[#2de2c9]">
+                    <Shield size={12} /> Moderator Actions
+                  </span>
+                  <p className="font-display text-2xl font-bold text-[#2de2c9] mt-1">
+                    {auditLogs.filter((l: any) => (l.user_role || l.details?.user_role) === "moderator").length}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Events, blogs, notices, photos</p>
+                </div>
+
+                <div className="p-4 rounded-xl glass border border-purple-500/30">
+                  <span className="text-xs text-muted-foreground font-medium flex items-center gap-1 text-purple-300">
+                    <Shield size={12} /> Administrator Actions
+                  </span>
+                  <p className="font-display text-2xl font-bold text-purple-300 mt-1">
+                    {auditLogs.filter((l: any) => (l.user_role || l.details?.user_role || "admin") === "admin").length}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Financials, roles &amp; master changes</p>
+                </div>
+
+                <div className="p-4 rounded-xl glass border border-border/70">
+                  <span className="text-xs text-muted-foreground font-medium">Logged Today</span>
+                  <p className="font-display text-2xl font-bold text-foreground mt-1">
+                    {auditLogs.filter((l: any) => new Date(l.created_at).toDateString() === new Date().toDateString()).length}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Today&apos;s activity pulse</p>
+                </div>
+              </div>
+
+              {/* Filter Toolbar */}
+              <div className="p-4 rounded-xl glass border border-border/70 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Filter size={13} />
+                    <span>Role:</span>
+                  </div>
+                  <div className="flex rounded-lg bg-secondary p-0.5 border border-border">
+                    <button
+                      onClick={() => setLogStaffFilter("all")}
+                      className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                        logStaffFilter === "all" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      All ({auditLogs.length})
+                    </button>
+                    <button
+                      onClick={() => setLogStaffFilter("moderator")}
+                      className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                        logStaffFilter === "moderator" ? "bg-[#2de2c9] text-black" : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Moderators ({auditLogs.filter((l: any) => (l.user_role || l.details?.user_role) === "moderator").length})
+                    </button>
+                    <button
+                      onClick={() => setLogStaffFilter("admin")}
+                      className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                        logStaffFilter === "admin" ? "bg-purple-600 text-white" : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Admins ({auditLogs.filter((l: any) => (l.user_role || l.details?.user_role || "admin") === "admin").length})
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground ml-2">
+                    <span>Category:</span>
+                  </div>
+                  <select
+                    value={logActionFilter}
+                    onChange={(e) => setLogActionFilter(e.target.value)}
+                    className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-xs text-foreground focus:outline-none"
+                  >
+                    <option value="all">All Action Categories</option>
+                    <option value="events">Events &amp; Registrations</option>
+                    <option value="projects">Projects &amp; Prototypes</option>
+                    <option value="announcements">Notices &amp; Announcements</option>
+                    <option value="photos">Gallery &amp; Photos</option>
+                    <option value="blogs">Blog Articles</option>
+                    <option value="roles">Staff Roles &amp; Invitations</option>
+                    <option value="payments">Financials &amp; Payments</option>
+                    <option value="messages">Contact Messages</option>
+                  </select>
+                </div>
+
+                <div className="relative">
+                  <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    value={logSearchQuery}
+                    onChange={(e) => setLogSearchQuery(e.target.value)}
+                    placeholder="Search logs by staff name, email, action..."
+                    className="pl-8 pr-3 py-1.5 rounded-lg bg-secondary border border-border text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 w-full sm:w-64"
+                  />
+                </div>
+              </div>
+
+              {/* Feed of Log Entries */}
+              <div className="space-y-3">
+                {auditLogs
+                  .filter((log: any) => {
+                    const lRole = log.user_role || log.details?.user_role || "admin";
+                    if (logStaffFilter === "admin" && lRole !== "admin") return false;
+                    if (logStaffFilter === "moderator" && lRole !== "moderator") return false;
+
+                    if (logActionFilter !== "all") {
+                      const act = (log.action || "").toLowerCase();
+                      const ent = (log.entity_type || "").toLowerCase();
+                      if (logActionFilter === "events" && !act.includes("event") && !ent.includes("event")) return false;
+                      if (logActionFilter === "projects" && !act.includes("project") && !ent.includes("project")) return false;
+                      if (logActionFilter === "announcements" && !act.includes("announcement") && !ent.includes("announcement") && !act.includes("notice")) return false;
+                      if (logActionFilter === "photos" && !act.includes("photo") && !ent.includes("photo")) return false;
+                      if (logActionFilter === "blogs" && !act.includes("blog") && !ent.includes("blog")) return false;
+                      if (logActionFilter === "roles" && !act.includes("role") && !act.includes("staff") && !act.includes("invite") && !act.includes("promote") && !ent.includes("role") && !ent.includes("invitation")) return false;
+                      if (logActionFilter === "payments" && !act.includes("payment") && !ent.includes("payment")) return false;
+                      if (logActionFilter === "messages" && !act.includes("message") && !act.includes("reply") && !ent.includes("message")) return false;
+                    }
+
+                    if (logSearchQuery.trim()) {
+                      const q = logSearchQuery.toLowerCase();
+                      const lName = (log.user_name || log.details?.user_name || "").toLowerCase();
+                      const lEmail = (log.user_email || log.details?.user_email || "").toLowerCase();
+                      const nameMatch = lName.includes(q);
+                      const emailMatch = lEmail.includes(q);
+                      const actMatch = (log.action || "").toLowerCase().includes(q);
+                      const entMatch = (log.entity_type || "").toLowerCase().includes(q);
+                      const detMatch = JSON.stringify(log.details || {}).toLowerCase().includes(q);
+                      if (!nameMatch && !emailMatch && !actMatch && !entMatch && !detMatch) return false;
+                    }
+
+                    return true;
+                  })
+                  .map((log: any) => {
+                    const effectiveRole = log.user_role || log.details?.user_role || "admin";
+                    const effectiveName = log.user_name || log.details?.user_name || "Club Staff";
+                    const effectiveEmail = log.user_email || log.details?.user_email || "";
+                    const isModeratorRole = effectiveRole === "moderator";
+                    const actionStr = (log.action || "").toLowerCase();
+                    const badgeColor =
+                      actionStr.includes("delete") || actionStr.includes("revoke") || actionStr.includes("reject")
+                        ? "bg-red-500/15 text-red-300 border-red-500/30"
+                        : actionStr.includes("promote") || actionStr.includes("admin") || actionStr.includes("role")
+                        ? "bg-purple-500/15 text-purple-300 border-purple-500/30"
+                        : actionStr.includes("invite") || actionStr.includes("onboard")
+                        ? "bg-cyan-500/15 text-cyan-300 border-cyan-500/30"
+                        : actionStr.includes("create") || actionStr.includes("add") || actionStr.includes("publish")
+                        ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                        : "bg-primary/15 text-primary border-primary/30";
+
+                    return (
+                      <div
+                        key={log.id}
+                        className="p-4 rounded-xl glass border border-border/70 hover:border-border transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="space-y-1.5 flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${
+                                isModeratorRole
+                                  ? "bg-[#2de2c9]/15 text-[#2de2c9] border border-[#2de2c9]/30"
+                                  : "bg-purple-500/15 text-purple-300 border border-purple-500/30"
+                              }`}
+                            >
+                              <Shield size={10} />
+                              {isModeratorRole ? "Moderator" : "Admin"}
+                            </span>
+
+                            <span className="font-semibold text-foreground">
+                              {effectiveName}
+                            </span>
+
+                            {effectiveEmail && (
+                              <span className="text-muted-foreground text-[11px]">
+                                ({effectiveEmail})
+                              </span>
+                            )}
+
+                            <span className="text-muted-foreground">→</span>
+
+                            <span className={`px-2 py-0.5 rounded-md font-mono text-[11px] font-medium border ${badgeColor}`}>
+                              {log.action.replace(/_/g, " ")}
+                            </span>
+
+                            {log.entity_type && (
+                              <span className="text-muted-foreground font-mono text-[10px] bg-secondary/80 px-1.5 py-0.5 rounded">
+                                {log.entity_type}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Details preview */}
+                          {log.details && Object.keys(log.details).length > 0 && (
+                            <p className="text-[11px] text-muted-foreground font-mono bg-secondary/40 p-2 rounded border border-border/40 overflow-x-auto">
+                              {JSON.stringify(log.details)}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <p className="text-foreground font-mono text-[11px]">
+                            {new Date(log.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {formatRelativeTime(log.created_at)} · {new Date(log.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                {auditLogs.length === 0 && (
+                  <div className="py-16 text-center text-sm text-muted-foreground glass rounded-xl border border-border/60 space-y-2">
+                    <Clock size={32} className="mx-auto text-muted-foreground/60" />
+                    <p className="font-semibold text-foreground">No Audit Logs Recorded Yet</p>
+                    <p className="text-xs">
+                      Actions taken by Admins and Moderators across events, notices, projects, blogs, and staff changes will automatically stream here.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1444,64 +2863,403 @@ const AdminDashboard = () => {
             </div>
           )}
           {tab === "team" && (
-            <div className="max-w-4xl mx-auto">
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <div className="max-w-5xl mx-auto space-y-6">
+              {/* ─── Header & Top Actions ─── */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-border/40">
                 <div>
-                  <h3 className="font-display text-base font-bold text-foreground flex items-center gap-2">
-                    <Shield size={18} className="text-[#2de2c9]" />
-                    Team & Leadership Management
+                  <h3 className="font-display text-base md:text-lg font-bold text-foreground flex items-center gap-2">
+                    <Shield size={20} className="text-[#2de2c9]" />
+                    Panel & Committee Governance
                   </h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Manage Executive and Advisory boards, designations, and hierarchy order.
+                    Create separate terms, configure specific roles, build in Draft mode, and publish as the active Current Board.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
                     type="button"
-                    onClick={handleSyncOfficial2026Panel}
-                    disabled={syncing2026Panel}
-                    className="px-3.5 py-2 rounded-lg bg-[#2de2c9]/15 border border-[#2de2c9]/40 text-[#2de2c9] text-xs font-mono font-semibold hover:bg-[#2de2c9]/25 transition-colors flex items-center gap-2 shadow-[0_0_12px_rgba(45,226,201,0.15)] disabled:opacity-50"
-                    title="Load/Sync official 46 members from 2026 Executive Panel document"
+                    onClick={() => {
+                      setPanelModalForm({
+                        title: "4th Executive Board (2026-2027)",
+                        boardType: "executive",
+                        sessionYears: "2026-2027",
+                        ordinal: 4,
+                        allowedRoles: [...DEFAULT_EXECUTIVE_ROLES],
+                        description: "",
+                      });
+                      setShowPanelModal(true);
+                    }}
+                    className="px-3.5 py-2 rounded-lg bg-gradient-to-r from-[#2de2c9]/20 to-[#14b8a6]/20 border border-[#2de2c9]/50 text-[#2de2c9] text-xs font-semibold hover:bg-[#2de2c9]/30 transition-all flex items-center gap-1.5 shadow-[0_0_14px_rgba(45,226,201,0.2)]"
                   >
-                    <Sparkles size={14} className={syncing2026Panel ? "animate-spin" : ""} />
-                    {syncing2026Panel ? "Syncing Panel..." : "Sync 2026 Panel (46 Members)"}
+                    <Plus size={15} /> Create New Panel
                   </button>
+
                   <button
                     type="button"
-                    onClick={() => { showTeamForm ? resetTeamForm() : setShowTeamForm(true); }}
-                    className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2"
+                    onClick={() => {
+                      if (showTeamForm) {
+                        resetTeamForm();
+                      } else {
+                        setTeamForm({
+                          ...emptyTeamForm,
+                          category: activePanel?.title || "3rd Executive (2025-2026)",
+                          position: activePanel?.allowedRoles?.[0] || "Executive Member",
+                        });
+                        setShowTeamForm(true);
+                      }
+                    }}
+                    className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs md:text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-1.5"
                   >
-                    <Plus size={16} /> {showTeamForm ? "Cancel" : "Add Team Member"}
+                    <Plus size={15} /> {showTeamForm ? "Cancel Form" : `Add Member to ${activePanel?.title ? `"${activePanel.title.slice(0, 18)}..."` : "Panel"}`}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSyncOfficial2026Panel}
+                    disabled={syncing2026Panel}
+                    className="px-3 py-2 rounded-lg bg-secondary/80 border border-border text-muted-foreground hover:text-foreground text-xs font-mono transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                    title="Sync official 46 members from 2026 Executive Panel document"
+                  >
+                    <Sparkles size={13} className={syncing2026Panel ? "animate-spin text-[#2de2c9]" : ""} />
+                    {syncing2026Panel ? "Syncing..." : "Sync 2026"}
                   </button>
                 </div>
               </div>
 
-              {showTeamForm && (
-                <motion.form initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-                  onSubmit={handleTeamSubmit} className="p-6 rounded-xl glass space-y-4 mb-6">
-                  <h3 className="font-display text-sm font-bold tracking-wider text-primary">
-                    {editingTeamId ? "Edit Team Member" : "Add Team Member"}
-                  </h3>
-                  <ImageUpload folder="team" currentUrl={teamForm.image_url}
-                    onUpload={(url) => setTeamForm({ ...teamForm, image_url: url })} />
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <input placeholder="Full Name *" required value={teamForm.name} onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })} className={inputClass} />
+              {/* ─── Panel Selector Bar ─── */}
+              <div className="bg-card/70 p-4 rounded-2xl border border-border/50 shadow-sm space-y-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <UserCog size={14} className="text-[#2de2c9]" /> Select Panel to Manage:
+                  </span>
+                  <span className="text-[11px] font-mono text-muted-foreground">
+                    Total Panels: <strong>{panels.length}</strong> (Drafts hidden from public)
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-border">
+                  {panels.map((p) => {
+                    const isSelected = p.id === activePanelId;
+                    const memberCount = teamMembers.filter(
+                      (m: any) =>
+                        (m.category || "").trim() === p.title.trim() ||
+                        (m.category || "").trim() === p.id
+                    ).length;
+
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setActivePanelId(p.id);
+                          setTeamForm((prev) => ({ ...prev, category: p.title }));
+                        }}
+                        className={`group px-3.5 py-2.5 rounded-xl border text-left transition-all shrink-0 flex items-center gap-2.5 ${
+                          isSelected
+                            ? "bg-[#2de2c9]/10 border-[#2de2c9] text-foreground shadow-[0_0_16px_rgba(45,226,201,0.25)] ring-1 ring-[#2de2c9]/50"
+                            : "bg-secondary/40 border-border/60 hover:border-border hover:bg-secondary/70 text-muted-foreground"
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                              {p.title}
+                            </span>
+                            {p.isCurrent ? (
+                              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold uppercase animate-pulse">
+                                LIVE CURRENT
+                              </span>
+                            ) : p.status === "draft" ? (
+                              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold uppercase">
+                                DRAFT (HIDDEN)
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-slate-500/20 text-slate-300 border border-slate-500/40 font-mono">
+                                ARCHIVED
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] font-mono text-muted-foreground mt-0.5">
+                            {p.boardType === "executive" ? "Executive" : "Advisory"} · {p.sessionYears} · {memberCount} {memberCount === 1 ? "member" : "members"}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ─── Active Panel Control Banner ─── */}
+              {activePanel && (
+                <div
+                  className={`p-5 rounded-2xl border transition-all ${
+                    activePanel.status === "draft"
+                      ? "bg-gradient-to-br from-amber-500/10 via-card to-background border-amber-500/40 shadow-[0_0_20px_rgba(245,158,11,0.12)]"
+                      : activePanel.isCurrent
+                      ? "bg-gradient-to-br from-[#2de2c9]/10 via-card to-background border-[#2de2c9]/40 shadow-[0_0_20px_rgba(45,226,201,0.12)]"
+                      : "bg-card border-border/60"
+                  }`}
+                >
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                      <input
-                        list="preset-designations-list"
-                        placeholder="Position (e.g. President, Vice President) *"
-                        required
-                        value={teamForm.position}
-                        onChange={(e) => setTeamForm({ ...teamForm, position: e.target.value })}
-                        className={inputClass + " w-full"}
-                      />
-                      <datalist id="preset-designations-list">
-                        {EXECUTIVE_DESIGNATION_PRESETS.map((preset) => (
-                          <option key={preset} value={preset} />
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-secondary text-primary border border-primary/30">
+                          {activePanel.boardType === "executive" ? "Executive Committee" : "Advisory Board"}
+                        </span>
+                        <span className="text-xs font-mono text-muted-foreground">
+                          Ordinal: #{activePanel.ordinal} ({activePanel.sessionYears})
+                        </span>
+
+                        {activePanel.isCurrent ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/50">
+                            <CheckCircle2 size={12} /> Active Current Board
+                          </span>
+                        ) : activePanel.status === "draft" ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/50">
+                            <AlertCircle size={12} /> Draft Mode (Hidden From Public /team)
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-mono px-2.5 py-0.5 rounded-full bg-secondary text-muted-foreground border border-border">
+                            Archived Past Term
+                          </span>
+                        )}
+                      </div>
+
+                      <h2 className="text-lg md:text-xl font-display font-bold text-foreground">
+                        {activePanel.title}
+                      </h2>
+
+                      <p className="text-xs text-muted-foreground mt-1 max-w-2xl leading-relaxed">
+                        {activePanel.status === "draft" ? (
+                          <span className="text-amber-300/90 font-medium">
+                            ⚠️ This panel is currently saved as a <strong>DRAFT</strong>. Public visitors on the website (/team) cannot see this panel or its members. Configure roles and add members below. When everything is set, click <strong>"Publish as Current Panel"</strong> to make it live.
+                          </span>
+                        ) : activePanel.isCurrent ? (
+                          <span className="text-[#2de2c9]">
+                            🌟 This is the active <strong>Current Board</strong> shown by default on the public /team page.
+                          </span>
+                        ) : (
+                          <span>
+                            📁 This panel is archived. Visitors can view it by selecting it in the session dropdown on the /team page.
+                          </span>
+                        )}
+                      </p>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 flex-wrap shrink-0">
+                      {activePanel.status === "draft" ? (
+                        <button
+                          type="button"
+                          onClick={handlePublishActivePanel}
+                          className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-xs md:text-sm hover:from-emerald-600 hover:to-teal-600 transition-all flex items-center gap-2 shadow-[0_0_18px_rgba(16,185,129,0.35)]"
+                        >
+                          <CheckCircle2 size={16} /> Publish as Current Panel
+                        </button>
+                      ) : !activePanel.isCurrent ? (
+                        <button
+                          type="button"
+                          onClick={handlePublishActivePanel}
+                          className="px-3.5 py-2 rounded-xl bg-[#2de2c9]/15 border border-[#2de2c9]/40 text-[#2de2c9] font-semibold text-xs hover:bg-[#2de2c9]/25 transition-all flex items-center gap-1.5"
+                        >
+                          <Sparkles size={14} /> Make Current Panel
+                        </button>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        onClick={() => setShowRoleModal(true)}
+                        className="px-3.5 py-2 rounded-xl bg-secondary hover:bg-secondary/80 border border-border text-foreground text-xs font-semibold transition-colors flex items-center gap-1.5"
+                        title="Configure roles/designations for this panel"
+                      >
+                        <UserCog size={14} className="text-[#2de2c9]" /> Configure Roles ({activePanel.allowedRoles?.length || 0})
+                      </button>
+
+                      <a
+                        href={`/team?session=${encodeURIComponent(activePanel.title)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-2 rounded-xl bg-secondary/60 hover:bg-secondary border border-border text-muted-foreground hover:text-foreground text-xs font-mono transition-colors flex items-center gap-1"
+                        title="Preview this panel on public /team page"
+                      >
+                        <ExternalLink size={13} /> Preview
+                      </a>
+
+                      {!activePanel.isCurrent && (
+                        <button
+                          type="button"
+                          onClick={handleDeleteActivePanel}
+                          className="p-2 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/20 transition-colors"
+                          title="Delete this panel"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Panel Configured Roles Quick Bar */}
+                  <div className="mt-4 pt-3 border-t border-border/40 flex items-center gap-2 flex-wrap">
+                    <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider shrink-0">
+                      Roles Dropdown Options:
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {(activePanel.allowedRoles || []).slice(0, 8).map((role) => (
+                        <span
+                          key={role}
+                          className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-secondary/80 border border-border/60 text-foreground/90"
+                        >
+                          {role}
+                        </span>
+                      ))}
+                      {(activePanel.allowedRoles || []).length > 8 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowRoleModal(true)}
+                          className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-[#2de2c9]/10 text-[#2de2c9] border border-[#2de2c9]/30 hover:bg-[#2de2c9]/20 transition-colors"
+                        >
+                          +{(activePanel.allowedRoles || []).length - 8} more roles...
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setShowRoleModal(true)}
+                        className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-colors flex items-center gap-1"
+                      >
+                        <Plus size={11} /> Add Role
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ─── Add / Edit Member Form ─── */}
+              {showTeamForm && (
+                <motion.form
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  onSubmit={handleTeamSubmit}
+                  className="p-6 rounded-2xl glass border border-primary/30 shadow-[0_0_24px_rgba(45,226,201,0.12)] space-y-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="font-display text-sm md:text-base font-bold tracking-wider text-primary flex items-center gap-2">
+                      <UserCog size={16} />
+                      {editingTeamId ? "Edit Team Member" : `Add Member to ${activePanel?.title || "Panel"}`}
+                    </h3>
+                    <span className="text-xs font-mono text-muted-foreground">
+                      Target Panel: <strong>{teamForm.category || activePanel?.title}</strong>
+                    </span>
+                  </div>
+
+                  <ImageUpload
+                    folder="team"
+                    currentUrl={teamForm.image_url}
+                    onUpload={(url) => setTeamForm({ ...teamForm, image_url: url })}
+                  />
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {/* Full Name */}
+                    <input
+                      placeholder="Full Name *"
+                      required
+                      value={teamForm.name}
+                      onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })}
+                      className={inputClass}
+                    />
+
+                    {/* Target Panel Dropdown */}
+                    <div>
+                      <label className="block text-[11px] font-mono text-muted-foreground mb-1">
+                        Select Panel / Term *:
+                      </label>
+                      <select
+                        value={teamForm.category}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setTeamForm({ ...teamForm, category: val });
+                          const matched = panels.find((p) => p.title === val || p.id === val);
+                          if (matched) {
+                            setActivePanelId(matched.id);
+                            if (matched.allowedRoles && matched.allowedRoles.length > 0) {
+                              setTeamForm((prev) => ({
+                                ...prev,
+                                category: val,
+                                position: matched.allowedRoles[0],
+                              }));
+                            }
+                          }
+                        }}
+                        className={inputClass}
+                      >
+                        {panels.map((p) => (
+                          <option key={p.id} value={p.title}>
+                            {p.title} {p.status === "draft" ? "(DRAFT)" : p.isCurrent ? "(CURRENT)" : "(ARCHIVED)"}
+                          </option>
                         ))}
-                      </datalist>
+                        <option value="Custom...">Custom Term...</option>
+                      </select>
+                      {teamForm.category === "Custom..." && (
+                        <input
+                          placeholder="Enter custom term (e.g. 5th Executive (2027-2028)) *"
+                          required
+                          value={teamForm.custom_category || ""}
+                          onChange={(e) => setTeamForm({ ...teamForm, custom_category: e.target.value })}
+                          className={inputClass + " mt-2"}
+                        />
+                      )}
+                    </div>
+
+                    {/* Position / Role Dropdown from Active Panel */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-mono text-muted-foreground">
+                          Position / Role (from Panel Roles) *:
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowRoleModal(true)}
+                          className="text-[10px] font-mono text-[#2de2c9] hover:underline flex items-center gap-1"
+                        >
+                          <Plus size={10} /> Add new role to panel
+                        </button>
+                      </div>
+
+                      <select
+                        value={
+                          (activePanel?.allowedRoles || []).includes(teamForm.position)
+                            ? teamForm.position
+                            : teamForm.position ? "__custom__" : (activePanel?.allowedRoles?.[0] || "")
+                        }
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "__custom__") {
+                            setTeamForm({ ...teamForm, position: "" });
+                          } else {
+                            setTeamForm({ ...teamForm, position: val });
+                          }
+                        }}
+                        className={inputClass}
+                      >
+                        {(activePanel?.allowedRoles || DEFAULT_EXECUTIVE_ROLES).map((role) => (
+                          <option key={role} value={role}>
+                            {role}
+                          </option>
+                        ))}
+                        <option value="__custom__">+ Enter Custom Role...</option>
+                      </select>
+
+                      {(!activePanel?.allowedRoles?.includes(teamForm.position) || teamForm.position === "") && (
+                        <input
+                          placeholder="Type custom designation (e.g., Lead Developer, Mentor) *"
+                          required
+                          value={teamForm.position}
+                          onChange={(e) => setTeamForm({ ...teamForm, position: e.target.value })}
+                          className={inputClass + " mt-2"}
+                        />
+                      )}
+
                       {teamForm.position && (
-                        <div className="mt-1 flex items-center gap-1.5 text-[11px] font-mono text-[#2de2c9]">
+                        <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-mono text-[#2de2c9]">
                           <Sparkles size={12} />
                           <span>
                             Tier: <strong>{EXECUTIVE_TIERS[getExecutiveTier(teamForm.position)].title}</strong> (#{EXECUTIVE_TIERS[getExecutiveTier(teamForm.position)].rank})
@@ -1509,134 +3267,663 @@ const AdminDashboard = () => {
                         </div>
                       )}
                     </div>
+
+                    {/* Department */}
                     <div>
-                      <select value={teamForm.category} onChange={(e) => setTeamForm({ ...teamForm, category: e.target.value })} className={inputClass + " w-full"}>
-                        {TEAM_CATEGORIES.map((cat) => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                      </select>
-                      {teamForm.category === "Custom..." && (
-                        <input
-                          placeholder="Enter custom term (e.g., 8th Executive (2025-2026)) *"
-                          required
-                          value={teamForm.custom_category || ""}
-                          onChange={(e) => setTeamForm({ ...teamForm, custom_category: e.target.value })}
-                          className={inputClass + " mt-2 w-full"}
-                        />
-                      )}
+                      <label className="block text-[11px] font-mono text-muted-foreground mb-1">
+                        Department:
+                      </label>
+                      <input
+                        placeholder="e.g. EEE, CSE, ECE, ME"
+                        value={teamForm.department}
+                        onChange={(e) => setTeamForm({ ...teamForm, department: e.target.value })}
+                        className={inputClass}
+                      />
                     </div>
-                    <input placeholder="Department (e.g., EEE, CSE, ECE)" value={teamForm.department} onChange={(e) => setTeamForm({ ...teamForm, department: e.target.value })} className={inputClass} />
-                    <input placeholder="Series (e.g., 20, 21, 22)" value={teamForm.batch} onChange={(e) => setTeamForm({ ...teamForm, batch: e.target.value })} className={inputClass} />
-                    <input placeholder="Sort Order (0 = first in tier)" type="number" value={teamForm.sort_order} onChange={(e) => setTeamForm({ ...teamForm, sort_order: e.target.value })} className={inputClass} />
-                    <input placeholder="Email" value={teamForm.email} onChange={(e) => setTeamForm({ ...teamForm, email: e.target.value })} className={inputClass} />
-                    <input placeholder="LinkedIn URL" value={teamForm.linkedin} onChange={(e) => setTeamForm({ ...teamForm, linkedin: e.target.value })} className={inputClass} />
-                    <input placeholder="GitHub URL" value={teamForm.github} onChange={(e) => setTeamForm({ ...teamForm, github: e.target.value })} className={inputClass} />
+
+                    {/* Series / Batch */}
+                    <div>
+                      <label className="block text-[11px] font-mono text-muted-foreground mb-1">
+                        Series / Batch:
+                      </label>
+                      <input
+                        placeholder="e.g. 20, 21, 22"
+                        value={teamForm.batch}
+                        onChange={(e) => setTeamForm({ ...teamForm, batch: e.target.value })}
+                        className={inputClass}
+                      />
+                    </div>
+
+                    {/* Sort Order */}
+                    <div>
+                      <label className="block text-[11px] font-mono text-muted-foreground mb-1">
+                        Sort Order (Lower numbers appear first):
+                      </label>
+                      <input
+                        placeholder="Sort Order (0 = first in tier)"
+                        type="number"
+                        value={teamForm.sort_order}
+                        onChange={(e) => setTeamForm({ ...teamForm, sort_order: e.target.value })}
+                        className={inputClass}
+                      />
+                    </div>
+
+                    {/* Email */}
+                    <input
+                      placeholder="Email Address"
+                      type="email"
+                      value={teamForm.email}
+                      onChange={(e) => setTeamForm({ ...teamForm, email: e.target.value })}
+                      className={inputClass}
+                    />
+
+                    {/* LinkedIn */}
+                    <input
+                      placeholder="LinkedIn Profile URL"
+                      value={teamForm.linkedin}
+                      onChange={(e) => setTeamForm({ ...teamForm, linkedin: e.target.value })}
+                      className={inputClass}
+                    />
+
+                    {/* GitHub */}
+                    <input
+                      placeholder="GitHub Profile URL"
+                      value={teamForm.github}
+                      onChange={(e) => setTeamForm({ ...teamForm, github: e.target.value })}
+                      className={inputClass}
+                    />
                   </div>
-                  <textarea placeholder="Bio / Description" rows={3} value={teamForm.bio} onChange={(e) => setTeamForm({ ...teamForm, bio: e.target.value })} className={inputClass + " resize-none"} />
-                  <button type="submit" className="px-6 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">
-                    {editingTeamId ? "Update Member" : "Add Member"}
-                  </button>
+
+                  <textarea
+                    placeholder="Short Bio / Description (optional)"
+                    rows={2}
+                    value={teamForm.bio}
+                    onChange={(e) => setTeamForm({ ...teamForm, bio: e.target.value })}
+                    className={inputClass + " resize-none"}
+                  />
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <button
+                      type="submit"
+                      className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors shadow-md"
+                    >
+                      {editingTeamId ? "Update Member" : "Save Member to Panel"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetTeamForm}
+                      className="px-4 py-2.5 rounded-xl bg-secondary hover:bg-secondary/80 text-muted-foreground text-sm font-medium transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </motion.form>
               )}
 
-              {/* Category & Tier Filters for Admin */}
-              <div className="flex items-center justify-between gap-3 mb-4 flex-wrap bg-card/60 p-3 rounded-xl border border-border/40">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-muted-foreground">Term:</span>
-                    <select
-                      value={teamAdminFilter}
-                      onChange={(e) => setTeamAdminFilter(e.target.value)}
-                      className="text-xs px-2.5 py-1.5 rounded-lg bg-secondary border border-border text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary"
-                    >
-                      <option value="all">All Terms ({teamMembers.length})</option>
-                      {[...new Set(teamMembers.map((t: any) => t.category || "Executive Board"))].map((cat: string) => (
-                        <option key={cat} value={cat}>
-                          {cat} ({teamMembers.filter((t: any) => (t.category || "Executive Board") === cat).length})
+              {/* ─── Members List Section ─── */}
+              <div className="space-y-4">
+                {/* Filter and Switcher Controls */}
+                <div className="flex items-center justify-between gap-3 flex-wrap bg-card/60 p-3.5 rounded-xl border border-border/40">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-muted-foreground">View Filter:</span>
+                      <select
+                        value={teamAdminFilter}
+                        onChange={(e) => setTeamAdminFilter(e.target.value)}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="active_panel">
+                          Active Panel Only: {activePanel?.title} ({
+                            teamMembers.filter(
+                              (t: any) =>
+                                (t.category || "").trim() === (activePanel?.title || "").trim() ||
+                                (activePanel?.id && (t.category || "").trim() === activePanel.id)
+                            ).length
+                          })
                         </option>
-                      ))}
-                    </select>
+                        <option value="all">All Panels Combined ({teamMembers.length})</option>
+                        {panels.map((p) => (
+                          <option key={p.id} value={p.title}>
+                            {p.title} ({teamMembers.filter((t: any) => (t.category || "").trim() === p.title.trim()).length})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-muted-foreground">Tier:</span>
+                      <select
+                        value={teamTierFilter}
+                        onChange={(e) => setTeamTierFilter(e.target.value)}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="all">All Leadership Tiers</option>
+                        <option value="president">Tier 1: President</option>
+                        <option value="vice_president">Tier 2: Vice Presidents</option>
+                        <option value="general_secretary">Tier 3: General Secretary</option>
+                        <option value="assistant_general_secretary">Tier 4: AGS</option>
+                        <option value="secretary">Tier 5: Secretaries</option>
+                        <option value="assistant_secretary">Tier 6: Assistant Secretaries</option>
+                        <option value="executive_member">Tier 7: Executive Members</option>
+                        <option value="other">Tier 8: Other / Advisors</option>
+                      </select>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-muted-foreground">Tier:</span>
-                    <select
-                      value={teamTierFilter}
-                      onChange={(e) => setTeamTierFilter(e.target.value)}
-                      className="text-xs px-2.5 py-1.5 rounded-lg bg-secondary border border-border text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary"
-                    >
-                      <option value="all">All Leadership Tiers</option>
-                      <option value="president">Tier 1: President</option>
-                      <option value="vice_president">Tier 2: Vice Presidents</option>
-                      <option value="general_secretary">Tier 3: General Secretary</option>
-                      <option value="assistant_general_secretary">Tier 4: AGS</option>
-                      <option value="secretary">Tier 5: Secretaries</option>
-                      <option value="assistant_secretary">Tier 6: Assistant Secretaries</option>
-                      <option value="executive_member">Tier 7: Executive Members</option>
-                      <option value="other">Tier 8: Other / Advisors</option>
-                    </select>
-                  </div>
+                  <span className="text-xs text-muted-foreground font-mono">
+                    Showing {
+                      teamMembers
+                        .filter((t: any) => {
+                          if (teamAdminFilter === "active_panel") {
+                            return (
+                              (t.category || "").trim() === (activePanel?.title || "").trim() ||
+                              (activePanel?.id && (t.category || "").trim() === activePanel.id)
+                            );
+                          }
+                          if (teamAdminFilter === "all") return true;
+                          return (t.category || "").trim() === teamAdminFilter.trim();
+                        })
+                        .filter((t: any) => teamTierFilter === "all" || getExecutiveTier(t.position) === teamTierFilter)
+                        .length
+                    } members
+                  </span>
                 </div>
 
-                <span className="text-xs text-muted-foreground font-mono">
-                  Showing {
-                    teamMembers
-                      .filter((t: any) => teamAdminFilter === "all" || (t.category || "Executive Board") === teamAdminFilter)
-                      .filter((t: any) => teamTierFilter === "all" || getExecutiveTier(t.position) === teamTierFilter).length
-                  } members
-                </span>
+                {/* Member Cards */}
+                {(() => {
+                  const filteredMembers = teamMembers
+                    .filter((t: any) => {
+                      if (teamAdminFilter === "active_panel") {
+                        return (
+                          (t.category || "").trim() === (activePanel?.title || "").trim() ||
+                          (activePanel?.id && (t.category || "").trim() === activePanel.id)
+                        );
+                      }
+                      if (teamAdminFilter === "all") return true;
+                      return (t.category || "").trim() === teamAdminFilter.trim();
+                    })
+                    .filter((t: any) => teamTierFilter === "all" || getExecutiveTier(t.position) === teamTierFilter)
+                    .sort((a: any, b: any) => {
+                      const tierA = EXECUTIVE_TIERS[getExecutiveTier(a.position)].rank;
+                      const tierB = EXECUTIVE_TIERS[getExecutiveTier(b.position)].rank;
+                      if (tierA !== tierB) return tierA - tierB;
+                      return (a.sort_order ?? 999) - (b.sort_order ?? 999);
+                    });
+
+                  if (filteredMembers.length === 0) {
+                    return (
+                      <div className="p-10 rounded-2xl glass border border-dashed border-border/80 text-center space-y-3">
+                        <div className="w-12 h-12 rounded-full bg-secondary mx-auto flex items-center justify-center text-muted-foreground">
+                          <Users size={20} />
+                        </div>
+                        <h4 className="font-semibold text-sm text-foreground">
+                          No members in {teamAdminFilter === "active_panel" ? `"${activePanel?.title}"` : "this view"} yet
+                        </h4>
+                        <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                          Click "Add Member" above to start populating this panel with members using the configured dropdown roles.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTeamForm({
+                              ...emptyTeamForm,
+                              category: activePanel?.title || "3rd Executive (2025-2026)",
+                              position: activePanel?.allowedRoles?.[0] || "Executive Member",
+                            });
+                            setShowTeamForm(true);
+                          }}
+                          className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors inline-flex items-center gap-1.5"
+                        >
+                          <Plus size={14} /> Add First Member
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-3">
+                      {filteredMembers.map((t: any) => {
+                        const tierId = getExecutiveTier(t.position);
+                        const tier = EXECUTIVE_TIERS[tierId];
+                        return (
+                          <motion.div
+                            key={t.id}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="p-4 rounded-xl glass border border-border/40 hover:border-[#2de2c9]/40 flex items-center justify-between gap-4 transition-all"
+                          >
+                            <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                              {t.image_url ? (
+                                <img
+                                  src={t.image_url}
+                                  alt={t.name}
+                                  className="w-11 h-11 rounded-full object-cover shrink-0 ring-1 ring-border"
+                                />
+                              ) : (
+                                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shrink-0 ring-1 ring-border">
+                                  <span className="font-display text-xs font-bold text-primary">
+                                    {t.name
+                                      .split(" ")
+                                      .map((n: string) => n[0])
+                                      .join("")
+                                      .slice(0, 2)}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="font-semibold text-sm text-foreground">{t.name}</h4>
+                                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${tier.badgeClass}`}>
+                                    TIER {tier.rank}: {tier.shortTitle}
+                                  </span>
+                                  {typeof t.sort_order === "number" && (
+                                    <span className="text-[10px] font-mono text-muted-foreground bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
+                                      Order #{t.sort_order}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  <span className="text-foreground/90 font-medium">{t.position}</span> ·{" "}
+                                  <span className="text-primary font-mono">{t.category || "Executive Board"}</span> ·{" "}
+                                  {t.department || "—"}
+                                  {t.batch ? ` (Series ${t.batch})` : ""}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex gap-1.5 shrink-0">
+                              <button
+                                onClick={() => editTeam(t)}
+                                className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                                title="Edit Member"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                onClick={() => deleteTeam(t.id)}
+                                className="p-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                                title="Delete Member"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
 
-              <div className="space-y-3">
-                {teamMembers.length === 0 && <p className="text-center text-muted-foreground py-8">No team members yet.</p>}
-                {teamMembers
-                  .filter((t: any) => teamAdminFilter === "all" || (t.category || "Executive Board") === teamAdminFilter)
-                  .filter((t: any) => teamTierFilter === "all" || getExecutiveTier(t.position) === teamTierFilter)
-                  .sort((a: any, b: any) => {
-                    const tierA = EXECUTIVE_TIERS[getExecutiveTier(a.position)].rank;
-                    const tierB = EXECUTIVE_TIERS[getExecutiveTier(b.position)].rank;
-                    if (tierA !== tierB) return tierA - tierB;
-                    return (a.sort_order ?? 999) - (b.sort_order ?? 999);
-                  })
-                  .map((t: any) => {
-                    const tierId = getExecutiveTier(t.position);
-                    const tier = EXECUTIVE_TIERS[tierId];
-                    return (
-                      <motion.div key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                        className="p-4 rounded-xl glass border border-border/40 hover:border-[#2de2c9]/40 flex items-center justify-between gap-4 transition-all">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          {t.image_url ? (
-                            <img src={t.image_url} alt={t.name} className="w-11 h-11 rounded-full object-cover shrink-0 ring-1 ring-border" />
-                          ) : (
-                            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shrink-0 ring-1 ring-border">
-                              <span className="font-display text-xs font-bold text-primary">{t.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}</span>
-                            </div>
-                          )}
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h4 className="font-semibold text-sm text-foreground">{t.name}</h4>
-                              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${tier.badgeClass}`}>
-                                TIER {tier.rank}: {tier.shortTitle}
-                              </span>
-                              {typeof t.sort_order === "number" && (
-                                <span className="text-[10px] font-mono text-muted-foreground bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
-                                  Order #{t.sort_order}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              <span className="text-foreground/90 font-medium">{t.position}</span> · <span className="text-primary font-mono">{t.category || "Executive Board"}</span> · {t.department || "—"}{t.batch ? ` (Series ${t.batch})` : ""}
-                            </p>
+              {/* ════════ Modal 1: Create New Panel Modal ════════ */}
+              <AnimatePresence>
+                {showPanelModal && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                      className="w-full max-w-xl bg-card border border-[#2de2c9]/40 rounded-2xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto"
+                    >
+                      <div className="flex items-center justify-between pb-3 border-b border-border/40">
+                        <div>
+                          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                            <Sparkles size={18} className="text-[#2de2c9]" />
+                            Create New Panel / Committee
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Set up a distinct new term. It will be created in <strong>Draft mode</strong> so you can safely add members before publishing.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setShowPanelModal(false)}
+                          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleCreateNewPanel} className="space-y-4">
+                        {/* Board Type Selection */}
+                        <div>
+                          <label className="block text-xs font-mono text-muted-foreground mb-1.5">
+                            1. Select Board Category *:
+                          </label>
+                          <div className="grid grid-cols-2 gap-3">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextOrd = panelModalForm.ordinal || 4;
+                                const suffix = nextOrd === 1 ? "1st" : nextOrd === 2 ? "2nd" : nextOrd === 3 ? "3rd" : `${nextOrd}th`;
+                                setPanelModalForm({
+                                  ...panelModalForm,
+                                  boardType: "executive",
+                                  title: `${suffix} Executive Board (${panelModalForm.sessionYears})`,
+                                  allowedRoles: [...DEFAULT_EXECUTIVE_ROLES],
+                                });
+                              }}
+                              className={`p-3 rounded-xl border text-left text-xs font-semibold transition-all ${
+                                panelModalForm.boardType === "executive"
+                                  ? "bg-primary/15 border-primary text-foreground ring-1 ring-primary/40"
+                                  : "bg-secondary/40 border-border text-muted-foreground hover:text-foreground"
+                              }`}
+                            >
+                              <div className="font-bold text-foreground">Executive Committee</div>
+                              <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
+                                Governing student leadership panel
+                              </div>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextOrd = panelModalForm.ordinal || 3;
+                                const suffix = nextOrd === 1 ? "1st" : nextOrd === 2 ? "2nd" : nextOrd === 3 ? "3rd" : `${nextOrd}th`;
+                                setPanelModalForm({
+                                  ...panelModalForm,
+                                  boardType: "advisory",
+                                  title: `${suffix} Advisory Board (${panelModalForm.sessionYears})`,
+                                  allowedRoles: [...DEFAULT_ADVISORY_ROLES],
+                                });
+                              }}
+                              className={`p-3 rounded-xl border text-left text-xs font-semibold transition-all ${
+                                panelModalForm.boardType === "advisory"
+                                  ? "bg-primary/15 border-primary text-foreground ring-1 ring-primary/40"
+                                  : "bg-secondary/40 border-border text-muted-foreground hover:text-foreground"
+                              }`}
+                            >
+                              <div className="font-bold text-foreground">Advisory Board</div>
+                              <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
+                                Faculty mentors & industry advisors
+                              </div>
+                            </button>
                           </div>
                         </div>
-                        <div className="flex gap-1 shrink-0">
-                          <button onClick={() => editTeam(t)} className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="Edit"><Pencil size={14} /></button>
-                          <button onClick={() => deleteTeam(t.id)} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="Delete"><Trash2 size={14} /></button>
+
+                        {/* Ordinal & Session Years */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-mono text-muted-foreground mb-1">
+                              2. Panel Number / Ordinal *:
+                            </label>
+                            <input
+                              type="number"
+                              min={1}
+                              max={20}
+                              required
+                              value={panelModalForm.ordinal}
+                              onChange={(e) => {
+                                const ord = parseInt(e.target.value) || 1;
+                                const suffix = ord === 1 ? "1st" : ord === 2 ? "2nd" : ord === 3 ? "3rd" : `${ord}th`;
+                                const boardLabel = panelModalForm.boardType === "executive" ? "Executive Board" : "Advisory Board";
+                                setPanelModalForm({
+                                  ...panelModalForm,
+                                  ordinal: ord,
+                                  title: `${suffix} ${boardLabel} (${panelModalForm.sessionYears})`,
+                                });
+                              }}
+                              className={inputClass}
+                              placeholder="e.g. 4 for 4th Executive"
+                            />
+                            <span className="text-[10px] font-mono text-muted-foreground mt-1 block">
+                              e.g., 4 for "4th Executive Board"
+                            </span>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-mono text-muted-foreground mb-1">
+                              3. Session Years *:
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={panelModalForm.sessionYears}
+                              onChange={(e) => {
+                                const years = e.target.value;
+                                const ord = panelModalForm.ordinal || 4;
+                                const suffix = ord === 1 ? "1st" : ord === 2 ? "2nd" : ord === 3 ? "3rd" : `${ord}th`;
+                                const boardLabel = panelModalForm.boardType === "executive" ? "Executive Board" : "Advisory Board";
+                                setPanelModalForm({
+                                  ...panelModalForm,
+                                  sessionYears: years,
+                                  title: `${suffix} ${boardLabel} (${years})`,
+                                });
+                              }}
+                              className={inputClass}
+                              placeholder="e.g. 2026-2027"
+                            />
+                            <span className="text-[10px] font-mono text-muted-foreground mt-1 block">
+                              e.g., "2026-2027"
+                            </span>
+                          </div>
                         </div>
-                      </motion.div>
-                    );
-                  })}
-              </div>
+
+                        {/* Computed Panel Title */}
+                        <div>
+                          <label className="block text-xs font-mono text-muted-foreground mb-1">
+                            4. Panel Full Title *:
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={panelModalForm.title}
+                            onChange={(e) => setPanelModalForm({ ...panelModalForm, title: e.target.value })}
+                            className={inputClass + " font-semibold text-primary"}
+                            placeholder="e.g. 4th Executive Board (2026-2027)"
+                          />
+                          <span className="text-[10px] font-mono text-muted-foreground mt-1 block">
+                            This title is used as the panel identifier and member category.
+                          </span>
+                        </div>
+
+                        {/* Initial Roles Configured */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-xs font-mono text-muted-foreground">
+                              5. Allowed Roles in this Panel ({panelModalForm.allowedRoles.length}):
+                            </label>
+                            <span className="text-[10px] font-mono text-[#2de2c9]">
+                              Populates member dropdown
+                            </span>
+                          </div>
+                          <div className="p-3 rounded-xl bg-secondary/50 border border-border/60 max-h-36 overflow-y-auto flex flex-wrap gap-1.5">
+                            {panelModalForm.allowedRoles.map((role) => (
+                              <span
+                                key={role}
+                                className="text-[11px] font-mono px-2 py-0.5 rounded bg-background border border-border text-foreground flex items-center gap-1"
+                              >
+                                {role}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setPanelModalForm({
+                                      ...panelModalForm,
+                                      allowedRoles: panelModalForm.allowedRoles.filter((r) => r !== role),
+                                    })
+                                  }
+                                  className="text-muted-foreground hover:text-destructive"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Safety Notice */}
+                        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs leading-relaxed flex items-start gap-2">
+                          <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                          <span>
+                            <strong>Draft Safeguard:</strong> This panel will be created in <strong>Draft mode</strong>. Neither this panel nor the members added to it will appear on the public /team page until you explicitly click "Publish as Current Panel".
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border/40">
+                          <button
+                            type="button"
+                            onClick={() => setShowPanelModal(false)}
+                            className="px-4 py-2 rounded-xl bg-secondary hover:bg-secondary/80 text-muted-foreground text-xs font-semibold transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            className="px-5 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all shadow-md flex items-center gap-1.5"
+                          >
+                            <Plus size={14} /> Create Panel (Draft Mode)
+                          </button>
+                        </div>
+                      </form>
+                    </motion.div>
+                  </div>
+                )}
+              </AnimatePresence>
+
+              {/* ════════ Modal 2: Manage Roles Modal ════════ */}
+              <AnimatePresence>
+                {showRoleModal && activePanel && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                      className="w-full max-w-xl bg-card border border-[#2de2c9]/40 rounded-2xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto"
+                    >
+                      <div className="flex items-center justify-between pb-3 border-b border-border/40">
+                        <div>
+                          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                            <UserCog size={18} className="text-[#2de2c9]" />
+                            Configure Roles for {activePanel.title}
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            These roles appear in the designation dropdown when adding or editing members in this panel.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setShowRoleModal(false)}
+                          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+
+                      {/* Add New Role Input */}
+                      <div className="space-y-2">
+                        <label className="block text-xs font-mono text-muted-foreground">
+                          Add a Role / Designation:
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            placeholder="e.g., Director of Logistics, Robotics Lead, Research Head"
+                            value={newRoleInput}
+                            onChange={(e) => setNewRoleInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleAddRoleToActivePanel();
+                              }
+                            }}
+                            className={inputClass + " flex-1"}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddRoleToActivePanel}
+                            className="px-4 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition-colors shrink-0 flex items-center gap-1"
+                          >
+                            <Plus size={14} /> Add Role
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Configured Roles List */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-mono text-muted-foreground">
+                            Configured Roles ({activePanel.allowedRoles?.length || 0}):
+                          </label>
+                          <span className="text-[10px] font-mono text-muted-foreground">
+                            Click × to remove from dropdown
+                          </span>
+                        </div>
+
+                        <div className="p-3 rounded-xl bg-secondary/50 border border-border/60 max-h-56 overflow-y-auto space-y-1.5">
+                          {(activePanel.allowedRoles || []).map((role, idx) => (
+                            <div
+                              key={role}
+                              className="flex items-center justify-between p-2 rounded-lg bg-background border border-border/60 text-xs font-mono"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground text-[10px] w-5">#{idx + 1}</span>
+                                <span className="text-foreground font-medium">{role}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveRoleFromActivePanel(role)}
+                                className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                title="Remove this role"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Quick Presets */}
+                      <div className="p-3 rounded-xl bg-secondary/30 border border-border/40 space-y-2">
+                        <span className="text-[11px] font-mono text-muted-foreground block">
+                          Quick Presets (Click to add if missing):
+                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {[
+                            "President",
+                            "Vice-president (Technical & Mentoring)",
+                            "Vice-president (Logistics & Management)",
+                            "General Secretary",
+                            "Assistant General Secretary",
+                            "Organizing Secretary",
+                            "Finance Secretary",
+                            "Publicity Secretary",
+                            "Research & Development Secretary",
+                            "Executive Member",
+                            "Faculty Advisor",
+                            "Senior Advisor",
+                            "Honorary Mentor",
+                          ]
+                            .filter((r) => !(activePanel.allowedRoles || []).includes(r))
+                            .slice(0, 8)
+                            .map((preset) => (
+                              <button
+                                key={preset}
+                                type="button"
+                                onClick={async () => {
+                                  const updatedRoles = [...activePanel.allowedRoles, preset];
+                                  await upsertClubPanel({ ...activePanel, allowedRoles: updatedRoles });
+                                  const refreshed = await fetchClubPanels();
+                                  setPanels(refreshed);
+                                  toast.success(`Added preset "${preset}"`);
+                                }}
+                                className="text-[10px] font-mono px-2 py-1 rounded bg-background hover:bg-[#2de2c9]/15 hover:text-[#2de2c9] border border-border transition-colors flex items-center gap-1"
+                              >
+                                <Plus size={10} /> {preset}
+                              </button>
+                            ))}
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end pt-2 border-t border-border/40">
+                        <button
+                          type="button"
+                          onClick={() => setShowRoleModal(false)}
+                          className="px-5 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+                        >
+                          Done
+                        </button>
+                      </div>
+                    </motion.div>
+                  </div>
+                )}
+              </AnimatePresence>
             </div>
           )}
 

@@ -35,6 +35,12 @@ import {
   type TierGroup,
 } from "@/lib/teamHierarchy";
 
+import {
+  fetchClubPanels,
+  type ClubPanel,
+  INITIAL_PANELS,
+} from "@/lib/panelManagement";
+
 interface SessionOption {
   id: string;
   label: string;
@@ -42,18 +48,18 @@ interface SessionOption {
   isCurrent?: boolean;
 }
 
-// Preset committee terms / sessions (1st was 2023-2024, current is 3rd: 2025-2026)
-const COMMITTEE_SESSIONS: SessionOption[] = [
-  { id: "current", label: "3rd Executive (2025-2026)", years: "2025-2026", isCurrent: true },
-];
-
 const isAdvisoryCategory = (category?: string | null) => {
   if (!category) return false;
   const lower = category.toLowerCase();
   return lower.includes("advisor") || lower.includes("advisory");
 };
 
-const memberMatchesSession = (member: any, sessionId: string, board: "executive" | "advisory") => {
+const memberMatchesSession = (
+  member: any,
+  sessionId: string,
+  board: "executive" | "advisory",
+  panels: ClubPanel[]
+) => {
   const cat = (member.category || (board === "advisory" ? "Advisory Board" : "Executive Board")).trim();
   const lower = cat.toLowerCase();
 
@@ -62,7 +68,28 @@ const memberMatchesSession = (member: any, sessionId: string, board: "executive"
   // If looking for advisory board, member must be advisory
   if (board === "advisory" && !isAdvisoryCategory(cat)) return false;
 
+  const currentPanel =
+    panels.find((p) => p.boardType === board && p.isCurrent && p.status === "published") ||
+    panels.find((p) => p.boardType === board && p.isCurrent) ||
+    panels.find((p) => p.boardType === board);
+
+  // If session is "current"
   if (sessionId === "current") {
+    if (!currentPanel) return true;
+
+    // Check if member category directly matches current panel title or id
+    if (cat === currentPanel.title || cat === currentPanel.id) return true;
+
+    // If current panel is ordinal >= 4 (e.g. 4th Executive Board (2026-2027))
+    if (currentPanel.ordinal >= 4) {
+      return (
+        lower.includes(`${currentPanel.ordinal}th`) ||
+        lower.includes(currentPanel.sessionYears) ||
+        lower.includes("current")
+      );
+    }
+
+    // Default current panel (3rd Executive 2025-2026)
     const isExplicitPast =
       lower.includes("1st") ||
       lower.includes("2nd") ||
@@ -80,11 +107,29 @@ const memberMatchesSession = (member: any, sessionId: string, board: "executive"
     return !isExplicitPast;
   }
 
-  if (sessionId === "2nd") {
-    return lower.includes("2nd") || lower.includes("second") || lower.includes("2024-2025");
-  }
-  if (sessionId === "1st") {
-    return lower.includes("1st") || lower.includes("first") || lower.includes("2023-2024");
+  // If session is a specific panel ID or title
+  const targetPanel = panels.find((p) => p.id === sessionId || p.title === sessionId);
+  if (targetPanel) {
+    if (cat === targetPanel.title || cat === targetPanel.id) return true;
+    if (targetPanel.ordinal === 3) {
+      return (
+        lower.includes("3rd") ||
+        lower.includes("third") ||
+        lower.includes("2025-2026") ||
+        (board === "executive" && (cat === "Executive Board" || cat === "Executive Committee")) ||
+        (board === "advisory" && cat === "Advisory Board")
+      );
+    }
+    if (targetPanel.ordinal === 2) {
+      return lower.includes("2nd") || lower.includes("second") || lower.includes("2024-2025");
+    }
+    if (targetPanel.ordinal === 1) {
+      return lower.includes("1st") || lower.includes("first") || lower.includes("2023-2024") || lower.includes("founding");
+    }
+    return (
+      lower.includes(`${targetPanel.ordinal}th`) ||
+      lower.includes(targetPanel.sessionYears)
+    );
   }
 
   return cat === sessionId || lower.includes(sessionId.toLowerCase());
@@ -365,10 +410,12 @@ const Team = () => {
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [panels, setPanels] = useState<ClubPanel[]>(INITIAL_PANELS);
+
   // Active board: "executive" | "advisory" | "members"
   const [activeBoard, setActiveBoard] = useState<"executive" | "advisory" | "members">("executive");
 
-  // Selected committee session (e.g., "current", "7th", "6th", ..., "1st")
+  // Selected committee session (e.g., "current", panel id, etc.)
   const [selectedSessionId, setSelectedSessionId] = useState<string>("current");
 
   // Selected tier filter ('all' or specific tier ID like 'president_gs', 'vice_president', etc.)
@@ -381,45 +428,75 @@ const Team = () => {
 
   useEffect(() => {
     const fetchAll = async () => {
-      const [teamRes, membersRes] = await Promise.all([
+      const [teamRes, membersRes, panelsRes] = await Promise.all([
         supabase.from("team_members").select("*").order("sort_order", { ascending: true }),
         supabase.rpc("get_public_members"),
+        fetchClubPanels(),
       ]);
       setTeam(teamRes.data || []);
       setMembers(membersRes.data || []);
+      if (panelsRes && panelsRes.length > 0) setPanels(panelsRes);
       setLoading(false);
     };
     fetchAll();
+
+    const onPanelsUpdated = (e: any) => {
+      if (e.detail) setPanels(e.detail);
+    };
+    window.addEventListener("ruet_panels_updated", onPanelsUpdated);
+    return () => window.removeEventListener("ruet_panels_updated", onPanelsUpdated);
   }, []);
 
-  // Dynamically include any custom sessions stored in database
+  // Dynamically build available committee sessions based on published panels
   const allSessions = useMemo(() => {
-    const list = [...COMMITTEE_SESSIONS];
-    const customSessions = new Set<string>();
+    // Only published panels for regular visitors; staff can preview drafts
+    const availablePanels = panels.filter(
+      (p) => p.boardType === activeBoard && (p.status === "published" || isAdmin || isModerator)
+    );
 
-    team.forEach((m) => {
-      const cat = m.category;
-      if (!cat) return;
-      const board = isAdvisoryCategory(cat) ? "advisory" : "executive";
-      const matchesPreset = list.some((p) => memberMatchesSession(m, p.id, board));
-      if (!matchesPreset) customSessions.add(cat);
-    });
+    const currentP =
+      availablePanels.find((p) => p.isCurrent && p.status === "published") ||
+      availablePanels.find((p) => p.isCurrent) ||
+      availablePanels[0];
 
-    customSessions.forEach((cat) => {
-      list.push({ id: cat, label: cat, years: "" });
+    const list: SessionOption[] = [];
+
+    // Current panel first
+    if (currentP) {
+      list.push({
+        id: "current",
+        label: currentP.title,
+        years: currentP.sessionYears,
+        isCurrent: true,
+      });
+    }
+
+    // Past / other panels sorted by ordinal descending
+    const otherPanels = availablePanels
+      .filter((p) => p.id !== currentP?.id)
+      .sort((a, b) => b.ordinal - a.ordinal);
+
+    otherPanels.forEach((p) => {
+      list.push({
+        id: p.id,
+        label: p.status === "draft" ? `${p.title} [DRAFT PREVIEW]` : p.title,
+        years: p.sessionYears,
+      });
     });
 
     return list;
-  }, [team]);
+  }, [panels, activeBoard, isAdmin, isModerator]);
 
   // Handle clicking Executive Board button
   const handleSelectExecutive = () => {
     setActiveBoard("executive");
+    setSelectedSessionId("current");
   };
 
   // Handle clicking Advisory Board button
   const handleSelectAdvisory = () => {
     setActiveBoard("advisory");
+    setSelectedSessionId("current");
   };
 
   // Handle dropdown selection (selects session / year)
@@ -433,8 +510,8 @@ const Team = () => {
   // Filter members by the selected Board and Session
   const boardMembers = useMemo(() => {
     if (activeBoard === "members") return [];
-    return team.filter((m) => memberMatchesSession(m, selectedSessionId, activeBoard));
-  }, [team, activeBoard, selectedSessionId]);
+    return team.filter((m) => memberMatchesSession(m, selectedSessionId, activeBoard, panels));
+  }, [team, activeBoard, selectedSessionId, panels]);
 
   // Group executive members hierarchically into rank-ordered tiers
   const tierGroups = useMemo(() => {
@@ -473,19 +550,15 @@ const Team = () => {
 
   const currentSessionLabel = useMemo(() => {
     const session = allSessions.find((s) => s.id === selectedSessionId);
-    const years = session?.years ? ` (${session.years})` : "";
-    const baseName = session?.id === "current" ? "Current" : session?.id || "";
-
-    if (activeBoard === "executive") {
-      if (selectedSessionId === "current") return "Current Executive Board";
-      return `${baseName} Executive Board${years}`;
-    } else if (activeBoard === "advisory") {
-      if (selectedSessionId === "current") return "Current Advisory Board";
-      if (selectedSessionId === "1st") return `Founding Advisory Board${years}`;
-      return `Advisory Board${years ? ` ${years}` : ` (${baseName})`}`;
+    if (selectedSessionId === "current") {
+      const curP =
+        panels.find((p) => p.boardType === activeBoard && p.isCurrent && p.status === "published") ||
+        panels.find((p) => p.boardType === activeBoard && p.isCurrent) ||
+        panels.find((p) => p.boardType === activeBoard);
+      return curP ? curP.title : activeBoard === "executive" ? "Current Executive Board" : "Current Advisory Board";
     }
     return session?.label || selectedSessionId;
-  }, [activeBoard, selectedSessionId, allSessions]);
+  }, [activeBoard, selectedSessionId, allSessions, panels]);
 
   const selectClass =
     "px-3 py-2 chip-shape bg-secondary border border-border text-foreground text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/50";
