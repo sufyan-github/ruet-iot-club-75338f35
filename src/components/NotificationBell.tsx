@@ -57,7 +57,9 @@ const NotificationBell = () => {
       ...(events.data || []).map((e) => ({ ...e, type: "event" as const })),
       ...(courses.data || []).map((c) => ({ ...c, type: "course" as const })),
       ...(activities.data || []).map((a) => ({ ...a, type: "activity" as const })),
-      ...(announcements.data || []).map((a) => ({ ...a, type: "announcement" as const })),
+      ...(announcements.data || [])
+        .filter((a) => !a.title?.startsWith("STAFF_INVITATION:") && a.title !== "HERO_BANNER_CONFIG" && a.title !== "PARTNERS_CONFIG")
+        .map((a) => ({ ...a, type: "announcement" as const })),
     ]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 15);

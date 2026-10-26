@@ -279,34 +279,67 @@ const DesktopBar = ({ open, handleRef, barRef, unread, onToggle, onClose }: Desk
                 );
               })}
 
-              {(isAdmin || isModerator) && (
+              {isAdmin && (
                 <Link
                   to="/admin"
                   aria-current={location.pathname === "/admin" ? "page" : undefined}
                   className={`relative px-1.5 lg:px-2 xl:px-3 py-1.5 rounded-lg text-xs lg:text-[13px] xl:text-sm font-medium whitespace-nowrap flex items-center gap-1 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                     location.pathname === "/admin"
-                      ? "text-primary"
+                      ? "text-primary font-semibold"
                       : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                   }`}
                 >
-                  <Shield size={12} />
+                  <Shield size={12} className="text-purple-400" />
                   Admin
                   {location.pathname === "/admin" && <ActiveUnderline />}
                 </Link>
               )}
+
+              {isModerator && (
+                <Link
+                  to="/moderator"
+                  aria-current={location.pathname === "/moderator" ? "page" : undefined}
+                  className={`relative px-1.5 lg:px-2 xl:px-3 py-1.5 rounded-lg text-xs lg:text-[13px] xl:text-sm font-medium whitespace-nowrap flex items-center gap-1 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                    location.pathname === "/moderator"
+                      ? "text-primary font-semibold"
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                  }`}
+                >
+                  <Shield size={12} className="text-[#2de2c9]" />
+                  Moderator
+                  {location.pathname === "/moderator" && <ActiveUnderline />}
+                </Link>
+              )}
             </nav>
 
-            {/* Right side: Notifications, User Dashboard, and Small 'X' Close Button (Sign In & Join Us temporarily disabled) */}
+            {/* Right side: Notifications, Auth Portal / Dashboard, and Small 'X' Close Button */}
             <div className="flex items-center gap-2 xl:gap-3 ml-2 xl:ml-4 shrink-0">
-              {user && (
+              {!user ? (
+                <Link
+                  to="/auth"
+                  className="px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition-all glow-border"
+                >
+                  Sign In
+                </Link>
+              ) : (
                 <>
                   <NotificationBell />
                   <div className="w-px h-5 bg-border/40" />
                   <Link
-                    to="/dashboard"
-                    className="px-2.5 xl:px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition-colors glow-border focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    to={isAdmin ? "/admin" : isModerator ? "/moderator" : "/dashboard"}
+                    className="px-2.5 xl:px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition-colors glow-border focus:outline-none focus-visible:ring-2 focus-visible:ring-primary flex items-center gap-1.5"
                   >
-                    Dashboard
+                    {isAdmin ? (
+                      <>
+                        <Shield size={12} /> Admin
+                      </>
+                    ) : isModerator ? (
+                      <>
+                        <Shield size={12} /> Moderator
+                      </>
+                    ) : (
+                      "Dashboard"
+                    )}
                   </Link>
                 </>
               )}
@@ -411,7 +444,7 @@ const MobileSheet = ({ unread }: { unread: number }) => {
                 );
               })}
 
-              {(isAdmin || isModerator) && (
+              {isAdmin && (
                 <motion.div variants={linkItemVariants}>
                   <Link
                     to="/admin"
@@ -423,7 +456,24 @@ const MobileSheet = ({ unread }: { unread: number }) => {
                         : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                     }`}
                   >
-                    <Shield size={13} /> Admin
+                    <Shield size={13} className="text-purple-400" /> Admin Dashboard
+                  </Link>
+                </motion.div>
+              )}
+
+              {isModerator && (
+                <motion.div variants={linkItemVariants}>
+                  <Link
+                    to="/moderator"
+                    onClick={() => setSheetOpen(false)}
+                    aria-current={location.pathname === "/moderator" ? "page" : undefined}
+                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                      location.pathname === "/moderator"
+                        ? "text-primary bg-primary/10 font-semibold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                    }`}
+                  >
+                    <Shield size={13} className="text-[#2de2c9]" /> Moderator Workspace
                   </Link>
                 </motion.div>
               )}
@@ -435,18 +485,27 @@ const MobileSheet = ({ unread }: { unread: number }) => {
               )}
             </motion.nav>
 
-            {/* Bottom auth area: (Sign In & Join Us temporarily disabled) */}
-            {user && (
-              <div className="px-5 pb-6 pt-3 border-t border-border/30 flex flex-col gap-2">
+            {/* Bottom auth area */}
+            <div className="px-5 pb-6 pt-3 border-t border-border/30 flex flex-col gap-2">
+              {!user ? (
                 <Link
-                  to="/dashboard"
+                  to="/auth"
                   onClick={() => setSheetOpen(false)}
-                  className="px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm text-center shadow-[0_0_15px_rgba(45,226,201,0.25)] hover:bg-primary/90 transition-colors"
                 >
-                  Dashboard
+                  Sign In
                 </Link>
-              </div>
-            )}
+              ) : (
+                <Link
+                  to={isAdmin ? "/admin" : isModerator ? "/moderator" : "/dashboard"}
+                  onClick={() => setSheetOpen(false)}
+                  className="px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm text-center flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  {(isAdmin || isModerator) && <Shield size={14} />}
+                  {isAdmin ? "Admin Dashboard" : isModerator ? "Moderator Workspace" : "Dashboard"}
+                </Link>
+              )}
+            </div>
           </SheetContent>
         </Sheet>
       </div>

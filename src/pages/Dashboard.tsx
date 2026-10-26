@@ -6,11 +6,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Pencil, Save, X, Award, ExternalLink } from "lucide-react";
+import { Pencil, Save, X, Award, ExternalLink, Shield } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 const Dashboard = () => {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, isAdmin, isModerator } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Tables<"profiles"> | null>(null);
   const [certificates, setCertificates] = useState<any[]>([]);
@@ -120,6 +120,47 @@ const Dashboard = () => {
               Sign Out
             </button>
           </div>
+
+          {(isAdmin || isModerator) && (
+            <div className="mb-6 p-4 rounded-xl glass border border-primary/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-[0_0_20px_rgba(45,226,201,0.15)]">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20 shrink-0">
+                  <Shield size={20} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-sm">Privileged Staff Account</p>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-primary/20 text-primary font-bold">
+                      {isAdmin ? "Admin" : "Moderator"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {isAdmin
+                      ? "You have full administrator access to financial operations, member roles, and site settings."
+                      : "You have moderator privileges to manage events, registrations, projects, blogs, gallery & notices."}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {isModerator && (
+                  <Link
+                    to="/moderator"
+                    className="px-3.5 py-1.5 rounded-lg bg-[#2de2c9] text-black text-xs font-semibold hover:opacity-90 transition-all shadow-[0_0_10px_rgba(45,226,201,0.3)]"
+                  >
+                    Open Moderator Workspace
+                  </Link>
+                )}
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="px-3.5 py-1.5 rounded-lg bg-purple-500 text-white text-xs font-semibold hover:bg-purple-600 transition-all shadow-[0_0_10px_rgba(168,85,247,0.3)]"
+                  >
+                    Open Admin Dashboard
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="grid md:grid-cols-2 gap-6">
             {/* Profile Card */}

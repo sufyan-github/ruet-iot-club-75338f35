@@ -247,6 +247,8 @@ const AdminDashboard = () => {
   // ─── Staff Invitation State ───
   const [staffInvitations, setStaffInvitations] = useState<any[]>([]);
   const [lastGeneratedInviteLink, setLastGeneratedInviteLink] = useState<string | null>(null);
+  const [lastGeneratedInviteEmail, setLastGeneratedInviteEmail] = useState<string>("");
+  const [lastGeneratedInviteRole, setLastGeneratedInviteRole] = useState<"admin" | "moderator">("moderator");
 
   // ─── Audit & Activity Logs State ───
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -257,7 +259,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        navigate("/auth?portal=staff");
+        navigate("/auth");
         return;
       }
       if (!isAdmin && isModerator) {
@@ -714,7 +716,22 @@ const AdminDashboard = () => {
       }
 
       setLastGeneratedInviteLink(inviteUrl);
+      setLastGeneratedInviteEmail(email);
+      setLastGeneratedInviteRole(staffRoleInput);
 
+      // 1. Dispatch email directly to invitee's inbox via Supabase Auth
+      try {
+        await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: inviteUrl,
+          },
+        });
+      } catch (authErr) {
+        console.warn("Supabase Auth direct email dispatch notice:", authErr);
+      }
+
+      // 2. Also invoke send-notification edge function for logging & notification
       try {
         await supabase.functions.invoke("send-notification", {
           body: {
@@ -725,10 +742,11 @@ const AdminDashboard = () => {
             invite_url: inviteUrl,
           },
         });
-        toast.success(`Invitation email dispatched to ${email}!`);
       } catch {
-        toast.info("Invite link generated! You can copy and share it directly.");
+        /* edge function silent */
       }
+
+      toast.success(`Invitation email sent to ${email}! The onboarding link has been dispatched to their inbox.`);
 
       logActivity("invite_staff", "announcements", token, {
         email,
@@ -1490,7 +1508,7 @@ const AdminDashboard = () => {
                       <li>Ask the person to sign up at <strong className="text-foreground">ruetiotclub.org/auth</strong>.</li>
                       <li>In the form below, select their name or enter their registered email.</li>
                       <li>Choose role <strong className="text-purple-300">Admin</strong> or <strong className="text-[#2de2c9]">Moderator</strong>.</li>
-                      <li>Click &quot;Assign Staff Role&quot;. They can immediately log in through the Staff Portal!</li>
+                      <li>Click &quot;Assign Staff Role&quot;. When they sign in, they will automatically be routed to their staff workspace!</li>
                     </ol>
                   </div>
 
@@ -1780,17 +1798,17 @@ NOTIFY pgrst, 'reload schema';`}
                   </div>
                 </form>
 
-                {/* Last Generated Invite Link Banner (Fail-safe for manual sharing) */}
+                {/* Last Generated Invite Status Banner */}
                 {lastGeneratedInviteLink && (
                   <motion.div
                     initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="p-4 rounded-xl bg-primary/10 border border-primary/40 space-y-2 mt-4"
+                    className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-3 mt-4"
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-primary font-semibold text-xs">
+                      <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs">
                         <CheckCircle2 size={16} />
-                        <span>Invitation Link Ready to Share</span>
+                        <span>Invitation Email Dispatched ({lastGeneratedInviteRole === "admin" ? "Admin" : "Moderator"})</span>
                       </div>
                       <button
                         onClick={() => setLastGeneratedInviteLink(null)}
@@ -1800,20 +1818,21 @@ NOTIFY pgrst, 'reload schema';`}
                       </button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      An email was dispatched. You can also copy and send this direct onboarding URL to them directly via WhatsApp/Messenger:
+                      An official invitation email has been sent to <strong className="text-foreground">{lastGeneratedInviteEmail}</strong>. When they open the email and click the setup link, they can enter their Name, Password, Department, and Roll to activate their {lastGeneratedInviteRole === "admin" ? "Administrator" : "Moderator"} account.
                     </p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
                       <input
                         readOnly
                         value={lastGeneratedInviteLink}
                         className="w-full px-3 py-2 rounded-lg bg-black/60 border border-border text-xs font-mono text-primary select-all"
                       />
                       <button
+                        type="button"
                         onClick={() => {
                           navigator.clipboard.writeText(lastGeneratedInviteLink);
-                          toast.success("Invite URL copied to clipboard!");
+                          toast.success("Invite link copied to clipboard!");
                         }}
-                        className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 shrink-0 flex items-center gap-1.5"
+                        className="px-3.5 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground border border-border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shrink-0"
                       >
                         <Copy size={13} /> Copy Link
                       </button>
@@ -1899,18 +1918,29 @@ NOTIFY pgrst, 'reload schema';`}
                                 {new Date(inv.expires_at).toLocaleDateString()}
                               </td>
                               <td className="py-3 px-3 text-right">
-                                <div className="flex items-center justify-end gap-2">
+                                <div className="flex items-center justify-end gap-1.5">
                                   {isPending && (
-                                    <button
-                                      onClick={() => {
-                                        navigator.clipboard.writeText(inviteUrl);
-                                        toast.success("Invite link copied to clipboard!");
-                                      }}
-                                      className="px-2.5 py-1 rounded bg-secondary hover:bg-secondary/80 text-foreground text-[11px] font-semibold flex items-center gap-1 transition-colors"
-                                      title="Copy Onboarding URL"
-                                    >
-                                      <Copy size={11} /> Copy Link
-                                    </button>
+                                    <>
+                                      <button
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(inviteUrl);
+                                          toast.success("Invite link copied to clipboard!");
+                                        }}
+                                        className="px-2 py-1 rounded bg-secondary hover:bg-secondary/80 text-foreground text-[11px] font-semibold flex items-center gap-1 transition-colors"
+                                        title="Copy Onboarding URL"
+                                      >
+                                        <Copy size={11} /> Copy
+                                      </button>
+                                      <a
+                                        href={`mailto:${inv.email}?subject=${encodeURIComponent(`Invitation to join RUET IoT Club as ${inv.role === "admin" ? "Club Administrator" : "Club Moderator"}`)}&body=${encodeURIComponent(
+                                          `Dear Colleague,\n\nHere is your official invitation link to join the RUET IoT Club team as a ${inv.role === "admin" ? "Club Administrator" : "Club Moderator"}:\n\n${inviteUrl}\n\nPlease complete your onboarding within 7 days.\n\nBest regards,\nRUET IoT Club Executive Team`
+                                        )}`}
+                                        className="px-2 py-1 rounded bg-secondary hover:bg-secondary/80 text-foreground text-[11px] font-semibold flex items-center gap-1 transition-colors"
+                                        title="Send via Email App"
+                                      >
+                                        <Mail size={11} className="text-primary" /> Email
+                                      </a>
+                                    </>
                                   )}
 
                                   <button

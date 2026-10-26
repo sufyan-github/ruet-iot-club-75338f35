@@ -23,10 +23,12 @@ import Blog from "./pages/Blog";
 // Lazy-loaded secondary & admin routes
 const EventRegistration = lazy(() => import("./pages/EventRegistration"));
 const Auth = lazy(() => import("./pages/Auth"));
+const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const ModeratorDashboard = lazy(() => import("./pages/ModeratorDashboard"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
 const BlogWrite = lazy(() => import("./pages/BlogWrite"));
 const CourseDetail = lazy(() => import("./pages/CourseDetail"));
@@ -77,10 +79,12 @@ const AppContent = () => {
             <Route path="/join" element={<JoinUs />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/accept-invite" element={<AcceptInvite />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/moderator" element={<ModeratorDashboard />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:id" element={<BlogPost />} />
             <Route path="/blog/write" element={<BlogWrite />} />
