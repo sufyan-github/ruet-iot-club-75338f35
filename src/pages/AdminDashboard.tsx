@@ -313,12 +313,21 @@ const AdminDashboard = () => {
         ]);
         const profiles = profilesRes.data || [];
         const pays = paymentsRes.data || [];
+        const courseRegs = courseRegsRes.data || [];
+        const eventRegs = eventRegsRes.data || [];
+        const pendingMemberPays = pays.filter(p => p.payment_status === "pending").length;
+        const pendingEventPays = eventRegs.filter(r => r.payment_status === "pending").length;
+        const pendingCoursePays = courseRegs.filter(r => r.payment_status === "pending" || r.payment_status === "unpaid").length;
+        const totalPendingPayments = pendingMemberPays + pendingEventPays + pendingCoursePays;
         setOverviewStats({
           totalMembers: profiles.length,
           approvedMembers: profiles.filter(p => p.status === "approved").length,
           pendingMembers: profiles.filter(p => p.status === "pending").length,
           totalRevenue: pays.filter(p => p.payment_status === "verified").reduce((s, p) => s + (p.amount || 0), 0),
-          pendingPayments: pays.filter(p => p.payment_status === "pending").length,
+          pendingPayments: totalPendingPayments,
+          pendingMemberPayments: pendingMemberPays,
+          pendingEventPayments: pendingEventPays,
+          pendingCoursePayments: pendingCoursePays,
           totalEvents: (eventsRes.data || []).length,
           totalProjects: (projectsRes.data || []).length,
           activeProjects: (projectsRes.data || []).filter(p => p.status !== "completed").length,
@@ -327,9 +336,9 @@ const AdminDashboard = () => {
           pendingBlogs: (blogRes.data || []).filter(b => !b.published).length,
           totalAlumni: (alumniRes.data || []).length,
           totalCertificates: (certsRes.data || []).length,
-          courseEnrollments: (courseRegsRes.data || []).length,
-          courseCompleted: (courseRegsRes.data || []).filter(r => r.completed).length,
-          eventRegistrations: (eventRegsRes.data || []).length,
+          courseEnrollments: courseRegs.length,
+          courseCompleted: courseRegs.filter(r => r.completed).length,
+          eventRegistrations: eventRegs.length,
         });
         break;
       }
@@ -605,8 +614,108 @@ const AdminDashboard = () => {
 
   const updateCoursePaymentStatus = async (id: string, status: string) => {
     const { error } = await supabase.from("course_registrations").update({ payment_status: status }).eq("id", id);
-    if (error) toast.error("Failed to update payment");
-    else { toast.success(`Course payment ${status}`); fetchData(); }
+    if (error) {
+      toast.error("Failed to update payment: " + error.message);
+    } else {
+      toast.success(`Course payment ${status}`);
+      logActivity("update_course_payment", "course_registrations", id, { status });
+      fetchData();
+    }
+  };
+
+  const toggleCourseCompletion = async (registrationId: string, currentCompleted: boolean, userId: string, courseId: string) => {
+    const newStatus = !currentCompleted;
+    const { error } = await supabase
+      .from("course_registrations")
+      .update({ completed: newStatus })
+      .eq("id", registrationId);
+    if (error) {
+      toast.error("Failed to update course completion: " + error.message);
+      return;
+    }
+
+    // Auto-generate certificate if marked complete and not yet certified
+    if (newStatus) {
+      const hasCert = courseCertificates.some((c: any) => c.course_id === courseId && c.user_id === userId);
+      if (!hasCert) {
+        try {
+          let certNum: string | null = null;
+          try {
+            const { data } = await supabase.rpc("generate_certificate_number");
+            certNum = data;
+          } catch {
+            /* ignore RPC error */
+          }
+          if (!certNum) {
+            certNum = `CERT-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+          }
+
+          const { error: certErr } = await supabase.from("certificates").insert({
+            user_id: userId,
+            course_id: courseId,
+            certificate_number: certNum,
+          });
+          if (!certErr) {
+            toast.success(`🎉 Marked completed & Certificate #${certNum} issued!`);
+          } else {
+            toast.success("Course marked as completed!");
+          }
+        } catch {
+          toast.success("Course marked as completed!");
+        }
+      } else {
+        toast.success("Course marked as completed!");
+      }
+    } else {
+      toast.info("Course marked as in progress");
+    }
+
+    logActivity("update_course_completion", "course_registrations", registrationId, { completed: newStatus });
+    fetchData();
+  };
+
+  const issueCourseCertificate = async (userId: string, courseId: string) => {
+    try {
+      let certNum: string | null = null;
+      try {
+        const { data } = await supabase.rpc("generate_certificate_number");
+        certNum = data;
+      } catch {
+        /* ignore RPC error */
+      }
+      if (!certNum) {
+        certNum = `CERT-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+      }
+
+      const { error } = await supabase.from("certificates").insert({
+        user_id: userId,
+        course_id: courseId,
+        certificate_number: certNum,
+      });
+
+      if (error) {
+        toast.error("Failed to issue certificate: " + error.message);
+        return;
+      }
+
+      toast.success(`🎉 Certificate #${certNum} issued successfully!`);
+      logActivity("issue_certificate", "certificates", courseId, { user_id: userId, certificate_number: certNum });
+      fetchData();
+    } catch (err: any) {
+      toast.error("Error issuing certificate: " + (err?.message || "Unknown error"));
+    }
+  };
+
+  const deleteCourseRegistration = async (id: string) => {
+    if (!confirm("Remove this course enrollment permanently?")) return;
+    const { error } = await supabase.from("course_registrations").delete().eq("id", id);
+    if (error) {
+      toast.error("Failed to delete enrollment: " + error.message);
+      return;
+    }
+    toast.success("Enrollment removed");
+    logActivity("delete_course_registration", "course_registrations", id);
+    fetchData();
   };
 
   // ─── Role Management ───
@@ -830,7 +939,7 @@ const AdminDashboard = () => {
     }
   };
   const editProject = (p: any) => { setProjectForm({ title: p.title, description: p.description || "", category: p.category || "", status: p.status, github_link: p.github_link || "", image_url: p.image_url || "" }); setEditingProjectId(p.id); setShowProjectForm(true); };
-  const deleteProject = async (id: string) => { const { error } = await supabase.from("projects").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Project deleted"); fetchData(); } };
+  const deleteProject = async (id: string) => { if (!confirm("Are you sure you want to delete this project permanently?")) return; const { error } = await supabase.from("projects").delete().eq("id", id); if (error) toast.error("Failed to delete project: " + error.message); else { toast.success("Project deleted"); logActivity("delete_project", "projects", id); fetchData(); } };
   const resetProjectForm = () => { setProjectForm(emptyProjectForm); setEditingProjectId(null); setShowProjectForm(false); };
 
   // ─── Event CRUD ───
@@ -856,7 +965,7 @@ const AdminDashboard = () => {
     }
   };
   const editEvent = (ev: any) => { setEventForm({ title: ev.title, date: ev.date ? new Date(ev.date).toISOString().slice(0, 16) : "", venue: ev.venue || "", description: ev.description || "", type: ev.type || "", max_participants: ev.max_participants?.toString() || "", image_url: ev.image_url || "", is_paid: ev.is_paid || false, registration_fee: ev.registration_fee?.toString() || "", payment_methods: ev.payment_methods || [], payment_number: ev.payment_number || "01580352238", bank_account: ev.bank_account || "4170331020181850" }); setEditingEventId(ev.id); setShowEventForm(true); };
-  const deleteEvent = async (id: string) => { const { error } = await supabase.from("events").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Event deleted"); fetchData(); } };
+  const deleteEvent = async (id: string) => { if (!confirm("Are you sure you want to delete this event? This will also remove attendee registrations.")) return; const { error } = await supabase.from("events").delete().eq("id", id); if (error) toast.error("Failed to delete event: " + error.message); else { toast.success("Event deleted"); logActivity("delete_event", "events", id); fetchData(); } };
   const resetEventForm = () => { setEventForm(emptyEventForm); setEditingEventId(null); setShowEventForm(false); };
   const togglePaymentMethod = (method: string) => { setEventForm(prev => ({ ...prev, payment_methods: prev.payment_methods.includes(method) ? prev.payment_methods.filter(m => m !== method) : [...prev.payment_methods, method] })); };
 
@@ -873,7 +982,7 @@ const AdminDashboard = () => {
     }
   };
   const editAlumni = (a: any) => { setAlumniForm({ name: a.name, batch: a.batch || "", department: a.department || "", company: a.company || "", linkedin: a.linkedin || "" }); setEditingAlumniId(a.id); setShowAlumniForm(true); };
-  const deleteAlumni = async (id: string) => { const { error } = await supabase.from("alumni").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Alumni deleted"); fetchData(); } };
+  const deleteAlumni = async (id: string) => { if (!confirm("Are you sure you want to delete this alumni record?")) return; const { error } = await supabase.from("alumni").delete().eq("id", id); if (error) toast.error("Failed to delete alumni: " + error.message); else { toast.success("Alumni deleted"); logActivity("delete_alumni", "alumni", id); fetchData(); } };
   const resetAlumniForm = () => { setAlumniForm(emptyAlumniForm); setEditingAlumniId(null); setShowAlumniForm(false); };
 
   // ─── Team CRUD ───
@@ -1070,11 +1179,11 @@ const AdminDashboard = () => {
 
         if (existing && existing.length > 0) {
           const current = existing[0];
-          if (!current.bio && m.bio) payload.bio = m.bio;
+          if (!current.bio && (m as any).bio) payload.bio = (m as any).bio;
           const { error } = await supabase.from("team_members").update(payload).eq("id", current.id);
           if (!error) updated++;
         } else {
-          payload.bio = m.bio || null;
+          payload.bio = (m as any).bio || null;
           const { error } = await supabase.from("team_members").insert(payload);
           if (!error) created++;
         }
@@ -1104,7 +1213,7 @@ const AdminDashboard = () => {
     }
   };
   const editPhoto = (p: any) => { setPhotoForm({ title: p.title || "", image_url: p.image_url, description: p.description || "" }); setEditingPhotoId(p.id); setShowPhotoForm(true); };
-  const deletePhoto = async (id: string) => { const { error } = await supabase.from("activity_photos").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Photo deleted"); fetchData(); } };
+  const deletePhoto = async (id: string) => { if (!confirm("Are you sure you want to delete this photo?")) return; const { error } = await supabase.from("activity_photos").delete().eq("id", id); if (error) toast.error("Failed to delete photo: " + error.message); else { toast.success("Photo deleted"); logActivity("delete_photo", "activity_photos", id); fetchData(); } };
   const resetPhotoForm = () => { setPhotoForm(emptyPhotoForm); setEditingPhotoId(null); setShowPhotoForm(false); };
 
   // ─── Research CRUD ───
@@ -1120,7 +1229,7 @@ const AdminDashboard = () => {
     }
   };
   const editResearch = (r: any) => { setResearchForm({ title: r.title, authors: r.authors, abstract: r.abstract || "", pdf_url: r.pdf_url || "", doi_link: r.doi_link || "", status: r.status || "ongoing", research_area: r.research_area || "", tags: r.tags?.join(", ") || "" }); setEditingResearchId(r.id); setShowResearchForm(true); };
-  const deleteResearch = async (id: string) => { const { error } = await supabase.from("research_papers").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Research deleted"); fetchData(); } };
+  const deleteResearch = async (id: string) => { if (!confirm("Are you sure you want to delete this research paper?")) return; const { error } = await supabase.from("research_papers").delete().eq("id", id); if (error) toast.error("Failed to delete research: " + error.message); else { toast.success("Research deleted"); logActivity("delete_research", "research_papers", id); fetchData(); } };
   const resetResearchForm = () => { setResearchForm(emptyResearchForm); setEditingResearchId(null); setShowResearchForm(false); };
 
   // ─── Course CRUD ───
@@ -1146,7 +1255,7 @@ const AdminDashboard = () => {
     }
   };
   const editCourse = (c: any) => { setCourseForm({ title: c.title, description: c.description || "", instructor: c.instructor || "", image_url: c.image_url || "", is_paid: c.is_paid || false, price: c.price?.toString() || "", category: c.category || "", duration: c.duration || "", max_students: c.max_students?.toString() || "", status: c.status || "draft" }); setEditingCourseId(c.id); setShowCourseForm(true); };
-  const deleteCourse = async (id: string) => { const { error } = await supabase.from("courses").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Course deleted"); fetchData(); } };
+  const deleteCourse = async (id: string) => { if (!confirm("Are you sure you want to delete this course permanently? This will remove all associated lessons.")) return; const { error } = await supabase.from("courses").delete().eq("id", id); if (error) toast.error("Failed to delete course: " + error.message); else { toast.success("Course deleted"); logActivity("delete_course", "courses", id); fetchData(); } };
   const resetCourseForm = () => { setCourseForm(emptyCourseForm); setEditingCourseId(null); setShowCourseForm(false); };
 
   // ─── Lesson CRUD ───
@@ -1163,7 +1272,7 @@ const AdminDashboard = () => {
     }
   };
   const editLesson = (l: any) => { setLessonForm({ title: l.title, video_url: l.video_url || "", pdf_file: l.pdf_file || "", sort_order: l.sort_order?.toString() || "0" }); setEditingLessonId(l.id); setSelectedCourseId(l.course_id); setShowLessonForm(true); };
-  const deleteLesson = async (id: string) => { const { error } = await supabase.from("lessons").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Lesson deleted"); fetchData(); } };
+  const deleteLesson = async (id: string) => { if (!confirm("Are you sure you want to delete this lesson?")) return; const { error } = await supabase.from("lessons").delete().eq("id", id); if (error) toast.error("Failed to delete lesson: " + error.message); else { toast.success("Lesson deleted"); logActivity("delete_lesson", "lessons", id); fetchData(); } };
   const resetLessonForm = () => { setLessonForm(emptyLessonForm); setEditingLessonId(null); setShowLessonForm(false); };
 
   // ─── Hero Slides CRUD ───
@@ -1179,7 +1288,7 @@ const AdminDashboard = () => {
     }
   };
   const editHeroSlide = (s: any) => { setHeroForm({ image_url: s.image_url, tagline: s.tagline || "", sort_order: s.sort_order?.toString() || "0", active: s.active }); setEditingHeroId(s.id); setShowHeroForm(true); };
-  const deleteHeroSlide = async (id: string) => { const { error } = await supabase.from("hero_slides").delete().eq("id", id); if (error) toast.error("Failed"); else { toast.success("Slide deleted"); fetchData(); } };
+  const deleteHeroSlide = async (id: string) => { if (!confirm("Are you sure you want to delete this slide?")) return; const { error } = await supabase.from("hero_slides").delete().eq("id", id); if (error) toast.error("Failed to delete slide: " + error.message); else { toast.success("Slide deleted"); logActivity("delete_hero_slide", "hero_slides", id); fetchData(); } };
   const resetHeroForm = () => { setHeroForm(emptyHeroForm); setEditingHeroId(null); setShowHeroForm(false); };
   const toggleHeroActive = async (id: string, active: boolean) => { await supabase.from("hero_slides").update({ active: !active }).eq("id", id); fetchData(); };
 
@@ -2823,9 +2932,9 @@ NOTIFY pgrst, 'reload schema';`}
                     </button>
                   </div>
                   {(() => {
-                    const paidRegs = courseRegistrations.filter(r => r.payment_method || r.transaction_id);
+                    const paidRegs = courseRegistrations.filter(r => r.payment_method || r.transaction_id || r.payment_status === "unpaid");
                     const confirmed = paidRegs.filter(r => r.payment_status === "confirmed").length;
-                    const pending = paidRegs.filter(r => r.payment_status === "pending").length;
+                    const pending = paidRegs.filter(r => r.payment_status === "pending" || r.payment_status === "unpaid").length;
                     const rejected = paidRegs.filter(r => r.payment_status === "rejected").length;
                     return (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -2839,7 +2948,7 @@ NOTIFY pgrst, 'reload schema';`}
                         </div>
                         <div className="p-4 rounded-xl glass text-center">
                           <p className="text-2xl font-display font-bold text-foreground">{pending}</p>
-                          <p className="text-xs text-muted-foreground mt-1">Pending</p>
+                          <p className="text-xs text-muted-foreground mt-1">Pending / Unpaid</p>
                         </div>
                         <div className="p-4 rounded-xl glass text-center">
                           <div className="flex justify-center gap-3 text-xs">
@@ -2864,17 +2973,22 @@ NOTIFY pgrst, 'reload schema';`}
                               <p className="text-sm font-semibold text-foreground">{p?.full_name || "Unknown"}</p>
                               <p className="text-xs text-primary font-medium">{c?.title || "Unknown Course"} {c?.is_paid ? `· ৳${c.price}` : "· Free"}</p>
                               <p className="text-xs text-muted-foreground">{p?.email || "—"} · {p?.student_id || "—"} · {p?.department || "—"}</p>
-                              {r.transaction_id && (
+                              {(r.transaction_id || r.payment_method) && (
                                 <div className="flex items-center gap-3 mt-1.5">
-                                  <span className="text-xs font-mono text-muted-foreground">TXN: {r.transaction_id}</span>
-                                  <span className="text-xs text-muted-foreground">{r.payment_method}</span>
+                                  {r.transaction_id && <span className="text-xs font-mono text-muted-foreground">TXN: {r.transaction_id}</span>}
+                                  {r.payment_method && <span className="text-xs text-muted-foreground capitalize">Method: {r.payment_method}</span>}
                                 </div>
                               )}
                               <p className="text-xs text-muted-foreground mt-1">{new Date(r.registered_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                             </div>
-                            <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${r.payment_status === "confirmed" ? "bg-green-500/10 text-green-400" : r.payment_status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-yellow-500/10 text-yellow-400"}`}>{r.payment_status}</span>
+                            <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${
+                              r.payment_status === "confirmed" ? "bg-green-500/10 text-green-400" :
+                              r.payment_status === "rejected" ? "bg-destructive/10 text-destructive" :
+                              r.payment_status === "unpaid" ? "bg-amber-500/10 text-amber-400" :
+                              "bg-yellow-500/10 text-yellow-400"
+                            }`}>{r.payment_status}</span>
                             <div className="flex gap-1 shrink-0">
-                              {r.payment_status === "pending" ? (
+                              {r.payment_status === "pending" || r.payment_status === "unpaid" ? (
                                 <>
                                   <button onClick={() => updateCoursePaymentStatus(r.id, "confirmed")} className="p-1.5 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors" title="Confirm"><Check size={14} /></button>
                                   <button onClick={() => updateCoursePaymentStatus(r.id, "rejected")} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="Reject"><X size={14} /></button>
@@ -4568,44 +4682,100 @@ NOTIFY pgrst, 'reload schema';`}
                                 <tr className="text-muted-foreground text-left">
                                   <th className="pb-1 pr-3">Name</th>
                                   <th className="pb-1 pr-3">Student ID</th>
-                                  <th className="pb-1 pr-3">Txn ID</th>
-                                  <th className="pb-1 pr-3">Method</th>
-                                  <th className="pb-1 pr-3">Payment</th>
-                                  <th className="pb-1 pr-3">Actions</th>
-                                  <th className="pb-1">Progress</th>
+                                  <th className="pb-1 pr-3">Payment Info</th>
+                                  <th className="pb-1 pr-3">Payment Status</th>
+                                  <th className="pb-1 pr-3">Payment Action</th>
+                                  <th className="pb-1 pr-3">Progress</th>
+                                  <th className="pb-1 pr-3">Certificate</th>
+                                  <th className="pb-1 text-right">Remove</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {cRegs.map((r: any) => {
                                   const p = courseProfiles.find((pr: any) => pr.user_id === r.user_id);
-                                  const hasCert = cCerts.some(cert => cert.user_id === r.user_id);
+                                  const cert = cCerts.find(cert => cert.user_id === r.user_id);
                                   return (
                                     <tr key={r.id} className="border-t border-border/30">
-                                      <td className="py-1.5 pr-3 text-foreground">{p?.full_name || "—"}</td>
+                                      <td className="py-1.5 pr-3 text-foreground font-medium">
+                                        <div>{p?.full_name || "—"}</div>
+                                        {p?.email && <div className="text-[10px] text-muted-foreground">{p.email}</div>}
+                                      </td>
                                       <td className="py-1.5 pr-3 text-muted-foreground">{p?.student_id || "—"}</td>
-                                      <td className="py-1.5 pr-3 text-muted-foreground font-mono text-[10px]">{r.transaction_id || "—"}</td>
-                                      <td className="py-1.5 pr-3 text-muted-foreground">{r.payment_method || "—"}</td>
-                                      <td className="py-1.5 pr-3">
-                                        <span className={`font-mono px-1.5 py-0.5 rounded ${r.payment_status === "confirmed" ? "bg-green-500/10 text-green-400" : r.payment_status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-yellow-500/10 text-yellow-400"}`}>{r.payment_status}</span>
+                                      <td className="py-1.5 pr-3 text-muted-foreground">
+                                        {r.transaction_id ? (
+                                          <div>
+                                            <span className="font-mono text-[10px]">{r.transaction_id}</span>
+                                            {r.payment_method && <span className="text-[10px] text-muted-foreground block">{r.payment_method}</span>}
+                                          </div>
+                                        ) : (
+                                          <span className="text-[11px] capitalize">{r.payment_method || "Free"}</span>
+                                        )}
                                       </td>
                                       <td className="py-1.5 pr-3">
-                                        {r.payment_status === "pending" ? (
+                                        <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded ${
+                                          r.payment_status === "confirmed" ? "bg-green-500/10 text-green-400" :
+                                          r.payment_status === "rejected" ? "bg-destructive/10 text-destructive" :
+                                          r.payment_status === "unpaid" ? "bg-amber-500/10 text-amber-400" :
+                                          "bg-yellow-500/10 text-yellow-400"
+                                        }`}>{r.payment_status || "unpaid"}</span>
+                                      </td>
+                                      <td className="py-1.5 pr-3">
+                                        {r.payment_status === "pending" || r.payment_status === "unpaid" ? (
                                           <div className="flex gap-1">
-                                            <button onClick={() => updateCoursePaymentStatus(r.id, "confirmed")} className="p-1 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors" title="Approve"><Check size={12} /></button>
-                                            <button onClick={() => updateCoursePaymentStatus(r.id, "rejected")} className="p-1 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="Reject"><X size={12} /></button>
+                                            <button onClick={() => updateCoursePaymentStatus(r.id, "confirmed")} className="p-1 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors" title="Approve Payment"><Check size={12} /></button>
+                                            <button onClick={() => updateCoursePaymentStatus(r.id, "rejected")} className="p-1 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="Reject Payment"><X size={12} /></button>
                                           </div>
                                         ) : (
                                           <button onClick={() => updateCoursePaymentStatus(r.id, "pending")} className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:bg-secondary/80 transition-colors">Reset</button>
                                         )}
                                       </td>
-                                      <td className="py-1.5">
-                                        {r.completed ? (
-                                          <span className="flex items-center gap-1 text-green-400">
-                                            <Award size={12} /> {hasCert ? "Certified" : "Completed"}
-                                          </span>
+                                      <td className="py-1.5 pr-3">
+                                        <button
+                                          onClick={() => toggleCourseCompletion(r.id, !!r.completed, r.user_id, r.course_id)}
+                                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                                            r.completed
+                                              ? "bg-green-500/10 text-green-400 hover:bg-green-500/20"
+                                              : "bg-secondary text-muted-foreground hover:bg-primary/20 hover:text-primary"
+                                          }`}
+                                          title={r.completed ? "Click to set In Progress" : "Click to mark Completed & auto-issue certificate"}
+                                        >
+                                          <CheckCircle2 size={11} />
+                                          <span>{r.completed ? "Completed" : "In Progress"}</span>
+                                        </button>
+                                      </td>
+                                      <td className="py-1.5 pr-3">
+                                        {cert ? (
+                                          <Link
+                                            to={`/certificate/${cert.id}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline font-mono"
+                                            title={`Certificate #${cert.certificate_number || cert.id}`}
+                                          >
+                                            <Award size={12} className="text-primary" />
+                                            <span>{cert.certificate_number || "Cert"}</span>
+                                            <ExternalLink size={10} />
+                                          </Link>
+                                        ) : r.completed ? (
+                                          <button
+                                            onClick={() => issueCourseCertificate(r.user_id, r.course_id)}
+                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 text-[10px] font-medium transition-colors"
+                                            title="Issue Certificate to Student"
+                                          >
+                                            <Award size={10} /> Issue Cert
+                                          </button>
                                         ) : (
-                                          <span className="text-muted-foreground">In Progress</span>
+                                          <span className="text-muted-foreground text-[10px]">—</span>
                                         )}
+                                      </td>
+                                      <td className="py-1.5 text-right">
+                                        <button
+                                          onClick={() => deleteCourseRegistration(r.id)}
+                                          className="p-1 rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                                          title="Remove Enrollment"
+                                        >
+                                          <Trash2 size={12} />
+                                        </button>
                                       </td>
                                     </tr>
                                   );
@@ -5371,7 +5541,8 @@ NOTIFY pgrst, 'reload schema';`}
                             </div>
                             <div className="pt-1">
                               <ImageUpload
-                                onUploadComplete={(url) => setPartnerForm({ ...partnerForm, logoUrl: url })}
+                                currentUrl={partnerForm.logoUrl}
+                                onUpload={(url) => setPartnerForm({ ...partnerForm, logoUrl: url })}
                                 folder="partners"
                               />
                             </div>
@@ -5767,7 +5938,7 @@ NOTIFY pgrst, 'reload schema';`}
                 {(() => {
                   const memRev = (reportData.membership || []).filter((p: any) => p.payment_status === "verified").reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
                   const evRev = (reportData.events || []).filter((r: any) => r.payment_status === "confirmed").reduce((s: number, r: any) => s + Number(r.events?.registration_fee || reportData.eventMap?.[r.event_id]?.registration_fee || 0), 0);
-                  const crRev = (reportData.courses || []).filter((r: any) => r.payment_status === "verified").reduce((s: number, r: any) => s + Number(reportData.courseMap?.[r.course_id]?.price || 0), 0);
+                  const crRev = (reportData.courses || []).filter((r: any) => r.payment_status === "confirmed" || r.payment_status === "verified").reduce((s: number, r: any) => s + Number(reportData.courseMap?.[r.course_id]?.price || 0), 0);
                   const total = memRev + evRev + crRev;
                   return (
                     <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -5852,7 +6023,14 @@ NOTIFY pgrst, 'reload schema';`}
                           <td className="py-2 pr-2">{new Date(r.registered_at).toLocaleDateString()}</td>
                           <td className="py-2 pr-2 truncate max-w-[200px]">{reportData.courseMap?.[r.course_id]?.title || "—"}</td>
                           <td className="py-2 pr-2">{r.payment_method || "free"}</td>
-                          <td className="py-2 pr-2">{r.payment_status}</td>
+                          <td className="py-2 pr-2">
+                            <span className={`px-2 py-0.5 rounded font-mono text-[10px] ${
+                              r.payment_status === "confirmed" ? "bg-green-500/10 text-green-400" :
+                              r.payment_status === "rejected" ? "bg-destructive/10 text-destructive" :
+                              r.payment_status === "unpaid" ? "bg-amber-500/10 text-amber-400" :
+                              "bg-yellow-500/10 text-yellow-400"
+                            }`}>{r.payment_status || "unpaid"}</span>
+                          </td>
                           <td className="py-2">{r.completed ? <span className="text-green-400">✓</span> : "—"}</td>
                         </tr>
                       ))}
